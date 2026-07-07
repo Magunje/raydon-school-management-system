@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Profile - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Staff Profile</h1>
+        <p class="text-secondary mb-0">{{ identity.full_name }} | {{ identity.role }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/staff-portal"><i class="bi bi-arrow-left"></i> Portal</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Account</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-5">Staff Number</dt><dd class="col-sm-7">{{ identity.staff_number|default:"-" }}</dd>
+                <dt class="col-sm-5">Username</dt><dd class="col-sm-7">{{ identity.username|default:"-" }}</dd>
+                <dt class="col-sm-5">Role</dt><dd class="col-sm-7">{{ identity.role|default:"-" }}</dd>
+                <dt class="col-sm-5">Status</dt><dd class="col-sm-7"><span class="status-pill {{ identity.status|lower }}">{{ identity.status|default:"-" }}</span></dd>
+                <dt class="col-sm-5">Email</dt><dd class="col-sm-7">{{ identity.email|default:"-" }}</dd>
+                <dt class="col-sm-5">Phone</dt><dd class="col-sm-7">{{ identity.phone_number|default:"-" }}</dd>
+            </dl>
+        </section>
+    </div>
+    <div class="col-lg-7">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Teaching Profile</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Assigned Classes</dt><dd class="col-sm-8">{{ counts.assigned_classes|default:0 }}</dd>
+                <dt class="col-sm-4">Assigned Subjects</dt><dd class="col-sm-8">{{ counts.assigned_subjects|default:0 }}</dd>
+                <dt class="col-sm-4">Qualifications</dt><dd class="col-sm-8">{{ identity.qualifications|default:"-" }}</dd>
+                <dt class="col-sm-4">Workload Notes</dt><dd class="col-sm-8">{{ identity.workload_notes|default:"-" }}</dd>
+            </dl>
+        </section>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Classes</h2>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Class</th><th>Year</th><th class="text-end">Students</th></tr></thead>
+                    <tbody>
+                    {% for row in classes %}
+                    <tr>
+                        <td>{{ row.class_label|default:row.class_name }}</td>
+                        <td>{{ row.academic_year }}</td>
+                        <td class="text-end">{{ row.student_count|default:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-secondary py-4">No class allocation found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Subjects</h2>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Code</th><th>Subject</th><th>Form</th></tr></thead>
+                    <tbody>
+                    {% for row in subjects %}
+                    <tr>
+                        <td>{{ row.subject_code|default:"-" }}</td>
+                        <td>{{ row.subject_name }}</td>
+                        <td>{{ row.grade|default:"All Forms" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-secondary py-4">No subject allocation found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

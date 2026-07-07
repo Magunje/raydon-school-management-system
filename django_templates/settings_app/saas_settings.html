@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">{{ subtitle }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/admin/saas_tenant_management/schooltenant/"><i class="bi bi-building-gear"></i> Tenants</a>
+        <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Total Tenants</span><strong>{{ saas_stats.total_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Active Tenants</span><strong>{{ saas_stats.active_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Suspended</span><strong>{{ saas_stats.suspended_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Default Plan</span><strong>{{ platform_settings.default_subscription_plan|default:"BASIC" }}</strong></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <span>Provisioning</span>
+            <strong>{% if platform_settings.tenant_auto_provisioning %}Auto{% else %}Manual{% endif %}</strong>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <span>Maintenance</span>
+            <strong>{% if platform_settings.maintenance_mode %}On{% else %}Off{% endif %}</strong>
+        </div>
+    </div>
+    <div class="col-md-3"><div class="stat-card"><span>Trial Days</span><strong>{{ platform_settings.default_trial_days|default:14 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Backup Retention</span><strong>{{ platform_settings.backup_retention_days|default:30 }} days</strong></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <section class="panel">
+            <div class="panel-heading mb-3">
+                <div>
+                    <h2>Master Console</h2>
+                    <p class="text-secondary mb-0">Controls used by the platform portal, tenant defaults, and operational switches.</p>
+                </div>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="platform_name">Platform Name</label>
+                        <input class="form-control" id="platform_name" name="platform_name" value="{{ platform_settings.platform_name|default:'Unified School SaaS Portal' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="admin_console_label">Console Label</label>
+                        <input class="form-control" id="admin_console_label" name="admin_console_label" value="{{ platform_settings.admin_console_label|default:'SaaS Admin Console' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" for="support_email">Support Email</label>
+                        <input class="form-control" id="support_email" name="support_email" type="email" value="{{ platform_settings.support_email|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" for="support_phone">Support Phone</label>
+                        <input class="form-control" id="support_phone" name="support_phone" value="{{ platform_settings.support_phone|default:'' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" for="billing_contact_email">Billing Email</label>
+                        <input class="form-control" id="billing_contact_email" name="billing_contact_email" type="email" value="{{ platform_settings.billing_contact_email|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold" for="default_subscription_plan">Default Plan</label>
+                        <select class="form-select" id="default_subscription_plan" name="default_subscription_plan">
+                            <option value="BASIC" {% if platform_settings.default_subscription_plan == "BASIC" %}selected{% endif %}>Basic</option>
+                            <option value="PREMIUM" {% if platform_settings.default_subscription_plan == "PREMIUM" %}selected{% endif %}>Premium</option>
+                            <option value="ELITE" {% if platform_settings.default_subscription_plan == "ELITE" %}selected{% endif %}>Elite</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold" for="default_trial_days">Trial Days</label>
+                        <input class="form-control" id="default_trial_days" name="default_trial_days" type="number" min="0" value="{{ platform_settings.default_trial_days|default:14 }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold" for="backup_retention_days">Backup Retention</label>
+                        <input class="form-control" id="backup_retention_days" name="backup_retention_days" type="number" min="1" value="{{ platform_settings.backup_retention_days|default:30 }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold" for="tenant_domain_suffix">Tenant Suffix</label>
+                        <input class="form-control" id="tenant_domain_suffix" name="tenant_domain_suffix" value="{{ platform_settings.tenant_domain_suffix|default:'.localhost' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" id="tenant_auto_provisioning" name="tenant_auto_provisioning" type="checkbox" {% if platform_settings.tenant_auto_provisioning %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="tenant_auto_provisioning">Auto Provision Tenants</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" id="allow_public_signup" name="allow_public_signup" type="checkbox" {% if platform_settings.allow_public_signup %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="allow_public_signup">Public Signup</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" id="maintenance_mode" name="maintenance_mode" type="checkbox" {% if platform_settings.maintenance_mode %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="maintenance_mode">Maintenance Mode</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" for="platform_notes">Platform Notes</label>
+                        <textarea class="form-control" id="platform_notes" name="platform_notes" rows="3">{{ platform_settings.platform_notes|default:'' }}</textarea>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Platform Settings</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="col-xl-4">
+        <section class="panel mb-4">
+            <div class="panel-heading mb-3">
+                <h2>Routing</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <tbody>
+                        <tr><th>Host</th><td>{{ diagnostics.portal_host }}</td></tr>
+                        <tr><th>Database</th><td>{{ diagnostics.database_name }}</td></tr>
+                        <tr><th>Engine</th><td>{{ diagnostics.database_engine }}</td></tr>
+                        <tr><th>Debug</th><td>{% if diagnostics.debug_mode %}Enabled{% else %}Disabled{% endif %}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading mb-3">
+                <div>
+                    <h2>Tenant Mix</h2>
+                    <p class="text-secondary mb-0">Basic {{ saas_stats.basic_schools|default:0 }} · Premium {{ saas_stats.premium_schools|default:0 }} · Elite {{ saas_stats.elite_schools|default:0 }}</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead><tr><th>Tenant</th><th>Plan</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for school in saas_stats.schools %}
+                        <tr>
+                            <td>
+                                <strong>{{ school.name }}</strong>
+                                <div class="text-secondary small">
+                                    {% if school.production_domain %}{{ school.production_domain }}{% elif school.local_testing_port %}{{ school.local_testing_port }}{% else %}-{% endif %}
+                                </div>
+                            </td>
+                            <td>{{ school.subscription_plan }}</td>
+                            <td>{% if school.active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Suspended</span>{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-secondary py-4">No tenants registered.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

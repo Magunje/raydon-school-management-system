@@ -1,0 +1,46 @@
+from django.urls import path
+
+from . import views
+
+app_name = "students"
+
+urlpatterns = [
+    path("", views.records, name="records"),
+    path("register/", views.register, name="register"),
+    path("completed/", views.completed, name="completed"),
+    path("textbooks/", views.textbooks, name="textbooks"),
+    path("textbooks/new/", views.textbook_new, name="textbook_new"),
+    path("textbooks/<int:loan_id>/edit/", views.textbook_edit, name="textbook_edit"),
+    path("textbooks/<int:loan_id>/delete/", views.textbook_delete, name="textbook_delete"),
+    path("textbooks/<int:loan_id>/return/", views.textbook_return, name="textbook_return"),
+    path("<str:admission_no>/", views.detail, name="detail_by_admission"),
+    path("<str:admission_no>/edit/", views.edit, name="edit_by_admission"),
+    path("<str:admission_no>/subjects/", views.student_subjects_edit, name="subjects_edit"),
+    path("<str:admission_no>/delete/", views.delete, name="delete_by_admission"),
+    path("<str:admission_no>/print/", views.detail, name="print_by_admission"),
+    path("<str:admission_no>/payments/", views.payment_history_view, name="payment_history"),
+    path("<str:admission_no>/balance/", views.balance, name="balance"),
+    path("<str:admission_no>/offer-letter/pdf/", views.offer_letter, name="offer_letter_pdf_by_admission"),
+    path("<str:admission_no>/promote/", views.promote, name="promote"),
+    path("<str:admission_no>/transfer/", views.status, {"action": "transfer"}, name="transfer"),
+    path("<str:admission_no>/deactivate/", views.deactivate, name="deactivate"),
+    path("<str:admission_no>/status/<str:action>/", views.status, name="status_by_admission"),
+    path("<str:admission_no>/transfer-letter/", views.transfer_letter, name="transfer_letter_by_admission"),
+    path("<str:admission_no>/transfer-letter/pdf/", views.transfer_letter, name="transfer_letter_pdf_by_admission"),
+    path("<int:pupil_id>/", views.detail, name="detail"),
+    path("<int:pupil_id>/edit/", views.edit, name="edit"),
+    path("<int:pupil_id>/delete/", views.delete, name="delete"),
+    path("<int:pupil_id>/print/", views.detail, name="print"),
+    path("<int:pupil_id>/payments/", views.payment_history_view, name="payment_history_by_id"),
+    path("<int:pupil_id>/balance/", views.balance, name="balance_by_id"),
+    path("<int:pupil_id>/promote/", views.promote, name="promote_by_id"),
+    path("<int:pupil_id>/transfer/", views.status, {"action": "transfer"}, name="transfer_by_id"),
+    path("<int:pupil_id>/deactivate/", views.deactivate, name="deactivate_by_id"),
+    path("<int:pupil_id>/status/<str:action>/", views.status, name="status"),
+    path("<int:pupil_id>/transfer-letter/", views.transfer_letter, name="transfer_letter"),
+    path("<int:pupil_id>/transfer-letter/pdf/", views.transfer_letter, name="transfer_letter_pdf"),
+    path("<int:pupil_id>/fee-override/", views.fee_override, name="fee_override"),
+    path("<int:pupil_id>/fee-override/new/", views.fee_override_new, name="fee_override_new"),
+    path("<int:pupil_id>/balance-adjustments/", views.balance_adjustments, name="balance_adjustments"),
+    path("<int:pupil_id>/balance-adjustments/new/", views.balance_adjustment_new, name="balance_adjustment_new"),
+]

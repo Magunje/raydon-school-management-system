@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Timetable - {{ teacher_name }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Teacher Timetable</h1>
+        <p class="text-secondary mb-0">Schedule Grid for <strong>{{ teacher_name }}</strong></p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if not is_teacher %}
+        <a class="btn btn-outline-primary" href="/timetables"><i class="bi bi-list-task"></i> View All Entries</a>
+        {% endif %}
+        <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+    </div>
+</div>
+
+<div class="panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="h5 mb-1">Weekly Schedule Matrix</h2>
+            <p class="text-secondary mb-0 small">Days as rows, Periods as columns showing Class, Subject, and Room.</p>
+        </div>
+        {% if not is_teacher %}
+        <div class="text-secondary small">Viewing as Administrator</div>
+        {% endif %}
+    </div>
+
+    {% if periods and timetable_rows %}
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered text-center align-middle" style="min-width: 800px;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 120px;">Day</th>
+                    {% for p in periods %}
+                    <th>
+                        Period {{ p.period_no }}
+                        <div class="text-muted small" style="font-weight: normal;">{{ p.start_time }} - {{ p.end_time }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in timetable_rows %}
+                <tr>
+                    <th class="table-light text-start">{{ row.day_name }}</th>
+                    {% for cell in row.cells %}
+                    <td class="p-2" style="height: 85px; width: calc(100% / {{ periods|length }});">
+                        {% if cell %}
+                        <div class="p-2 rounded border-start border-4 border-success bg-light text-start" style="font-size: 0.85rem;">
+                            <div class="fw-bold text-dark">{{ cell.subject_name }}</div>
+                            <div class="text-primary fw-semibold" style="font-size: 0.8rem;"><i class="bi bi-mortarboard"></i> {{ cell.class_label|default:cell.class_name }}</div>
+                            {% if cell.room_name %}
+                            <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-geo-alt"></i> {{ cell.room_name }}</div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="text-muted small py-3 bg-light-subtle rounded border border-dashed">-</div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info py-4 text-center mt-3">
+        <i class="bi bi-calendar-x display-6 mb-2 d-block"></i>
+        <h5>No Schedule Found</h5>
+        <p class="text-secondary mb-0">There are no timetable entries assigned to teacher <strong>{{ teacher_name }}</strong>.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Subjects - {{ pupil.first_name }} {{ pupil.surname }}{% endblock %}
+
+{% block content %}
+<div class="page-title mb-4">
+    <div>
+        <h1 class="h3 mb-1">Manage Registered Subjects</h1>
+        <p class="text-secondary mb-0">For {{ pupil.first_name }} {{ pupil.surname }} (Admission: {{ pupil.admission_no }}, {{ pupil.grade }} - Stream {{ pupil.class_stream }})</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back to Profile</button>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <form id="subjectsForm" method="post">
+            {% csrf_token %}
+            <section class="panel mb-4 shadow-sm border-0 bg-white p-4 rounded">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
+                    <h2 class="h5 mb-0 text-primary"><i class="bi bi-book-fill"></i> Subject Selection</h2>
+                    <span id="counterBadge" class="badge bg-secondary p-2">Selected: 0 / {{ max_subjects }}</span>
+                </div>
+                
+                <p class="text-muted small mb-4">
+                    Modify the subject registration for the current academic year ({{ settings.current_year }}).
+                    <strong>Note:</strong> Zimbabwean O Level allows a maximum of 10 subjects, and A Level allows a maximum of 5 subjects.
+                </p>
+                
+                <div class="row g-2 mb-4">
+                    {% for sub in master_subjects %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border p-2 h-100 subject-card {% if sub.subject_id in current_ids %}selected-card{% endif %}" style="transition: all 0.2s ease;">
+                            <div class="form-check d-flex align-items-center mb-0">
+                                <input class="form-check-input me-2 subject-checkbox" type="checkbox" name="subjects" value="{{ sub.subject_id }}" id="sub_{{ sub.subject_id }}" data-name="{{ sub.subject_name }}" style="width: 18px; height: 18px;" {% if sub.subject_id in current_ids %}checked{% endif %}>
+                                <label class="form-check-label w-100 cursor-pointer" for="sub_{{ sub.subject_id }}">
+                                    <strong>{{ sub.subject_name }}</strong> <br>
+                                    <span class="text-secondary small">{{ sub.subject_code }}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="border-top pt-3">
+                    <label for="reason" class="form-label fw-semibold text-primary">Reason for Subject Update <span class="text-danger">*</span></label>
+                    <input type="text" id="reason" name="reason" class="form-control" placeholder="e.g. Student dropped BES to register for Accounts / Academic stream switch" required>
+                    <div class="form-text">All updates to student subject registrations are recorded in the system audit trail.</div>
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary px-4" onclick="history.back()">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Save Changes</button>
+                </div>
+            </section>
+        </form>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Academic Summary Card -->
+        <div class="card shadow-sm border-0 mb-4 bg-white">
+            <div class="card-body">
+                <h3 class="h6 border-bottom pb-2 mb-3 text-primary"><i class="bi bi-info-circle-fill"></i> Registration Limits</h3>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-2 d-flex justify-content-between">
+                        <span class="text-secondary">Current Grade:</span>
+                        <strong>{{ pupil.grade }}</strong>
+                    </li>
+                    <li class="mb-2 d-flex justify-content-between">
+                        <span class="text-secondary">Level Classification:</span>
+                        <strong>{% if max_subjects == 5 %}A Level{% else %}O Level{% endif %}</strong>
+                    </li>
+                    <li class="mb-2 d-flex justify-content-between">
+                        <span class="text-secondary">Maximum Subjects:</span>
+                        <strong class="text-primary">{{ max_subjects }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Registration History Timeline -->
+        <div class="card shadow-sm border-0 bg-white">
+            <div class="card-body">
+                <h3 class="h6 border-bottom pb-2 mb-3 text-primary"><i class="bi bi-clock-history"></i> Academic Year History</h3>
+                {% if history %}
+                    <div class="timeline">
+                        {% for hist in history %}
+                        <div class="mb-3 pb-3 border-bottom last-border-0 small">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-light text-primary fw-bold">{{ hist.academic_year }}</span>
+                                <span class="text-muted small">{{ hist.form }} ({{ hist.stream }})</span>
+                            </div>
+                            <p class="text-secondary mb-0" style="font-size: 0.85rem;">{{ hist.subjects_list }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No historical registration records found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .subject-card:hover { border-color: #0d6efd !important; background-color: #f8f9fa; }
+    .subject-card.selected-card { border-color: #0d6efd !important; background-color: #eff6ff; }
+    .last-border-0:last-child { border-bottom: 0 !important; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const limit = {{ max_subjects }};
+    const checkboxes = document.querySelectorAll(".subject-checkbox");
+    const counterBadge = document.getElementById("counterBadge");
+    const form = document.getElementById("subjectsForm");
+    
+    function updateLimits() {
+        const checkedCount = document.querySelectorAll(".subject-checkbox:checked").length;
+        counterBadge.textContent = `Selected: ${checkedCount} / ${limit}`;
+        
+        if (checkedCount >= limit) {
+            counterBadge.className = "badge bg-danger p-2";
+        } else if (checkedCount > 0) {
+            counterBadge.className = "badge bg-primary p-2";
+        } else {
+            counterBadge.className = "badge bg-secondary p-2";
+        }
+        
+        checkboxes.forEach(cb => {
+            if (!cb.checked) {
+                cb.disabled = checkedCount >= limit;
+            } else {
+                cb.disabled = false;
+            }
+        });
+    }
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener("change", function() {
+            const card = cb.closest(".subject-card");
+            if (cb.checked) {
+                card.classList.add("selected-card");
+            } else {
+                card.classList.remove("selected-card");
+            }
+            updateLimits();
+        });
+    });
+    
+    // Initial run
+    updateLimits();
+    
+    form.addEventListener("submit", function(e) {
+        const checkedCount = document.querySelectorAll(".subject-checkbox:checked").length;
+        if (checkedCount === 0) {
+            e.preventDefault();
+            alert("Subject registration is mandatory. Please select at least 1 subject.");
+            return;
+        }
+        if (checkedCount > limit) {
+            e.preventDefault();
+            alert(`Subject registration limit exceeded. Max allowed is ${limit} subjects.`);
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

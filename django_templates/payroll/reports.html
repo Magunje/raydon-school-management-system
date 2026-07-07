@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll Reports - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Payroll Reports</h1>
+        <p class="text-secondary mb-0">Salary summaries and payment reports</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'payroll:dashboard' %}"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<section class="panel mb-3 filter-panel">
+    <form class="row g-2" method="get">
+        <div class="col-md-5">
+            {{ form.report.label_tag }}
+            {{ form.report }}
+        </div>
+        <div class="col-md-5">
+            {{ form.employee_number.label_tag }}
+            {{ form.employee_number }}
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-funnel"></i> Apply</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            {% if selected_report == "employee" %}
+            <thead><tr><th>Employee</th><th>Period</th><th>Department</th><th class="text-end">Gross</th><th class="text-end">Deductions</th><th class="text-end">Net</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr><td><strong>{{ row.employee_name }}</strong><br><small class="text-secondary">{{ row.employee_number }}</small></td><td>{{ row.period.period_code }}</td><td>{{ row.department }}</td><td class="text-end">USD {{ row.gross_salary|floatformat:2 }}</td><td class="text-end">USD {{ row.total_deductions|floatformat:2 }}</td><td class="text-end">USD {{ row.net_salary|floatformat:2 }}</td></tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-secondary py-4">No records found.</td></tr>{% endfor %}
+            </tbody>
+            {% elif selected_report == "bank" %}
+            <thead><tr><th>Full Name</th><th class="text-end">Net Salary</th><th>Account Number</th><th>Bank Name</th><th>Employee Number</th><th>Payroll Month</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr><td>{{ row.employee_name }}</td><td class="text-end">USD {{ row.net_salary|floatformat:2 }}</td><td>{{ row.account_number }}</td><td>{{ row.bank_name }}</td><td>{{ row.employee_number }}</td><td>{{ row.period.period_code }}</td></tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-secondary py-4">No approved payroll records found.</td></tr>{% endfor %}
+            </tbody>
+            {% else %}
+            <thead><tr><th>Period</th>{% if selected_report == "department" %}<th>Department</th>{% endif %}<th class="text-end">Employees</th><th class="text-end">Gross</th><th class="text-end">Deductions</th><th class="text-end">Net</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{% if row.period__year %}{{ row.period__year }}-{{ row.period__month|stringformat:"02d" }}{% else %}{{ row.period_code }}{% endif %}</td>
+                {% if selected_report == "department" %}<td>{{ row.department }}</td>{% endif %}
+                <td class="text-end">{{ row.employees|default:0 }}</td>
+                <td class="text-end">USD {{ row.gross|default:0|floatformat:2 }}</td>
+                <td class="text-end">USD {{ row.deductions|default:0|floatformat:2 }}</td>
+                <td class="text-end">USD {{ row.net|default:0|floatformat:2 }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center text-secondary py-4">No report data found.</td></tr>{% endfor %}
+            </tbody>
+            {% endif %}
+        </table>
+    </div>
+</section>
+{% endblock %}

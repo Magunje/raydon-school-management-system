@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">Upload new study note or course material for students.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="panel form-panel">
+    <form method="post" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="title" class="form-label">Note Title / Topic</label>
+                <input type="text" name="title" id="title" class="form-control" placeholder="e.g. Introduction to Algebra" required>
+            </div>
+            <div class="col-md-3">
+                <label for="grade" class="form-label">Target Form</label>
+                <select name="grade" id="grade" class="form-select" required>
+                    <option value="">-- Select Form --</option>
+                    {% for g in grades %}
+                    <option value="{{ g }}">{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="class_stream" class="form-label">Class Stream</label>
+                <select name="class_stream" id="class_stream" class="form-select" required>
+                    <option value="All Streams" selected>All Streams</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="subject_id" class="form-label">Subject</label>
+                <select name="subject_id" id="subject_id" class="form-select" required>
+                    <option value="">-- Select Subject --</option>
+                    {% for s in subjects %}
+                    <option value="{{ s.subject_id }}">
+                        [{{ s.subject_code }}] {{ s.subject_name }} ({{ s.grade }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="term" class="form-label">Term</label>
+                <select name="term" id="term" class="form-select" required>
+                    <option value="Term 1" {% if settings.current_term == "Term 1" %}selected{% endif %}>Term 1</option>
+                    <option value="Term 2" {% if settings.current_term == "Term 2" %}selected{% endif %}>Term 2</option>
+                    <option value="Term 3" {% if settings.current_term == "Term 3" %}selected{% endif %}>Term 3</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="year" class="form-label">Year</label>
+                <select name="year" id="year" class="form-select" required>
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if settings.current_year == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="description" class="form-label">Description / Summary</label>
+            <textarea name="description" id="description" class="form-control" rows="4" placeholder="Enter brief overview of this note..."></textarea>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label for="file" class="form-label">Attachment File (PDF, Word, PPT, Image)</label>
+                <input type="file" name="file" id="file" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-arrow-up"></i> Upload Note</button>
+            <a href="/e-learning" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

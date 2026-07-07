@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">Set up landing page announcements, news, or banner alerts.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="panel form-panel">
+    <form method="post" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="row g-3 mb-3">
+            <div class="col-md-8">
+                <label for="title" class="form-label">Announcement Title</label>
+                <input type="text" name="title" id="title" class="form-control" placeholder="e.g. End of Term Notice" required>
+            </div>
+            <div class="col-md-4">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select" required>
+                    <option value="Published" selected>Published</option>
+                    <option value="Draft">Draft</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="content" class="form-label">Announcement Content / Description</label>
+            <textarea name="content" id="content" class="form-control" rows="6" placeholder="Enter detailed text here..." required></textarea>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label for="picture" class="form-label">Banner Image / Picture</label>
+                <input type="file" name="picture" id="picture" class="form-control" accept="image/*">
+                <small class="text-secondary d-block mt-1">Recommended size: 800x450 pixels or aspect ratio 16:9.</small>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Announcement</button>
+            <a href="{% url 'notifications:announcements' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

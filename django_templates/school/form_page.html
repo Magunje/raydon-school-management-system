@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">{{ subtitle }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+<section class="panel form-panel">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3">
+            {% for field in fields %}
+            {% if field.widget == "hidden" %}
+            <input id="{{ field.name }}" name="{{ field.name }}" type="hidden" value="{{ field.value|default:'' }}">
+            {% else %}
+            <div class="{{ field.col_class|default:'col-md-6' }}">
+                <label for="{{ field.name }}">{{ field.label }}</label>
+                {% if field.widget == "textarea" %}
+                <textarea id="{{ field.name }}" name="{{ field.name }}" rows="3" placeholder="{{ field.placeholder|default:'' }}" {% if field.readonly %}readonly{% endif %} {% if field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+                {% elif field.widget == "select" %}
+                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.readonly %}disabled{% endif %} {% if field.required %}required{% endif %}>
+                    {% for option in field.options %}
+                    {% if option.items %}
+                    <option value="{{ option.value }}" {% if option.value|stringformat:"s" == field.value|stringformat:"s" %}selected{% endif %}>{{ option.label }}</option>
+                    {% else %}
+                    <option value="{{ option }}" {% if option == field.value %}selected{% endif %}>{{ option }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                {% if field.readonly %}
+                <input type="hidden" name="{{ field.name }}" value="{{ field.value|default:'' }}">
+                {% endif %}
+                {% elif field.type == "file" %}
+                {% if field.value %}
+                <div class="mb-2">
+                    <img src="{% if field.preview_url %}{{ field.preview_url }}{% else %}/static/{{ field.value }}{% endif %}" alt="{{ field.label }}" style="max-height: 80px; display: block;" class="img-thumbnail">
+                    <small class="text-secondary d-block mt-1">Current: {{ field.value }}</small>
+                </div>
+                {% endif %}
+                <input id="{{ field.name }}" name="{{ field.name }}" type="file" {% if field.accept %}accept="{{ field.accept }}"{% endif %} {% if field.required and not field.value %}required{% endif %}>
+                {% else %}
+                <input id="{{ field.name }}" name="{{ field.name }}" type="{{ field.type|default:'text' }}" value="{{ field.value|default:'' }}" placeholder="{{ field.placeholder|default:'' }}" {% if field.readonly %}readonly{% endif %} {% if field.required %}required{% endif %}>
+                {% endif %}
+                {% if field.help_text %}<small class="text-secondary d-block mt-1">{{ field.help_text }}</small>{% endif %}
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="col-12 text-secondary">This Django form is ready for the native module save logic.</div>
+            {% endfor %}
+        </div>
+        <div class="d-flex justify-content-end mt-4">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

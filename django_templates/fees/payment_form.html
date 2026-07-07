@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Record Payment - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Record Fees Payment</h1>
+        <p class="text-secondary mb-0">Search by admission number, name, class, or parent/guardian. Payments clear arrears first.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/payments"><i class="bi bi-receipt"></i> Payments</a>
+</div>
+
+<form method="post" class="payment-workbench" data-payment-form data-search-url="/api/pupil-search" data-lookup-url="/api/pupil-balance">
+    {% csrf_token %}
+    <input type="hidden" name="admission_no" value="{{ initial_admission_no }}">
+    <input type="hidden" name="payment_date_manual" value="0">
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <section class="panel payment-intake">
+                <div class="row g-3">
+                    <div class="col-12 position-relative">
+                        <label for="pupil_query">Admission Number / Student Search</label>
+                        <input id="pupil_query" name="pupil_query" value="{{ initial_admission_no }}" autocomplete="off" placeholder="Type A26001, student name, class, or guardian">
+                        <div class="search-results mt-2" hidden></div>
+                        <small id="lookup-message" class="text-danger" hidden></small>
+                    </div>
+                    <div class="col-12">
+                        <div class="bg-light border rounded p-3">
+                            <h2 class="h5 mb-3">Confirm Student Before Payment</h2>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <span class="text-secondary small">Student</span>
+                                    <strong class="d-block" id="lookup-picked-name">-</strong>
+                                    <span id="lookup-picked-admission">-</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-secondary small">Class / Stream</span>
+                                    <strong class="d-block" id="lookup-picked-grade">-</strong>
+                                    <span id="lookup-picked-status" class="status-pill">-</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <span class="text-secondary small">Parent / Guardian</span>
+                                    <strong class="d-block" id="lookup-guardian">-</strong>
+                                </div>
+                                <div class="col-md-3"><div class="stat-card"><span>Current Term Fees</span><strong id="lookup-current-fees">USD 0.00</strong></div></div>
+                                <div class="col-md-3"><div class="stat-card"><span>Previous Arrears</span><strong id="lookup-opening-balance">USD 0.00</strong></div></div>
+                                <div class="col-md-3"><div class="stat-card"><span>Total Paid</span><strong id="lookup-paid">USD 0.00</strong></div></div>
+                                <div class="col-md-3"><div class="stat-card"><span>Total Balance</span><strong id="lookup-overall-balance">USD 0.00</strong></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <span id="lookup-name" hidden>-</span>
+                    <span id="lookup-grade" hidden>-</span>
+                    <div class="col-md-6">
+                        <label for="term">Term</label>
+                        <input id="term" name="term" value="{{ settings.current_term|default:'Term 1' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="year">Year</label>
+                        <input id="year" name="year" type="number" value="{{ current_year }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="payment_date">Payment Date</label>
+                        <input id="payment_date" name="payment_date" type="date" value="{{ today }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="payment_method">Payment Method</label>
+                        <select id="payment_method" name="payment_method">
+                            {% for method in payment_methods %}
+                            <option value="{{ method }}">{{ method }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label for="reference_no">Reference Number</label>
+                        <input id="reference_no" name="reference_no" placeholder="Bank, mobile money, cheque, or internal reference">
+                    </div>
+                    <div class="col-12 payment-amount-field">
+                        <label for="amount_paid">Amount Paid</label>
+                        <input id="amount_paid" name="amount_paid" type="number" min="0.01" step="0.01" required>
+                    </div>
+                </div>
+                <div class="payment-summary-banner">
+                    <strong>After this payment: <span id="lookup-after">USD 0.00</span></strong>
+                    <span id="lookup-rule-note">Allocation rule: previous arrears are cleared before current term fees.</span>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save and Generate Receipt</button>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-5">
+            <section class="panel mb-3">
+                <h2 class="h5">Fees Position</h2>
+                <dl class="row mb-0">
+                    <dt class="col-7">Adjustments</dt><dd class="col-5 text-end" id="lookup-adjustments">USD 0.00</dd>
+                    <dt class="col-7">Amount Required</dt><dd class="col-5 text-end" id="lookup-required">USD 0.00</dd>
+                    <dt class="col-7">Current Term Balance</dt><dd class="col-5 text-end" id="lookup-balance">USD 0.00</dd>
+                    <dt class="col-7">Other Arrears</dt><dd class="col-5 text-end" id="lookup-other-arrears">USD 0.00</dd>
+                    <dt class="col-7">Amount Due First</dt><dd class="col-5 text-end" id="lookup-required-term">-</dd>
+                    <dt class="col-7">Advance Term</dt><dd class="col-5 text-end" id="lookup-advance-term">-</dd>
+                </dl>
+            </section>
+
+            <section class="panel mb-3" id="lookup-outstanding-panel" hidden>
+                <h2 class="h5">Outstanding Terms</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm"><tbody id="lookup-outstanding-rows"></tbody></table>
+                </div>
+            </section>
+
+            <section class="panel" id="lookup-allocation-panel" hidden>
+                <h2 class="h5">Payment Allocation Preview</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm"><tbody id="lookup-allocation-rows"></tbody></table>
+                </div>
+            </section>
+
+            <section class="panel mt-3" id="lookup-history-panel" hidden>
+                <h2 class="h5">Recent Payment History</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead><tr><th>Receipt</th><th>Date</th><th class="text-end">Amount</th></tr></thead>
+                        <tbody id="lookup-history-rows"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</form>
+{% endblock %}

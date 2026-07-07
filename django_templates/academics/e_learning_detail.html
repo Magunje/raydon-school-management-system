@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment Detail - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Assignment: {{ assignment.title }}</h1>
+        <p class="text-secondary mb-0">Form: <strong>{{ assignment.grade }}</strong> | Stream: <strong>{{ assignment.class_stream|default:"All Streams" }}</strong> | Subject: <strong>{{ assignment.subject_name }}</strong></p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'academics:e_learning_edit' assignment.assignment_id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Edit Assignment</a>
+        <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi-arrow-left"></i> Back</button>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Assignment Info -->
+    <div class="col-md-4">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3 text-primary">Assignment details</h2>
+            <div class="mb-3">
+                <span class="text-secondary d-block small">Instructions</span>
+                <p class="mb-0 text-dark" style="white-space: pre-wrap;">{{ assignment.instructions|default:"No instructions provided." }}</p>
+            </div>
+            <hr>
+            <div class="row g-3">
+                <div class="col-6">
+                    <span class="text-secondary d-block small">Due Date</span>
+                    <strong class="text-danger"><i class="bi bi-calendar-event"></i> {{ assignment.due_date|default:"None" }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-secondary d-block small">Max Score</span>
+                    <strong class="text-dark">{{ assignment.max_score }} Marks</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-secondary d-block small">Term & Year</span>
+                    <strong class="text-dark">{{ assignment.term }} ({{ assignment.year }})</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-secondary d-block small">Status</span>
+                    <span class="status-pill {% if assignment.status == 'Open' %}approved{% else %}draft{% endif %}">
+                        {{ assignment.status }}
+                    </span>
+                </div>
+            </div>
+            {% if assignment.file_path %}
+            <div class="mt-4">
+                <span class="text-secondary d-block small mb-1">Attachment</span>
+                <a href="{% url 'academics:download' 'assignment' assignment.assignment_id %}" class="btn btn-sm btn-info text-white"><i class="bi bi-download"></i> Download {{ assignment.original_filename }}</a>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Student Submissions Grid -->
+    <div class="col-md-8">
+        <section class="panel">
+            <h2 class="h5 mb-3 text-primary">Student Submissions</h2>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Stream</th>
+                            <th>Status</th>
+                            <th>Submitted File / Answer</th>
+                            <th>Score</th>
+                            <th>Action / Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in students %}
+                        <tr>
+                            <td>
+                                <div><strong>{{ s.name }}</strong></div>
+                                <small class="text-muted">{{ s.admission_no }}</small>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ s.class_stream }}</span></td>
+                            <td>
+                                {% if s.status == 'Marked' %}
+                                <span class="badge bg-success">Marked</span>
+                                {% elif s.status == 'Submitted' %}
+                                <span class="badge bg-warning text-dark">Submitted</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Not Submitted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.status != 'Not Submitted' %}
+                                    {% if s.file_path %}
+                                    <div class="mb-1">
+                                        <a href="{% url 'academics:download' 'submission' s.submission_id %}" class="text-primary small"><i class="bi bi-download"></i> {{ s.original_filename }}</a>
+                                    </div>
+                                    {% endif %}
+                                    {% if s.answer_text %}
+                                    <div class="p-2 bg-light border rounded small text-dark" style="max-height: 80px; overflow-y: auto;">
+                                        {{ s.answer_text }}
+                                    </div>
+                                    {% endif %}
+                                    <small class="text-muted d-block mt-1">On: {{ s.submitted_at }}</small>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.status == 'Marked' %}
+                                <strong>{{ s.score }} / {{ assignment.max_score }}</strong>
+                                {% if s.feedback %}
+                                <div class="text-muted small" title="{{ s.feedback }}"><i class="bi bi-chat-text"></i> {{ s.feedback|truncatechars:20 }}</div>
+                                {% endif %}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if s.status != 'Not Submitted' %}
+                                <!-- Button to trigger modal / inline grading -->
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#gradeForm-{{ s.pupil_id }}" aria-expanded="false" aria-controls="gradeForm-{{ s.pupil_id }}">
+                                    <i class="bi bi-check2-square"></i> {% if s.status == 'Marked' %}Regrade{% else %}Grade{% endif %}
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>No Submission</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if s.status != 'Not Submitted' %}
+                        <!-- Collapse grading form row -->
+                        <tr class="collapse" id="gradeForm-{{ s.pupil_id }}">
+                            <td colspan="6" class="bg-light p-3">
+                                <form method="post" action="{% url 'academics:mark_submission' s.submission_id %}" class="row g-3">
+                                    {% csrf_token %}
+                                    <div class="col-md-3">
+                                        <label for="score-{{ s.pupil_id }}" class="form-label font-bold">Marks Scored (Max: {{ assignment.max_score }})</label>
+                                        <input type="number" step="0.1" max="{{ assignment.max_score }}" name="score" id="score-{{ s.pupil_id }}" class="form-control" value="{{ s.score }}" required>
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label for="feedback-{{ s.pupil_id }}" class="form-label font-bold">Feedback / Remarks</label>
+                                        <input type="text" name="feedback" id="feedback-{{ s.pupil_id }}" class="form-control" value="{{ s.feedback }}" placeholder="Good work, try harder next time.">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-success w-100"><i class="bi bi-save"></i> Submit Grade</button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No students in this Form.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

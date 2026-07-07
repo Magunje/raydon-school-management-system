@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">E-learning material / assignment setup.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="panel form-panel">
+    <form method="post" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="title" class="form-label">Title / Heading</label>
+                <input type="text" name="title" id="title" class="form-control" value="{{ assignment.title|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="grade" class="form-label">Target Form</label>
+                <select name="grade" id="grade" class="form-select" required>
+                    <option value="">-- Select Form --</option>
+                    {% for g in grades %}
+                    <option value="{{ g }}" {% if assignment.grade == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="class_stream" class="form-label">Class Stream</label>
+                <select name="class_stream" id="class_stream" class="form-select" required>
+                    <option value="All Streams" {% if assignment.class_stream == "All Streams" or not assignment.class_stream %}selected{% endif %}>All Streams</option>
+                    <option value="A" {% if assignment.class_stream == "A" %}selected{% endif %}>A</option>
+                    <option value="B" {% if assignment.class_stream == "B" %}selected{% endif %}>B</option>
+                    <option value="C" {% if assignment.class_stream == "C" %}selected{% endif %}>C</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="subject_id" class="form-label">Subject</label>
+                <select name="subject_id" id="subject_id" class="form-select" required>
+                    <option value="">-- Select Subject --</option>
+                    {% for s in subjects %}
+                    <option value="{{ s.subject_id }}" {% if assignment.subject_id == s.subject_id %}selected{% endif %}>
+                        [{{ s.subject_code }}] {{ s.subject_name }} ({{ s.grade }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="term" class="form-label">Term</label>
+                <select name="term" id="term" class="form-select" required>
+                    <option value="Term 1" {% if assignment.term == "Term 1" %}selected{% endif %}>Term 1</option>
+                    <option value="Term 2" {% if assignment.term == "Term 2" %}selected{% endif %}>Term 2</option>
+                    <option value="Term 3" {% if assignment.term == "Term 3" %}selected{% endif %}>Term 3</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="year" class="form-label">Year</label>
+                <select name="year" id="year" class="form-select" required>
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if assignment.year|stringformat:"s" == y|stringformat:"s" or not assignment.year and y == 2026 %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="instructions" class="form-label">Instructions / Description</label>
+            <textarea name="instructions" id="instructions" class="form-control" rows="4">{{ assignment.instructions|default:'' }}</textarea>
+        </div>
+
+        <div class="row g-3 mb-3 align-items-end">
+            <div class="col-md-6">
+                <label for="file" class="form-label">Attachment File (PDF, Word, PPT, Image)</label>
+                <input type="file" name="file" id="file" class="form-control">
+                {% if assignment.original_filename %}
+                <div class="text-success small mt-1">
+                    <i class="bi bi-file-earmark-check"></i> Current: {{ assignment.original_filename }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-3">
+                <label for="due_date" class="form-label">Due Date</label>
+                <input type="date" name="due_date" id="due_date" class="form-control" value="{{ assignment.due_date|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="max_score" class="form-label">Max Score (Marks)</label>
+                <input type="number" name="max_score" id="max_score" class="form-control" value="{{ assignment.max_score|default:'100' }}" required>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select" required>
+                    <option value="Open" {% if assignment.status == "Open" or not assignment.status %}selected{% endif %}>Open</option>
+                    <option value="Closed" {% if assignment.status == "Closed" %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Save Assignment</button>
+            <a href="/e-learning" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

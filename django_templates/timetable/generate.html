@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Auto Generate Timetables{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-gray-800">Auto Generate Timetables</h1>
+        <p class="text-muted mb-0"><small>Automatically construct conflict-free timetables for classes, teachers, and rooms based on your rules and subject allocations.</small></p>
+    </div>
+    <a href="{% url 'timetable:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow mb-4" style="border-top: 4px solid #0f766e;">
+            <div class="card-body py-4 px-5">
+                <form id="generate-form" method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label font-weight-bold" style="color: #475569;" for="class_id">Select Target Class</label>
+                        <select class="form-select" id="class_id" name="class_id">
+                            <option value="">-- All Active Classes --</option>
+                            {% for c in classes %}
+                            <option value="{{ c.class_id }}">{{ c.class_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-muted"><small>Leave empty to run the engine for all active classes simultaneously.</small></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label font-weight-bold" style="color: #475569;" for="replace">Replace Existing Entries</label>
+                        <select class="form-select" id="replace" name="replace">
+                            <option value="no">No, skip classes that already have schedules</option>
+                            <option value="yes" selected>Yes, overwrite existing unlocked schedules</option>
+                        </select>
+                        <div class="form-text text-muted"><small>Note: Locked slots will never be changed or deleted by the auto generator.</small></div>
+                    </div>
+
+                    <div class="alert alert-info py-3" role="alert">
+                        <h6 class="alert-heading font-weight-bold"><i class="bi bi-info-circle-fill"></i> Timetable Scheduling Engine Details</h6>
+                        <p class="mb-0 fs-7 text-secondary">
+                            The engine uses constraint-satisfaction heuristics to resolve:
+                            <br/>• Teacher double booking prevention.
+                            <br/>• Class period overlap prevention.
+                            <br/>• Specialty room allocation (e.g. Science Labs, Computer Rooms).
+                            <br/>• Practical subject grouping into double periods.
+                            <br/>• Teacher availabilities and maximum daily workload bounds.
+                        </p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top text-end">
+                        <button type="submit" class="btn btn-teal px-4" style="background-color: #0f766e; color: white;" id="btn-submit">
+                            <i class="bi bi-cpu"></i> Run Timetable Engine
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading State overlay -->
+                <div id="loading-overlay" class="text-center py-5 d-none">
+                    <div class="spinner-border text-teal mb-3" style="width: 3rem; height: 3rem; color: #0f766e;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="font-weight-bold text-gray-800">Generating Timetables...</h5>
+                    <p class="text-secondary mb-0"><small>Applying constraint satisfaction and resolving conflicts. Please wait, this may take a few seconds.</small></p>
+                </div>
+                
+                <!-- Success State -->
+                <div id="success-state" class="text-center py-5 d-none">
+                    <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="font-weight-bold text-gray-800" id="success-title">Timetables Generated Successfully</h5>
+                    <p class="text-secondary mb-4" id="success-desc"></p>
+                    <a href="{% url 'timetable:grid' %}" class="btn btn-teal" style="background-color: #0f766e; color: white;">Go to Timetables Grid</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('generate-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const btnSubmit = document.getElementById('btn-submit');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const successState = document.getElementById('success-state');
+    
+    // Hide form & show loading
+    form.classList.add('d-none');
+    loadingOverlay.classList.remove('d-none');
+    
+    const formData = new FormData(form);
+    
+    fetch('{% url "timetable:generate" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingOverlay.classList.add('d-none');
+        if (data.status === 'success') {
+            successState.classList.remove('d-none');
+            document.getElementById('success-desc').innerText = data.message;
+        } else {
+            form.classList.remove('d-none');
+            alert('Error generating timetables: ' + data.message);
+        }
+    })
+    .catch(error => {
+        loadingOverlay.classList.add('d-none');
+        form.classList.remove('d-none');
+        alert('Server error occurred during timetable generation.');
+    });
+});
+</script>
+{% endblock %}

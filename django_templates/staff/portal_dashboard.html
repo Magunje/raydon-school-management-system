@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Portal - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ identity.role|default:"Staff" }} Portal</h1>
+        <p class="text-secondary mb-0">{{ identity.full_name }}{% if identity.staff_number %} | {{ identity.staff_number }}{% endif %}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/staff-portal/profile"><i class="bi bi-person-vcard"></i> Profile</a>
+        {% if request.user.is_authenticated %}
+        <a class="btn btn-outline-secondary" href="{% url 'accounts:change_password' %}"><i class="bi bi-key"></i> Password</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Live Students</span><strong>{{ counts.active_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Assigned Classes</span><strong>{{ counts.assigned_classes|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Attendance Today</span><strong>{{ counts.attendance_today|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Pending Results</span><strong>{{ counts.pending_results|default:0 }}</strong></div></div>
+</div>
+
+{% if request.user.is_authenticated and finance_dashboard %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Payments Today</span><strong>USD {{ finance_dashboard.payments_today|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>This Month</span><strong>USD {{ finance_dashboard.payments_month|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total Arrears</span><strong>USD {{ finance_dashboard.total_arrears|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Portal Payments</span><strong>{{ counts.pending_portal_payments|default:0 }}</strong></div></div>
+</div>
+{% endif %}
+
+<section class="panel mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Role Modules</h2>
+        <span class="text-secondary small">{{ modules|length }} available</span>
+    </div>
+    <div class="row g-3">
+        {% for module in modules %}
+        <div class="col-sm-6 col-lg-3">
+            <a class="d-flex align-items-center gap-3 border rounded-2 p-3 text-decoration-none text-dark h-100" href="{{ module.href }}">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-2 bg-light border" style="width: 42px; height: 42px;"><i class="bi {{ module.icon }}"></i></span>
+                <strong>{{ module.label }}</strong>
+            </a>
+        </div>
+        {% empty %}
+        <div class="col-12 text-secondary">No modules are available for this role.</div>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <section class="panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Assigned Classes</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/attendance"><i class="bi bi-calendar-check"></i> Attendance</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Class</th><th>Year</th><th class="text-end">Students</th></tr></thead>
+                    <tbody>
+                    {% for row in classes %}
+                    <tr>
+                        <td><a href="/classes/{{ row.class_id }}">{{ row.class_label|default:row.class_name }}</a></td>
+                        <td>{{ row.academic_year }}</td>
+                        <td class="text-end">{{ row.student_count|default:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-secondary py-4">No class allocation found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-6">
+        <section class="panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Today Timetable</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/timetables/grid"><i class="bi bi-calendar3"></i> Open</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Period</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead>
+                    <tbody>
+                    {% for row in timetable_today %}
+                    <tr>
+                        <td>{{ row.period_no }}<br><small class="text-secondary">{{ row.start_time }} - {{ row.end_time }}</small></td>
+                        <td>{{ row.subject_name|default:"-" }}</td>
+                        <td>{{ row.teacher_name|default:"-" }}</td>
+                        <td>{{ row.room_name|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-secondary py-4">No timetable entries for today.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-xl-6">
+        <section class="panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Recent Results</h2>
+                <a class="btn btn-sm btn-outline-primary" href="/results"><i class="bi bi-clipboard-data"></i> Results</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Student</th><th>Term</th><th>Status</th><th class="text-end">Average</th></tr></thead>
+                    <tbody>
+                    {% for row in recent_results %}
+                    <tr>
+                        <td><a href="/results/{{ row.result_id }}">{{ row.first_name }} {{ row.surname }}</a><br><small class="text-secondary">{{ row.admission_no }}</small></td>
+                        <td>{{ row.term }} {{ row.year }}</td>
+                        <td><span class="status-pill {{ row.status|lower }}">{{ row.status }}</span></td>
+                        <td class="text-end">{{ row.average_mark|default:0|floatformat:2 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-secondary py-4">No result sheets found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-xl-6">
+        <section class="panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Announcements</h2>
+                {% if can_manage_announcements %}
+                <a class="btn btn-sm btn-outline-primary" href="/notifications/announcements/"><i class="bi bi-megaphone"></i> Open</a>
+                {% endif %}
+            </div>
+            {% for row in announcements %}
+            <div class="border-bottom py-2">
+                <strong>{{ row.title }}</strong><br>
+                <small class="text-secondary">{{ row.audience|default:"School" }} | {{ row.published_at|default:"-" }}</small>
+            </div>
+            {% empty %}
+            <p class="text-secondary mb-0">No announcements found.</p>
+            {% endfor %}
+        </section>
+    </div>
+</div>
+{% endblock %}

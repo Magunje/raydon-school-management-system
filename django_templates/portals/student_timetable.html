@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Timetable - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">My Weekly Timetable</h1>
+        <p class="text-secondary mb-0">Class: {{ pupil|class_label }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="panel">
+    <h2 class="h5 mb-3"><i class="bi bi-calendar3"></i> Class Timetable Grid</h2>
+    {% if periods %}
+    <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle" style="min-width: 800px;">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 120px;">Day</th>
+                    {% for p in periods %}
+                    <th>
+                        Period {{ p.period_no }}
+                        <div class="text-muted small" style="font-weight: normal;">{{ p.start_time }} - {{ p.end_time }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in timetable_rows %}
+                <tr>
+                    <th class="table-light text-start">{{ row.day_name }}</th>
+                    {% for cell in row.cells %}
+                    <td class="p-2" style="height: 80px; width: calc(100% / {{ periods|length }});">
+                        {% if cell %}
+                        <div class="p-2 rounded border-start border-4 border-primary bg-light text-start" style="font-size: 0.85rem;">
+                            <div class="fw-bold text-dark">{{ cell.subject_name }}</div>
+                            <div class="text-secondary" style="font-size: 0.75rem;"><i class="bi bi-person"></i> {{ cell.teacher_name }}</div>
+                            {% if cell.room_name %}
+                            <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-geo-alt"></i> {{ cell.room_name }}</div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="text-muted small py-3 bg-light-subtle rounded border border-dashed">-</div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info py-4 text-center">
+        <i class="bi bi-calendar-x display-6 mb-2 d-block"></i>
+        <h5>No Timetable Entries Found</h5>
+        <p class="text-secondary mb-0">Your class stream has no timetable entries assigned for the current academic year.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

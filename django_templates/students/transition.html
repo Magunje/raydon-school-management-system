@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Transition Student - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title mb-4">
+    <h1 class="h3 mb-1 text-primary">Transition Student Status</h1>
+    <p class="text-secondary mb-0">Advance student status through the Finite State Machine (FSM) workflow.</p>
+</div>
+
+<div class="card shadow-sm border-light" style="max-width: 600px;">
+    <div class="card-body">
+        <h5 class="card-title text-dark mb-3">Student: {{ student.first_name }} {{ student.surname }} ({{ student.admission_no }})</h5>
+        <p class="card-text">Current Status: <span class="badge bg-secondary">{{ student.status }}</span></p>
+
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="target_status" class="form-label">Select Target Lifecycle Status</label>
+                <select name="target_status" id="target_status" class="form-select" required>
+                    <option value="">-- Select Status --</option>
+                    {% for status in allowed_transitions %}
+                    <option value="{{ status }}">{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Transition Status</button>
+            <a href="/pupils" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

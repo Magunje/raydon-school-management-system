@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Attendance</h1>
+        <p class="text-secondary mb-0">{{ pupil.first_name }} {{ pupil.surname }} | {{ pupil.admission_no }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Attendance Rate</span><strong>{{ summary.percentage|floatformat:1 }}%</strong></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Present</span><strong>{{ summary.present_days }}</strong></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Late</span><strong>{{ summary.late_days }}</strong></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="stat-card"><span>Absent</span><strong>{{ summary.absent_days }}</strong></div></div>
+</div>
+
+<section class="panel">
+    <h2 class="h5 mb-3">Daily History</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Date</th><th>Status</th><th>Remarks</th><th>Updated</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>{{ row.attendance_date }}</td>
+                    <td><span class="badge {% if row.status == 'Present' %}bg-success{% elif row.status == 'Late' %}bg-warning text-dark{% elif row.status == 'Absent' %}bg-danger{% else %}bg-secondary{% endif %}">{{ row.status }}</span></td>
+                    <td>{{ row.notes|default:"-" }}</td>
+                    <td>{{ row.updated_at|default:row.marked_at|default:"-" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="4" class="text-secondary">No attendance records found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Subject Allocations - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Subject Allocations</h1>
+        <p class="text-secondary mb-0">Assign subjects, classes, and streams to teachers for marking and results tracking.</p>
+    </div>
+    <div>
+        <a class="btn btn-primary" href="{% url 'new_allocation' %}"><i class="bi bi-plus-circle"></i> New Allocation</a>
+    </div>
+</div>
+
+<div class="card card-custom mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-9">
+                <input class="form-control" name="q" value="{{ q }}" placeholder="Search by teacher name, username, or subject name...">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card card-custom">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Teacher</th>
+                        <th>Subject</th>
+                        <th>Academic Year</th>
+                        <th>Term</th>
+                        <th>Form</th>
+                        <th>Stream</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alloc in allocations %}
+                    <tr>
+                        <td><strong>{{ alloc.teacher.full_name }}</strong> <br><small class="text-secondary">{{ alloc.teacher.username }}</small></td>
+                        <td><strong>{{ alloc.subject.name }}</strong> <br><small class="text-secondary">{{ alloc.subject.code }}</small></td>
+                        <td>{{ alloc.academic_year.name }}</td>
+                        <td>{{ alloc.academic_term.name }}</td>
+                        <td>{{ alloc.form.name }}</td>
+                        <td>{{ alloc.stream.name }}</td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'edit_allocation' alloc.pk %}"><i class="bi bi-pencil"></i> Edit</a>
+                                <form method="post" action="{% url 'delete_allocation' alloc.pk %}" onsubmit="return confirm('Delete this allocation?');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-secondary">No subject allocations found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

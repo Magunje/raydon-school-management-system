@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Staff Login - {{ app_title }}{% endblock %}
+
+{% block auth_content %}
+<section class="auth-panel p-4">
+    <div class="text-center mb-4">
+        <img src="{% static 'img/raydon-system-logo.svg' %}" alt="{{ school_name }}" style="width:64px;height:64px">
+        <h1 class="h4 mt-3 mb-1">Staff Login</h1>
+        <p class="text-secondary mb-0">{{ school_name }}</p>
+    </div>
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post" class="form-panel">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_username">Username, staff number, or email</label>
+            <input id="id_username" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="mb-3">
+            <label for="id_password">Password</label>
+            <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right"></i> Login</button>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Manage Period Configs - Timetables{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-gray-800">School Timetable structure</h1>
+        <p class="text-muted mb-0"><small>Configure lesson durations, opening and closing hours, tea breaks, and lunch breaks.</small></p>
+    </div>
+    <div>
+        <a href="{% url 'timetable:dashboard' %}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="{% url 'timetable:period_config_new' %}" class="btn btn-teal btn-sm" style="background-color: #0f766e; color: white;"><i class="bi bi-plus-circle"></i> Add Period</a>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase fs-7" style="border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th class="px-4 py-3 text-center" style="width: 100px;">Period No</th>
+                        <th class="py-3">Label / Name</th>
+                        <th class="py-3">Type</th>
+                        <th class="py-3">Timings</th>
+                        <th class="px-4 py-3 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for config in configs %}
+                    <tr {% if config.period_type != 'Lesson' %}style="background-color: #f8fafc;"{% endif %}>
+                        <td class="px-4 py-3 text-center font-weight-bold" style="color: #0f766e; font-size: 1.1em;">{{ config.period_no }}</td>
+                        <td class="py-3 font-weight-bold">{{ config.label|default:"-" }}</td>
+                        <td class="py-3">
+                            {% if config.period_type == 'Lesson' %}
+                            <span class="badge bg-success">Lesson</span>
+                            {% elif config.period_type == 'Break' %}
+                            <span class="badge bg-warning text-dark">Tea Break</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Lunch Break</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 font-monospace font-weight-bold text-secondary">{{ config.start_time }} - {{ config.end_time }}</td>
+                        <td class="px-4 py-3 text-end">
+                            <a href="{% url 'timetable:period_config_edit' config.config_id %}" class="btn btn-outline-primary btn-sm me-1"><i class="bi bi-pencil"></i> Edit</a>
+                            <form action="{% url 'timetable:period_config_delete' config.config_id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this period configuration?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+                            No periods configured yet. They will be auto-generated when you run the timetable engine, or click "Add Period" to define manually.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

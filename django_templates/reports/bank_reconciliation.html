@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Bank Reconciliation - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">{{ subtitle }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="?report=reconciliation&start={{ start_date }}&end={{ end_date }}&export=pdf"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+        <a class="btn btn-outline-primary" href="?report=reconciliation&start={{ start_date }}&end={{ end_date }}&export=xlsx"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+    </div>
+</div>
+
+<!-- Financial Summary Roster -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-primary border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Opening Balance</span>
+            <strong class="text-primary mt-1">USD {{ opening_balance|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-success border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Total Debits (Receipts)</span>
+            <strong class="text-success mt-1">+ USD {{ total_debit|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-danger border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Total Credits (Payments)</span>
+            <strong class="text-danger mt-1">- USD {{ total_credit|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-info border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Closing Balance</span>
+            <strong class="text-info mt-1">USD {{ closing_balance|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-success border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Cleared Cashbook</span>
+            <strong class="text-success mt-1">USD {{ cleared_total|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-warning border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Outstanding Cashbook</span>
+            <strong class="text-warning mt-1">USD {{ outstanding_total|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-secondary border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Bank Statement Net</span>
+            <strong class="text-secondary mt-1">USD {{ bank_statement_balance|floatformat:2 }}</strong>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card border-start border-danger border-4 shadow-sm">
+            <span class="text-muted small uppercase fw-bold">Difference</span>
+            <strong class="text-danger mt-1">USD {{ reconciliation_difference|floatformat:2 }}</strong>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<section class="panel mb-4 filter-panel shadow-sm">
+    <form class="row g-3 align-items-end" method="get">
+        <input type="hidden" name="report" value="reconciliation">
+        <div class="col-md-4">
+            <label for="start" class="form-label small fw-bold">Start Date</label>
+            <input type="date" id="start" name="start" value="{{ start_date }}" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label for="end" class="form-label small fw-bold">End Date</label>
+            <input type="date" id="end" name="end" value="{{ end_date }}" class="form-control">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel"></i> Apply Filter</button>
+            <a href="?report=reconciliation" class="btn btn-outline-secondary w-50">Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="panel mb-4 shadow-sm">
+    <h2 class="h6 mb-3"><i class="bi bi-upload"></i> Import Bank Statement CSV</h2>
+    <form class="row g-3 align-items-end" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="report" value="reconciliation">
+        <input type="hidden" name="start" value="{{ start_date }}">
+        <input type="hidden" name="end" value="{{ end_date }}">
+        <div class="col-md-8">
+            <label for="statement_file" class="form-label small fw-bold">CSV file</label>
+            <input type="file" id="statement_file" name="statement_file" class="form-control" accept=".csv" required>
+            <small class="text-secondary">Supported columns include date, description, reference, debit/withdrawal, credit/deposit, money_in, money_out, or signed amount.</small>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-bank"></i> Import and Match</button>
+        </div>
+    </form>
+</section>
+
+<!-- Ledger Table -->
+<section class="panel shadow-sm">
+    <h2 class="h6 mb-3"><i class="bi bi-list-check"></i> Cash Book Ledger Entries</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Ledger Source</th>
+                    <th>Method</th>
+                    <th>Reference No</th>
+                    <th class="text-end">Debit (Collections)</th>
+                    <th class="text-end">Credit (Payments)</th>
+                    <th class="text-end">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><strong>{{ row.entry_date }}</strong></td>
+                    <td><span class="badge {% if row.source == 'Expense Payment' %}bg-danger-subtle text-danger{% else %}bg-success-subtle text-success{% endif %}">{{ row.source }}</span></td>
+                    <td>{{ row.method }}</td>
+                    <td><code>{{ row.reference_no|default:"-" }}</code></td>
+                    <td class="text-end text-success">
+                        {% if row.debit > 0 %}
+                        + USD {{ row.debit|floatformat:2 }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end text-danger">
+                        {% if row.credit > 0 %}
+                        - USD {{ row.credit|floatformat:2 }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-bold">USD {{ row.balance|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-secondary py-5">
+                        <i class="bi bi-journal-x display-6 mb-2 d-block"></i>
+                        No transactions found for the selected date range.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel shadow-sm mt-4">
+    <h2 class="h6 mb-3"><i class="bi bi-bank2"></i> Unmatched Bank Statement Lines</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Reference</th>
+                    <th class="text-end">Money In</th>
+                    <th class="text-end">Money Out</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in unmatched_bank_rows %}
+                <tr>
+                    <td>{{ row.transaction_date }}</td>
+                    <td>{{ row.description|default:"-" }}</td>
+                    <td><code>{{ row.reference_no|default:"-" }}</code></td>
+                    <td class="text-end text-success">USD {{ row.money_in|floatformat:2 }}</td>
+                    <td class="text-end text-danger">USD {{ row.money_out|floatformat:2 }}</td>
+                    <td><span class="badge bg-warning text-dark">{{ row.match_status|default:"Unmatched" }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-secondary py-4">No unmatched bank statement lines.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}New POS Sale - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">New POS Sale</h1>
+        <p class="text-secondary mb-0">Sell inventory items, reduce stock, and issue a POS receipt.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/uniform-pos"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3">
+    <!-- Left column: Add items to checkout -->
+    <div class="col-lg-8">
+        <section class="panel mb-3">
+            <h2 class="h5 mb-3">Add items to Checkout</h2>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label for="item_select" class="form-label fw-bold">Select Item</label>
+                    <select id="item_select" class="form-select">
+                        <option value="">-- Choose Item --</option>
+                        {% for item in items %}
+                        <option value="{{ item.item_id }}" data-name="{{ item.item_name }}" data-price="{{ item.sale_price }}" data-stock="{{ item.quantity }}" data-unit="{{ item.unit }}">
+                            {{ item.item_name }} (Stock: {{ item.quantity }} {{ item.unit }}) - USD {{ item.sale_price }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="line_qty" class="form-label fw-bold">Qty</label>
+                    <input id="line_qty" type="number" class="form-control" min="1" step="1" value="1">
+                </div>
+                <div class="col-md-3">
+                    <label for="line_price" class="form-label fw-bold">Unit Price (USD)</label>
+                    <input id="line_price" type="number" class="form-control" step="0.01" min="0">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" id="btn_add_line" class="btn btn-success w-100"><i class="bi bi-plus-circle"></i> Add</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2 class="h5 mb-3">Checkout Lines</h2>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="checkout_table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item Name</th>
+                            <th class="text-center" style="width: 100px;">Quantity</th>
+                            <th class="text-end" style="width: 120px;">Unit Price</th>
+                            <th class="text-end" style="width: 120px;">Total</th>
+                            <th class="text-center" style="width: 80px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checkout_tbody">
+                        <tr id="empty_row">
+                            <td colspan="5" class="text-center text-muted py-4">No items added to checkout yet.</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="3" class="text-end">Grand Total:</td>
+                            <td class="text-end text-primary" id="grand_total_cell">USD 0.00</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Right column: Sale details & checkout -->
+    <div class="col-lg-4">
+        <section class="panel form-panel">
+            <h2 class="h5 mb-3">Sale Details</h2>
+            <form method="post" id="pos_sale_form">
+                {% csrf_token %}
+                
+                <!-- Hidden inputs container for line items -->
+                <div id="hidden_inputs_container"></div>
+
+                <div class="mb-3">
+                    <label for="receipt_no" class="form-label fw-bold">Receipt Number</label>
+                    <input id="receipt_no" class="form-control" value="{{ receipt_no }}" readonly style="background-color: #f1f5f9;">
+                </div>
+                <div class="mb-3">
+                    <label for="sale_date" class="form-label fw-bold">Sale Date</label>
+                    <input id="sale_date" name="sale_date" type="date" class="form-control" value="{{ today }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="customer_name" class="form-label fw-bold">Customer Name</label>
+                    <input id="customer_name" name="customer_name" class="form-control" placeholder="Walk-in Customer">
+                </div>
+                <div class="mb-3">
+                    <label for="payment_method" class="form-label fw-bold">Payment Method</label>
+                    <select id="payment_method" name="payment_method" class="form-select">
+                        <option>Cash</option>
+                        <option>Bank Transfer</option>
+                        <option>Mobile Money</option>
+                        <option>Card</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="reference_no" class="form-label fw-bold">Payment Reference</label>
+                    <input id="reference_no" name="reference_no" class="form-control" placeholder="Ref Number if applicable">
+                </div>
+                <div class="mb-3">
+                    <label for="notes" class="form-label fw-bold">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Optional comments..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2" id="btn_submit_sale"><i class="bi bi-cart-check"></i> Complete Sale</button>
+            </form>
+        </section>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const itemSelect = document.getElementById("item_select");
+    const lineQty = document.getElementById("line_qty");
+    const linePrice = document.getElementById("line_price");
+    const btnAddLine = document.getElementById("btn_add_line");
+    const checkoutTbody = document.getElementById("checkout_tbody");
+    const emptyRow = document.getElementById("empty_row");
+    const grandTotalCell = document.getElementById("grand_total_cell");
+    const posForm = document.getElementById("pos_sale_form");
+    const hiddenContainer = document.getElementById("hidden_inputs_container");
+
+    let checkoutItems = [];
+
+    // Automatically set price when item is selected
+    itemSelect.addEventListener("change", function () {
+        const selected = this.options[this.selectedIndex];
+        if (selected && selected.value) {
+            linePrice.value = selected.dataset.price || "";
+        } else {
+            linePrice.value = "";
+        }
+    });
+
+    // Add item line to table
+    btnAddLine.addEventListener("click", function () {
+        const itemId = itemSelect.value;
+        if (!itemId) {
+            alert("Please select an item first.");
+            return;
+        }
+
+        const selected = itemSelect.options[itemSelect.selectedIndex];
+        const itemName = selected.dataset.name;
+        const stock = parseFloat(selected.dataset.stock || "0");
+        const qty = parseInt(lineQty.value || "0");
+        const price = parseFloat(linePrice.value || "0");
+        const unit = selected.dataset.unit || "units";
+
+        if (qty <= 0) {
+            alert("Quantity must be at least 1.");
+            return;
+        }
+
+        if (price < 0) {
+            alert("Price cannot be negative.");
+            return;
+        }
+
+        if (qty > stock) {
+            alert(`Insufficient stock. Only ${stock} ${unit} available.`);
+            return;
+        }
+
+        // Check if item already exists in checkout, update it if so
+        const existingIdx = checkoutItems.findIndex(x => x.itemId === itemId);
+        if (existingIdx > -1) {
+            const newQty = checkoutItems[existingIdx].qty + qty;
+            if (newQty > stock) {
+                alert(`Cannot add more. Total checkout quantity (${newQty}) exceeds available stock (${stock}).`);
+                return;
+            }
+            checkoutItems[existingIdx].qty = newQty;
+            checkoutItems[existingIdx].price = price;
+        } else {
+            checkoutItems.push({
+                itemId: itemId,
+                itemName: itemName,
+                qty: qty,
+                price: price
+            });
+        }
+
+        renderTable();
+        
+        // Reset line input controls
+        itemSelect.value = "";
+        lineQty.value = "1";
+        linePrice.value = "";
+    });
+
+    function renderTable() {
+        // Clear previous rows except empty row
+        const rows = checkoutTbody.querySelectorAll("tr:not(#empty_row)");
+        rows.forEach(r => r.remove());
+
+        if (checkoutItems.length === 0) {
+            emptyRow.style.display = "table-row";
+            grandTotalCell.innerText = "USD 0.00";
+            return;
+        }
+
+        emptyRow.style.display = "none";
+        let grandTotal = 0;
+
+        checkoutItems.forEach((item, idx) => {
+            const lineTotal = item.qty * item.price;
+            grandTotal += lineTotal;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><strong>${item.itemName}</strong></td>
+                <td class="text-center">${item.qty}</td>
+                <td class="text-end">USD ${item.price.toFixed(2)}</td>
+                <td class="text-end fw-bold">USD ${lineTotal.toFixed(2)}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove" data-idx="${idx}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            checkoutTbody.appendChild(tr);
+        });
+
+        grandTotalCell.innerText = `USD ${grandTotal.toFixed(2)}`;
+
+        // Attach event listeners to remove buttons
+        document.querySelectorAll(".btn-remove").forEach(btn => {
+            btn.addEventListener("click", function () {
+                const idx = parseInt(this.dataset.idx);
+                checkoutItems.splice(idx, 1);
+                renderTable();
+            });
+        });
+    }
+
+    // Populate hidden inputs before submit
+    posForm.addEventListener("submit", function (e) {
+        if (checkoutItems.length === 0) {
+            e.preventDefault();
+            alert("Please add at least one item to checkout before completing the sale.");
+            return;
+        }
+
+        hiddenContainer.innerHTML = "";
+        checkoutItems.forEach(item => {
+            const inputId = document.createElement("input");
+            inputId.type = "hidden";
+            inputId.name = "item_ids";
+            inputId.value = item.itemId;
+
+            const inputQty = document.createElement("input");
+            inputQty.type = "hidden";
+            inputQty.name = "quantities";
+            inputQty.value = item.qty;
+
+            const inputPrice = document.createElement("input");
+            inputPrice.type = "hidden";
+            inputPrice.name = "unit_prices";
+            inputPrice.value = item.price;
+
+            hiddenContainer.appendChild(inputId);
+            hiddenContainer.appendChild(inputQty);
+            hiddenContainer.appendChild(inputPrice);
+        });
+    });
+});
+</script>
+{% endblock %}

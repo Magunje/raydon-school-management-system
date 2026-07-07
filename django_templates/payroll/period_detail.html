@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}{{ period.period_code }} Payroll - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ period.period_code }} Payroll</h1>
+        <p class="text-secondary mb-0"><span class="status-pill {{ period.status|lower }}">{{ period.status }}</span>{% if period.locked %} <span class="badge text-bg-dark">Locked</span>{% endif %}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'payroll:dashboard' %}"><i class="bi bi-arrow-left"></i> Back</a>
+        <a class="btn btn-outline-primary" href="{% url 'payroll:bank_export' period.id %}"><i class="bi bi-file-earmark-spreadsheet"></i> Export Bank Excel</a>
+        <a class="btn btn-outline-success" href="{% url 'payroll:period_payslips_pdf' period.id %}"><i class="bi bi-printer"></i> Bulk Payslips PDF</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Employees</span><strong>{{ summary.employees|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Gross salary</span><strong>USD {{ summary.gross|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Deductions</span><strong>USD {{ summary.deductions|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Net payable</span><strong>USD {{ summary.net|default:0|floatformat:2 }}</strong></div></div>
+</div>
+
+<section class="panel mb-3">
+    <form class="row g-2 filter-panel" method="get">
+        <div class="col-md-4">
+            <label for="q">Search</label>
+            <input id="q" name="q" value="{{ request.GET.q }}" placeholder="Employee, number, job title">
+        </div>
+        <div class="col-md-3">
+            <label for="department">Department</label>
+            <select id="department" name="department">
+                <option value="">All departments</option>
+                {% for department in departments %}
+                <option value="{{ department }}" {% if request.GET.department == department %}selected{% endif %}>{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">All statuses</option>
+                <option value="Draft" {% if request.GET.status == "Draft" %}selected{% endif %}>Draft</option>
+                <option value="Reviewed" {% if request.GET.status == "Reviewed" %}selected{% endif %}>Reviewed</option>
+                <option value="Approved" {% if request.GET.status == "Approved" %}selected{% endif %}>Approved</option>
+                <option value="Paid" {% if request.GET.status == "Paid" %}selected{% endif %}>Paid</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel mb-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-3">
+        <h2 class="h5 mb-0">Approval Workflow</h2>
+        <form class="d-flex flex-wrap gap-2" method="post" action="{% url 'payroll:period_workflow' period.id %}">
+            {% csrf_token %}
+            <input name="notes" type="hidden" value="">
+            {% if period.status == "Draft" %}
+            <button class="btn btn-outline-primary" name="action" value="review" type="submit"><i class="bi bi-check2-square"></i> Mark Reviewed</button>
+            <button class="btn btn-success" name="action" value="approve" type="submit"><i class="bi bi-shield-check"></i> Approve Payroll</button>
+            {% elif period.status == "Reviewed" %}
+            <button class="btn btn-success" name="action" value="approve" type="submit"><i class="bi bi-shield-check"></i> Approve Payroll</button>
+            <button class="btn btn-outline-secondary" name="action" value="reopen" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Reopen Draft</button>
+            {% elif period.status == "Approved" %}
+            <button class="btn btn-primary" name="action" value="mark_paid" type="submit"><i class="bi bi-cash-coin"></i> Mark Paid</button>
+            {% endif %}
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Payment</th>
+                <th class="text-end">Basic</th>
+                <th class="text-end">Gross</th>
+                <th class="text-end">Deductions</th>
+                <th class="text-end">Net</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for run in page.object_list %}
+            <tr>
+                <td><strong>{{ run.employee_name }}</strong><br><small class="text-secondary">{{ run.employee_number }} | {{ run.job_title }}</small></td>
+                <td>{{ run.department }}</td>
+                <td>{{ run.payment_method }}<br><small class="text-secondary">{{ run.bank_name|default:"-" }}</small></td>
+                <td class="text-end">USD {{ run.basic_salary|floatformat:2 }}</td>
+                <td class="text-end">USD {{ run.gross_salary|floatformat:2 }}</td>
+                <td class="text-end">USD {{ run.total_deductions|floatformat:2 }}</td>
+                <td class="text-end"><strong>USD {{ run.net_salary|floatformat:2 }}</strong></td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-secondary" href="{% url 'payroll:run_edit' run.id %}"><i class="bi bi-pencil"></i></a>
+                        <a class="btn btn-outline-secondary" href="{% url 'payroll:payslip' run.id %}"><i class="bi bi-receipt"></i></a>
+                        <a class="btn btn-outline-secondary" href="{% url 'payroll:payslip_pdf' run.id %}"><i class="bi bi-filetype-pdf"></i></a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-secondary py-4">No employees loaded for this period.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="text-secondary small">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        <div class="btn-group">
+            {% if page.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
+            {% if page.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page.next_page_number }}">Next</a>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}My Academic Results - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Academic Results</h1>
+        <p class="text-secondary mb-0">Published reports only. Unapproved results remain hidden.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+{% if restricted_reason %}
+<div class="alert alert-warning">
+    <strong>Results restricted.</strong> {{ restricted_reason }} must be cleared before report cards are released.
+</div>
+{% endif %}
+
+{% if rows %}
+<div class="row g-3 mb-3">
+    <div class="col-lg-5">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Latest Subject Breakdown</h2>
+            {% for entry in latest_entries %}
+            <div class="mb-3">
+                <div class="d-flex justify-content-between gap-3 mb-1">
+                    <span>{{ entry.subject_name }}</span>
+                    <strong>{{ entry.mark|floatformat:1 }}% {{ entry.grade }}</strong>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ entry.mark|default:0 }}%;" aria-valuenow="{{ entry.mark|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary mb-0">No subject marks were found for the latest published report.</p>
+            {% endfor %}
+        </section>
+    </div>
+    <div class="col-lg-7">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Performance Trend</h2>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Term</th><th>Average</th><th>Class Position</th></tr></thead>
+                    <tbody>
+                    {% for row in trend %}
+                        <tr>
+                            <td>{{ row.term }} {{ row.year }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 10px;">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ row.average_mark|default:0 }}%;"></div>
+                                    </div>
+                                    <strong>{{ row.average_mark|floatformat:1 }}%</strong>
+                                </div>
+                            </td>
+                            <td>{{ row.class_position|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endif %}
+
+<section class="panel">
+    <h2 class="h5 mb-3">Published Term Reports</h2>
+    {% if rows %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Academic Period</th>
+                    <th>Average Mark</th>
+                    <th>Total Marks</th>
+                    <th>Class Position</th>
+                    <th>Form Position</th>
+                    <th>Published</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><strong>{{ row.term }} {{ row.year }}</strong></td>
+                    <td>{{ row.average_mark|floatformat:2 }}%</td>
+                    <td>{{ row.total_marks|floatformat:0 }}</td>
+                    <td>{{ row.class_position|default:"-" }}</td>
+                    <td>{{ row.grade_position|default:"-" }}</td>
+                    <td>{{ row.published_at|default:"Published" }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="/student-portal/results/pdf?result_id={{ row.result_id }}"><i class="bi bi-file-earmark-pdf"></i> Report Card</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info mb-0">
+        No published results are currently available for this profile.
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

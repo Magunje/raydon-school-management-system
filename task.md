@@ -1,0 +1,60 @@
+- [x] Create Django app `academic_structure` (Phase 1)
+- [x] Write `academic_structure/models.py` (AcademicYear, AcademicTerm, Form, Stream, AcademicClass, and StudentClassAllocation)
+- [x] Implement capacity overrides and Zimbabwean streaming system matrix validation
+- [x] Write `academic_structure/tests.py` testing validations and constraints
+- [x] Add `'academic_structure'` to `INSTALLED_APPS` in settings
+- [x] Run Django migrations for the new app on dev and main databases
+- [x] Create Django app `student_registry` (Phase 2)
+- [x] Write `student_registry/models.py` (Student, Guardian, FeeStructure, and StudentFeeRecord)
+- [x] Implement mutable guardian relations with exactly one primary database flag
+- [x] Implement immutable sequential auto-numbering system
+- [x] Write `student_registry/signals.py` for post-save auto fee assignment bindings (USD 100/150 based on academic level)
+- [x] Write `student_registry/tests.py` validating boundary constraints and signals
+- [x] Add `'student_registry'` to `INSTALLED_APPS` in settings
+- [x] Run migrations and verify complete test suite
+- [x] Implement Finite State Machine and allowed status transition matrix (Phase 3)
+- [x] Implement ZIMSEC freeze logic blocking non-admin transitions out of Pending ZIMSEC Analysis before March 1
+- [x] Implement end-of-year yearly progression promotion and freezing workflow
+- [x] Implement A-Level Reactivation process mapping returning students to Form 5 with stream-specific fee structures
+- [x] Implement status log audit telemetry mapping acted user, timestamp, previous and new status
+- [x] Fix core CSP scheduler double period split-break bug
+- [x] Run migrations and verify all 70 tests in the test suite pass successfully
+- [x] Create Django app `subject_management` (Phase 4)
+- [x] Write `subject_management/models.py` (Subject, StudentSubjectRegistration, TeacherSubjectAllocation, and SubjectManagementAuditLog)
+- [x] Write `subject_management/signals.py` handling modification/deletion audit logs
+- [x] Seed baseline O-Level and A-Level subjects via Django database migrations
+- [x] Implement level-specific hard registration caps (max 10 for O-Level, max 5 for A-Level) and level mismatch validation
+- [x] Implement row-level data security filters isolating teacher view to assigned subjects and sections
+- [x] Write `subject_management/tests.py` validating caps, teacher isolation, mismatches, and audit logs
+- [x] Add `'subject_management'` to `INSTALLED_APPS` in settings
+- [x] Run migrations and verify all 75 tests in the test suite pass successfully
+- [x] Create Django app `results_centre` (Phase 5)
+- [x] Write `results_centre/models.py` (AssessmentComponent, Assessment, StudentResult, and ResultCorrectionLog)
+- [x] Write `results_centre/services.py` calculating ranks and averages
+- [x] Implement weight limit checks and 100% sum validations for Published status
+- [x] Implement automatic grading conversion (ZIMSEC mappings) and rankings calculations
+- [x] Implement write-once compliance locking results on Published status and recording corrections logs
+- [x] Enforce integration rigidity blocking marks for inactive or unregistered students
+- [x] Write `results_centre/tests.py` validating weights, caps, rankings, overrides, and rigidity
+- [x] Add `'results_centre'` to `INSTALLED_APPS` in settings
+- [x] Run migrations and verify all 80 tests in the test suite pass successfully
+- [x] Create Django app `zimsec_analytics` (Phase 6)
+- [x] Write `zimsec_analytics/models.py` (ZIMSECCandidateResult)
+- [x] Write `zimsec_analytics/services.py` calculating student metrics and section metrics
+- [x] Implement Subject registration and exam year check validations
+- [x] Implement student analytics (total passes, distinction counts, A-Level eligibility flags)
+- [x] Implement section analytics pass rate grouping across Subject, Teacher, Stream, Form, and Department
+- [x] Implement workflow coupling block preventing status transition out of Pending ZIMSEC Analysis to Archived/Alumni without results
+- [x] Write `zimsec_analytics/tests.py` validating captures, grouping analytics, and lifecycle transition constraints
+- [x] Add `'zimsec_analytics'` to `INSTALLED_APPS` in settings
+- [x] Run migrations and verify all 83 tests in the test suite pass successfully
+- [x] Create Django app `attendance_ledger` (Phase 8)
+- [x] Write `attendance_ledger/models.py` (AttendanceRecord and StudentAttendanceSummary)
+- [x] Write `attendance_ledger/services.py` updating summaries and calculations
+- [x] Write `attendance_ledger/signals.py` auto-updating summaries on save or delete events
+- [x] Implement dual-mode DAILY vs LESSON attendance tracking based on settings
+- [x] Implement entry filter validation preventing creations for Archived, Alumni, Withdrawn, and Pending ZIMSEC Analysis students
+- [x] Implement properties checking chronic absenteeism and consecutive absence alerts
+- [x] Write `attendance_ledger/tests.py` validating tracking modes, entry filters, and chronic alerts
+- [x] Add `'attendance_ledger'` to `INSTALLED_APPS` in settings
+- [x] Run migrations and verify all 96 tests in the test suite pass successfully

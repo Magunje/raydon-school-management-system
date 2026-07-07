@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Payslip {{ payslip.slip_number }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Payslip</h1>
+        <p class="text-secondary mb-0">{{ payslip.slip_number }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'payroll:period_detail' run.period_id %}"><i class="bi bi-arrow-left"></i> Back</a>
+        <a class="btn btn-primary" href="{% url 'payroll:payslip_pdf' run.id %}"><i class="bi bi-filetype-pdf"></i> PDF</a>
+    </div>
+</div>
+
+<section class="panel mx-auto" style="max-width: 920px;">
+    <div class="d-flex justify-content-between gap-3 border-bottom pb-3 mb-3">
+        <div>
+            <h2 class="h4 mb-1">{{ school_name }}</h2>
+            <div class="text-secondary">Payroll period {{ run.period.period_code }}</div>
+        </div>
+        <div class="text-end">
+            <strong>{{ run.employee_name }}</strong><br>
+            <span class="text-secondary">{{ run.employee_number }} | {{ run.job_title }}</span><br>
+            <span class="text-secondary">{{ run.department }}</span>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light"><tr><th>Earnings</th><th class="text-end">Amount</th></tr></thead>
+                    <tbody>
+                    {% for earning in earnings %}
+                    <tr><td>{{ earning.label }}</td><td class="text-end">USD {{ earning.amount|floatformat:2 }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-secondary">No earnings recorded.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light"><tr><th>Deductions</th><th class="text-end">Amount</th></tr></thead>
+                    <tbody>
+                    {% for deduction in deductions %}
+                    <tr><td>{{ deduction.label }}</td><td class="text-end">USD {{ deduction.amount|floatformat:2 }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-secondary">No deductions recorded.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+        <div class="col-md-4"><div class="stat-card"><span>Gross salary</span><strong>USD {{ run.gross_salary|floatformat:2 }}</strong></div></div>
+        <div class="col-md-4"><div class="stat-card"><span>Total deductions</span><strong>USD {{ run.total_deductions|floatformat:2 }}</strong></div></div>
+        <div class="col-md-4"><div class="stat-card"><span>Net salary</span><strong>USD {{ run.net_salary|floatformat:2 }}</strong></div></div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="text-secondary small">Payment method</div>
+            <strong>{{ run.payment_method }}</strong>
+        </div>
+        <div class="col-md-6">
+            <div class="text-secondary small">Bank details</div>
+            <strong>{{ run.bank_name|default:"-" }}</strong><br>
+            <span>{{ run.account_number|default:"-" }}</span>
+        </div>
+    </div>
+</section>
+{% endblock %}

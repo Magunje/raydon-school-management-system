@@ -1,0 +1,896 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ settings.school_name|default:"RAYDON SCHOOL" }} | Excellence in Education</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --brand-primary: #071f4d;
+            --brand-hover: #0b2d6d;
+            --brand-secondary: #c18a13;
+            --brand-dark: #061832;
+            --bg-light: #f7f9fc;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+        
+        body {
+            font-family: var(--font-body);
+            color: var(--text-dark);
+            background-color: var(--bg-light);
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-display);
+            font-weight: 700;
+        }
+        
+        .site-topbar {
+            background: var(--brand-primary);
+            color: #dbeafe;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.45rem 0;
+        }
+
+        .site-topbar a {
+            color: #dbeafe;
+            text-decoration: none;
+        }
+
+        .site-topbar i {
+            color: var(--brand-secondary);
+            margin-right: 0.35rem;
+        }
+
+        .navbar {
+            background: #ffffff !important;
+            border-bottom: 1px solid rgba(7, 31, 77, 0.1);
+            padding: 0.65rem 0;
+            box-shadow: 0 10px 30px rgba(7, 31, 77, 0.06);
+        }
+        
+        .navbar-brand {
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            color: var(--brand-primary) !important;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            line-height: 1.05;
+        }
+
+        .navbar-brand small {
+            display: block;
+            color: var(--brand-secondary);
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            letter-spacing: 0;
+            margin-top: 0.15rem;
+        }
+        
+        .nav-link {
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            padding: 0.5rem 0.7rem !important;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+        }
+        
+        .nav-link:hover {
+            color: var(--brand-primary) !important;
+        }
+
+        .portal-login-btn {
+            background: var(--brand-secondary);
+            border-color: var(--brand-secondary);
+            color: #fff;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+        }
+
+        .portal-login-btn:hover {
+            background: #a66f0a;
+            border-color: #a66f0a;
+            color: #fff;
+        }
+
+        .btn-primary {
+            background-color: var(--brand-secondary);
+            border-color: var(--brand-secondary);
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .btn-primary:hover {
+            background-color: #a66f0a;
+            border-color: #a66f0a;
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+            font-weight: 800;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: #fff;
+        }
+
+        .text-teal {
+            color: var(--brand-primary) !important;
+        }
+
+        /* Announcement Ticker Banner */
+        .announcement-ticker {
+            background-color: #fffbeb;
+            border-bottom: 1px solid #fef3c7;
+            color: #b45309;
+            padding: 0.6rem 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .ticker-title {
+            background-color: var(--brand-secondary);
+            color: #fff;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
+        }
+        
+        .ticker-content-container {
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%;
+        }
+        
+        .ticker-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker 30s linear infinite;
+        }
+        
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 520px;
+            display: flex;
+            align-items: center;
+            background:
+                linear-gradient(90deg, rgba(7,31,77,0.93) 0%, rgba(7,31,77,0.82) 38%, rgba(7,31,77,0.25) 68%, rgba(7,31,77,0.05) 100%),
+                url("{% static 'img/raydon-school-hero.png' %}") center/cover no-repeat;
+            color: #fff;
+            padding: 4.5rem 0 5.25rem;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            display: none;
+        }
+        
+        .hero-container {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero-copy {
+            max-width: 620px;
+        }
+
+        .hero-motto {
+            font-size: 0.9rem;
+            letter-spacing: 0.15em;
+            color: var(--brand-secondary);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .hero h1 {
+            font-size: clamp(2.45rem, 5vw, 4.25rem);
+            line-height: 1.15;
+            font-weight: 800;
+        }
+
+        .hero p.lead {
+            max-width: 540px;
+            font-size: 1rem;
+        }
+
+        .quick-access-wrap {
+            margin-top: -42px;
+            position: relative;
+            z-index: 4;
+        }
+
+        .quick-access {
+            background: #ffffff;
+            border: 1px solid rgba(7, 31, 77, 0.08);
+            border-radius: 8px;
+            box-shadow: 0 22px 40px rgba(7, 31, 77, 0.14);
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            overflow: hidden;
+        }
+
+        .quick-tile {
+            display: grid;
+            grid-template-columns: 42px minmax(0, 1fr);
+            gap: 12px;
+            padding: 18px;
+            min-height: 96px;
+            text-decoration: none;
+            color: var(--text-dark);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .quick-tile:last-child {
+            border-right: 0;
+        }
+
+        .quick-tile i {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: var(--brand-primary);
+            color: #fff;
+            font-size: 1.15rem;
+        }
+
+        .quick-tile:nth-child(2) i,
+        .quick-tile:nth-child(4) i {
+            background: var(--brand-secondary);
+        }
+
+        .quick-tile strong {
+            display: block;
+            color: var(--brand-primary);
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+
+        .quick-tile span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.74rem;
+            line-height: 1.35;
+        }
+
+        .quick-tile em {
+            display: block;
+            color: var(--brand-primary);
+            font-size: 0.72rem;
+            font-style: normal;
+            font-weight: 800;
+            margin-top: 6px;
+            text-transform: uppercase;
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem 1.5rem;
+            background: #ffffff;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.01);
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: var(--brand-primary);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 30px rgba(15,118,110,0.08);
+            border-color: rgba(15, 118, 110, 0.2);
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        
+        .stat-card i {
+            font-size: 2.5rem;
+            color: var(--brand-primary);
+            margin-bottom: 1.25rem;
+            display: inline-block;
+        }
+        
+        .stat-card .stat-val {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-top: 0.5rem;
+            font-family: var(--font-display);
+        }
+        
+        /* Sections Layout */
+        .section {
+            padding: 6rem 0;
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 5rem;
+            text-align: center;
+        }
+        
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+        
+        .section-title p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 5px;
+            background-color: var(--brand-primary);
+            border-radius: 10px;
+        }
+        
+        /* Announcement Cards */
+        .announcement-card {
+            border: none;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        .announcement-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 30px 40px rgba(0,0,0,0.08);
+        }
+        
+        .card-img-wrap {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .announcement-card img {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .announcement-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        .badge-date {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            background-color: var(--brand-primary);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(15, 118, 110, 0.3);
+        }
+        
+        .featured-announcement {
+            border: 2px solid var(--brand-secondary) !important;
+        }
+        
+        .featured-badge {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            background-color: var(--brand-secondary);
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            z-index: 10;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        /* Testimonials Slider */
+        .testimonial-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+        }
+        
+        .quote-icon {
+            font-size: 3rem;
+            color: rgba(15, 118, 110, 0.15);
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+        
+        /* Contact Cards */
+        .contact-box {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.03);
+            border: 1px solid var(--border-color);
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .contact-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: var(--brand-light);
+            color: var(--brand-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+        
+        /* Footer styling */
+        footer {
+            background-color: var(--brand-dark);
+            color: #9ca3af;
+            padding: 5rem 0 2rem;
+            font-size: 0.95rem;
+        }
+        
+        footer h5 {
+            color: #ffffff;
+            font-family: var(--font-display);
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+        
+        footer a {
+            color: #9ca3af;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        footer a:hover {
+            color: #ffffff;
+        }
+
+        @media (max-width: 1100px) {
+            .quick-access {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .quick-tile:nth-child(2n) {
+                border-right: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .site-topbar {
+                font-size: 0.72rem;
+            }
+
+            .hero {
+                min-height: 560px;
+                padding-bottom: 5.5rem;
+                background:
+                    linear-gradient(90deg, rgba(7,31,77,0.94), rgba(7,31,77,0.78)),
+                    url("{% static 'img/raydon-school-hero.png' %}") center/cover no-repeat;
+            }
+
+            .quick-access-wrap {
+                margin-top: -28px;
+            }
+
+            .quick-access {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-tile {
+                border-right: 0;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .quick-tile:last-child {
+                border-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top Contact Bar -->
+<div class="site-topbar">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+        <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
+            <span><i class="bi bi-telephone-fill"></i>{{ settings.school_phone|default:"+263 777 921 440" }}</span>
+            <span><i class="bi bi-envelope-fill"></i>{{ settings.school_email|default:"info@raydonschool.ac.zw" }}</span>
+            <span><i class="bi bi-geo-alt-fill"></i>{{ settings.school_address|default:"22521 Ndira Street, Masvingo" }}</span>
+        </div>
+        <div class="d-flex gap-3">
+            <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+        </div>
+    </div>
+</div>
+
+<!-- Header/Navigation -->
+<nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">
+            <img src="{% static 'img/raydon-system-logo.png' %}" alt="Logo" width="58" height="58" onerror="this.src='/static/img/raydon-system-logo.svg'">
+            <span>{{ settings.school_name|default:"RAYDON HIGH SCHOOL" }}<small>{{ settings.school_motto|default:"Knowledge • Discipline • Excellence" }}</small></span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+            <div class="navbar-nav ms-auto align-items-center gap-1">
+                <a class="nav-link" href="/about-us">About Us</a>
+                <a class="nav-link" href="/academics">Academics</a>
+                <a class="nav-link" href="/admissions">Admissions</a>
+                <a class="nav-link" href="/departments">Staff Directory</a>
+                <a class="nav-link" href="/news">News</a>
+                <a class="nav-link" href="/gallery">Gallery</a>
+                <a class="nav-link" href="/contact-us">Contact</a>
+                <a class="btn portal-login-btn ms-lg-2 px-3" href="/student-portal/login"><i class="bi bi-person-lock"></i> Portal Login</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Scrolling Announcements Ticker -->
+{% if announcements %}
+<div class="announcement-ticker">
+    <div class="container d-flex align-items-center">
+        <span class="ticker-title"><i class="bi bi-bell-fill"></i> Bulletin</span>
+        <div class="ticker-content-container">
+            <div class="ticker-content">
+                {% for a in announcements %}
+                <span class="me-5"><i class="bi bi-megaphone-fill text-warning me-1"></i> <strong>{{ a.title }}:</strong> {{ a.content|truncatewords:15 }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Hero Banner -->
+<header class="hero">
+    <div class="container hero-container">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <div class="hero-copy">
+                    <p class="hero-motto mb-2">Welcome to {{ settings.school_name|default:"Raydon High School" }}</p>
+                    <h1 class="display-4 fw-bold mb-3">Nurturing Future Leaders Through Excellence</h1>
+                    <p class="lead text-white-50 mb-4" style="line-height: 1.7;">We are committed to quality education that empowers students to achieve academic excellence, strong discipline, and responsible citizenship.</p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a class="btn btn-primary btn-lg px-4" href="/about-us">Discover More <i class="bi bi-arrow-right"></i></a>
+                        <a class="btn btn-outline-light btn-lg px-4" href="/admissions">Apply Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section class="quick-access-wrap">
+        <div class="container">
+            <div class="quick-access">
+                <a class="quick-tile" href="/student-portal/login">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <span><strong>Student Portal</strong>Access your results, timetable, and resources.<em>Login Now</em></span>
+                </a>
+                <a class="quick-tile" href="/staff/login">
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span><strong>Staff Portal</strong>Manage classes, marks, attendance, and administration records.<em>Login Now</em></span>
+                </a>
+                <a class="quick-tile" href="/admissions">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                    <span><strong>Admissions</strong>Apply online for admissions into various forms.<em>Apply Now</em></span>
+                </a>
+                <a class="quick-tile" href="/news">
+                    <i class="bi bi-calendar-event-fill"></i>
+                    <span><strong>School Calendar</strong>View academic calendar, events, and term dates.<em>View Calendar</em></span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section & Stats Grid -->
+    <section class="section">
+        <div class="container">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-6">
+                    <span class="text-primary fw-bold text-uppercase tracking-wider" style="font-size: 0.85rem;"><i class="bi bi-shield-check"></i> Dynamic Educational Hub</span>
+                    <h2 class="h1 fw-bold mt-2 mb-4">A standard of academic excellence and modern governance</h2>
+                    <p class="text-secondary mb-4" style="font-size: 1.05rem; line-height: 1.8;">Our institution bridges physical education and digital administration seamlessly. Parents track fees structures and student performance trends via safe dashboards, while learners navigate classes scheduled conflicts-free by smart systems.</p>
+                    <a href="/about-us" class="btn btn-outline-primary px-4 py-2 fw-semibold">Learn More About Us <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+                <div class="col-lg-6">
+                    <div class="row g-4">
+                        {% for label, value in stats %}
+                        <div class="col-6">
+                            <div class="stat-card">
+                                {% if label == "Students" %}
+                                <i class="bi bi-people-fill text-primary"></i>
+                                {% elif label == "Teachers" %}
+                                <i class="bi bi-person-badge-fill text-teal"></i>
+                                {% elif label == "Classes" %}
+                                <i class="bi bi-door-closed-fill text-warning"></i>
+                                {% else %}
+                                <i class="bi bi-book-half text-danger"></i>
+                                {% endif %}
+                                <div class="text-secondary small fw-semibold uppercase">{{ label }}</div>
+                                <span class="stat-val d-block">{{ value }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Announcements Noticeboard -->
+    <section id="announcements" class="section bg-white border-top border-bottom">
+        <div class="container">
+            <div class="section-title">
+                <h2>News and Upcoming Events</h2>
+                <p class="mb-0">Stay informed with the latest updates from the school registrar and principal.</p>
+            </div>
+            
+            <div class="row g-4">
+                {% for a in announcements %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="announcement-card {% if forloop.first %}featured-announcement{% endif %}">
+                        <div class="card-img-wrap">
+                            {% if forloop.first %}
+                            <div class="featured-badge"><i class="bi bi-star-fill"></i> Highlighted</div>
+                            {% endif %}
+                            {% if a.image_path %}
+                            <img src="/media/{{ a.image_path }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ a.title }}">
+                            {% else %}
+                            <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="height: 220px; font-size: 1.25rem;">
+                                <i class="bi bi-megaphone-fill display-5 text-secondary"></i>
+                            </div>
+                            {% endif %}
+                            <span class="badge-date">{{ a.created_at|slice:":10" }}</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <h3 class="h5 card-title fw-bold mb-3 text-dark">{{ a.title }}</h3>
+                            <p class="card-text text-secondary" style="font-size: 0.92rem; line-height: 1.7;">{{ a.content|truncatewords:28 }}</p>
+                        </div>
+                        <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+                            <hr class="mt-0 mb-3 text-muted">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted"><i class="bi bi-person-fill"></i> Admin</small>
+                                <a href="/news" class="btn btn-link btn-sm text-teal p-0 fw-semibold text-decoration-none">Read Full Notice <i class="bi bi-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-calendar2-x display-4 text-muted mb-3 d-block"></i>
+                    <h5>No active notices posted</h5>
+                    <p class="text-secondary">Please check back later during term hours for circulars and calendar events.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Hear From Our Community</h2>
+                <p class="mb-0">Read feedback from parents, students, and alumni regarding our academic frameworks.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                        <p class="text-secondary italic mb-4" style="line-height: 1.75;">"The portal is exceptionally convenient. I can verify results card integrity and check fee balance payments instantly from my phone."</p>
+                        <hr class="text-muted">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-mock bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 42px; height: 42px;">T</div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">Mrs. T. Sibanda</h6>
+                                <small class="text-muted">High School Parent</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                        <p class="text-secondary italic mb-4" style="line-height: 1.75;">"Our timetable is extremely organized this term. We have consecutive double practical periods without overlaps, giving us plenty of lab time."</p>
+                        <hr class="text-muted">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-mock bg-success text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 42px; height: 42px;">K</div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">Kudakwashe M.</h6>
+                                <small class="text-muted">Form 4 Student</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="quote-icon"><i class="bi bi-quote"></i></div>
+                        <p class="text-secondary italic mb-4" style="line-height: 1.75;">"Raydon High prepared me for international standard university structures. The discipline, values, and academics are top tier."</p>
+                        <hr class="text-muted">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-mock bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 42px; height: 42px;">A</div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">Amanda Dube</h6>
+                                <small class="text-muted">Alumna (Class of 2024)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Map & Quick Contacts -->
+    <section class="section bg-white border-top">
+        <div class="container">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-5">
+                    <div class="contact-box">
+                        <span class="text-primary fw-bold text-uppercase tracking-wider" style="font-size: 0.8rem;">Visit Campus</span>
+                        <h2 class="fw-bold mt-2 mb-4">Contact Administration</h2>
+                        <div class="contact-item">
+                            <div class="contact-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">School Address</h6>
+                                <span class="text-secondary small">{{ settings.school_address|default:"22521 Ndira St Rujeko C, Masvingo" }}</span>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon"><i class="bi bi-telephone-fill"></i></div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">Phone Lines</h6>
+                                <span class="text-secondary small">{{ settings.school_phone|default:"+263 777 921 440" }}</span>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon"><i class="bi bi-envelope-at-fill"></i></div>
+                            <div>
+                                <h6 class="mb-0 fw-bold">Email Addresses</h6>
+                                <span class="text-secondary small">{{ settings.school_email|default:"info@raydonhigh.ac.zw" }}</span>
+                            </div>
+                        </div>
+                        <a href="/contact-us" class="btn btn-primary w-100 py-3 fw-semibold"><i class="bi bi-envelope-fill"></i> Submit Online Enquiry</a>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="rounded-4 overflow-hidden border" style="height: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.03);">
+                        <iframe title="Raydon School Location Map" src="https://maps.google.com/maps?q={{ settings.school_address|default:'22521 Ndira St Rujeko C Masvingo'|urlencode }}&output=embed" width="100%" height="100%" style="border:0;" loading="lazy"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row g-4 mb-5">
+            <div class="col-lg-4">
+                <a class="d-flex align-items-center gap-2 mb-3 text-white h4 fw-bold" href="/">
+                    <img src="{% static 'img/raydon-system-logo.png' %}" alt="" width="32" height="32" onerror="this.src='/static/img/raydon-system-logo.svg'">
+                    <span>{{ settings.school_name|default:"Raydon High School" }}</span>
+                </a>
+                <p class="small text-muted mb-4">Dedicated to high standards of learning, character building, and digital school administration.</p>
+                <div class="d-flex gap-3">
+                    <a href="#" class="text-muted"><i class="bi bi-facebook fs-5"></i></a>
+                    <a href="#" class="text-muted"><i class="bi bi-twitter-x fs-5"></i></a>
+                    <a href="#" class="text-muted"><i class="bi bi-youtube fs-5"></i></a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2 offset-lg-2">
+                <h5>Portals</h5>
+                <ul class="list-unstyled d-flex flex-column gap-2">
+                    <li><a href="/staff/login">Staff Administrator</a></li>
+                    <li><a href="/student-portal/login">Student Login</a></li>
+                    <li><a href="/results">Results Centre</a></li>
+                </ul>
+            </div>
+            <div class="col-6 col-lg-2">
+                <h5>Academics</h5>
+                <ul class="list-unstyled d-flex flex-column gap-2">
+                    <li><a href="/academics">Curriculum</a></li>
+                    <li><a href="/admissions">Admissions</a></li>
+                    <li><a href="/departments">Departments</a></li>
+                    <li><a href="/about-us">Vision & Mission</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-2">
+                <h5>Verification</h5>
+                <p class="small text-muted">Scan the QR code on any printed report slip to verify its authenticity instantly.</p>
+                <a href="/contact-us" class="btn btn-sm btn-outline-light w-100">Enquire Verification</a>
+            </div>
+        </div>
+        <hr class="border-secondary mb-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+            <span class="small text-muted">&copy; 2026 {{ settings.school_name|default:"Raydon High School" }}. All rights reserved.</span>
+            <span class="small text-muted">Powered by Raydon School Management System</span>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

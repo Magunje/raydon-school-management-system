@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Attendance Grid - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Attendance Register</h1>
+        <p class="text-secondary mb-0">Record, mark, and review daily, weekly, and monthly learner attendance.</p>
+    </div>
+    {% if selected_class_id %}
+    <a class="btn btn-outline-primary" href="?tab=weekly&class_id={{ selected_class_id }}&date={{ selected_date }}&export=pdf"><i class="bi bi-file-earmark-pdf"></i> Weekly PDF</a>
+    {% endif %}
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    {% for tab in tabs %}
+    <li class="nav-item">
+        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Filter Panel -->
+<div class="panel mb-4 filter-panel">
+    <form method="get" action="" class="row g-3 align-items-end">
+        <input type="hidden" name="tab" value="weekly">
+        
+        <div class="col-md-4">
+            <label for="class_id" class="form-label">Class / Stream</label>
+            <select name="class_id" id="class_id" class="form-select" required>
+                <option value="">-- Select Class --</option>
+                {% for c in classes %}
+                <option value="{{ c.class_id }}" {% if c.class_id|stringformat:"s" == selected_class_id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.class_label|default:c.class_name }} ({{ c.academic_year }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="date" class="form-label">Date (Pick any day in the week)</label>
+            <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}" required>
+        </div>
+        
+        <div class="col-md-5 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search"></i> Generate Grid</button>
+            {% if selected_class_id %}
+            <a href="?tab=weekly&class_id={{ selected_class_id }}&date={{ prev_week_date }}" class="btn btn-outline-secondary" title="Previous Week"><i class="bi bi-chevron-left"></i> Prev</a>
+            <a href="?tab=weekly&class_id={{ selected_class_id }}&date={{ next_week_date }}" class="btn btn-outline-secondary" title="Next Week">Next <i class="bi bi-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% if selected_class_id %}
+<!-- Attendance Grid Table -->
+<div class="panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">
+            Weekly Grid View
+        </h2>
+        <span class="badge bg-secondary">Learners: {{ students_grid|length }}</span>
+    </div>
+
+    <style>
+        .grid-container {
+            overflow-x: auto;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .grid-table {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        .grid-table th, .grid-table td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 0.5rem 0.5rem;
+            font-size: 0.85rem;
+            border-right: 1px solid #f1f5f9;
+        }
+        .grid-table th:first-child, .grid-table td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #fff;
+            z-index: 10;
+            border-right: 2px solid var(--line);
+            min-width: 180px;
+        }
+        .grid-table tr:hover td:first-child {
+            background: #f8fafc;
+        }
+        .cell-1 {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .cell-a {
+            background-color: #fee2e2 !important;
+            color: #b91c1c !important;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .cell-none {
+            color: #cbd5e1;
+        }
+        .badge-present {
+            background-color: #dcfce7;
+            color: #15803d;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .badge-absent {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+
+    <div class="grid-container">
+        <table class="table table-hover grid-table align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="min-width: 180px;">Student Name</th>
+                    <th>Adm No</th>
+                    {% for day in week_days %}
+                    <th style="min-width: 90px;">
+                        <div>{{ day.name }}</div>
+                        <small class="text-secondary fw-normal" style="font-size: 0.75rem;">{{ day.date }}</small>
+                    </th>
+                    {% endfor %}
+                    <th class="table-success" style="width: 50px;">P</th>
+                    <th class="table-danger" style="width: 50px;">A</th>
+                    <th class="table-info" style="width: 70px;">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in students_grid %}
+                <tr>
+                    <td>
+                        <strong>{{ row.name }}</strong>
+                        <div class="text-secondary" style="font-size: 0.75rem;">{{ row.gender }}</div>
+                    </td>
+                    <td><code>{{ row.admission_no }}</code></td>
+                    {% for status in row.daily_status %}
+                    <td class="{% if status == '1' %}cell-1{% elif status == 'a' %}cell-a{% else %}cell-none{% endif %}">
+                        {{ status }}
+                    </td>
+                    {% endfor %}
+                    <td class="table-success"><strong>{{ row.present_count }}</strong></td>
+                    <td class="table-danger"><strong>{{ row.absent_count }}</strong></td>
+                    <td class="table-info"><strong>{{ row.percentage }}</strong></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center py-4 text-muted">
+                        No active learners found in this class stream.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-secondary small d-flex gap-3 mt-2">
+        <div><strong>Legend:</strong></div>
+        <div><span class="badge-present">1</span> Present / Late</div>
+        <div><span class="badge-absent">a</span> Absent</div>
+        <div><span>.</span> No record</div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info text-center py-5">
+    <i class="bi bi-calendar3 display-6 mb-3 d-block text-secondary"></i>
+    <h5>Generate Weekly Grid</h5>
+    <p class="text-secondary mb-0">Choose a Class Stream and a date above to view the weekly attendance grid register.</p>
+</div>
+{% endif %}
+{% endblock %}

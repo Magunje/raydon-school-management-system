@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Dashboard - {{ app_title }}{% endblock %}
+
+{% block content %}
+{% if is_saas_portal %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">SaaS Platform Operator Dashboard</h1>
+        <p class="text-secondary mb-0">Global Master Ledger Operations</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="/admin/saas_tenant_management/schooltenant/add/"><i class="bi bi-plus-circle"></i> Add School Tenant</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Total School Tenants</span><strong>{{ saas_stats.total_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Active Schools</span><strong>{{ saas_stats.active_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Elite Subscriptions</span><strong>{{ saas_stats.elite_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Premium Subscriptions</span><strong>{{ saas_stats.premium_schools|default:0 }}</strong></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Basic Subscriptions</span><strong>{{ saas_stats.basic_schools|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>System Backups</span><strong>{{ saas_stats.backups|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Platform Operators</span><strong><a href="/users" class="text-decoration-none" style="color: inherit;">Open Users</a></strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Platform Settings</span><strong><a href="/settings" class="text-decoration-none" style="color: inherit;">Open Settings</a></strong></div></div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-lg-6">
+        <section class="panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Registered School Tenants</h2>
+                <a href="/admin/saas_tenant_management/schooltenant/" class="btn btn-sm btn-outline-primary">Manage</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>School Name</th>
+                            <th>Port</th>
+                            <th>Domain</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for school in saas_stats.schools %}
+                        <tr>
+                            <td><strong>{{ school.name }}</strong></td>
+                            <td>{{ school.local_testing_port|default:"-" }}</td>
+                            <td class="text-secondary small">{{ school.production_domain|default:"-" }}</td>
+                            <td><span class="badge bg-secondary">{{ school.subscription_plan }}</span></td>
+                            <td>
+                                {% if school.active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Suspended</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-secondary">No school tenants registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    
+    <div class="col-lg-6">
+        <section class="panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Recent Platform Operations</h2>
+                <a href="/audit-trail" class="btn btn-sm btn-outline-primary">Full Logs</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for audit in saas_stats.recent_audit %}
+                        <tr>
+                            <td><strong>{{ audit.username }}</strong></td>
+                            <td>{{ audit.action }}</td>
+                            <td class="text-secondary small">{{ audit.details }}</td>
+                            <td class="small">{{ audit.created_at }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-secondary">No audit entries found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% else %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ dashboard_role|default:"Staff" }} Dashboard</h1>
+        <p class="text-secondary mb-0">Current term: {{ current_term|default:"-" }} | Year: {{ current_year|default:"-" }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        {% if show_finance %}
+        <a class="btn btn-primary" href="/payments/new"><i class="bi bi-plus-circle"></i> Record Payment</a>
+        <a class="btn btn-outline-primary" href="/reports?report=balances"><i class="bi bi-wallet2"></i> Balances</a>
+        {% endif %}
+        {% if show_academics %}
+        <a class="btn btn-outline-primary" href="/attendance"><i class="bi bi-calendar-check"></i> Attendance</a>
+        <a class="btn btn-outline-primary" href="/results"><i class="bi bi-clipboard-data"></i> Results</a>
+        {% endif %}
+        {% if show_library %}
+        <a class="btn btn-outline-primary" href="/textbook-loans"><i class="bi bi-book-half"></i> Textbooks</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if dashboard_role == "Bursar / Accounts Clerk" or dashboard_role == "Accountant" %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Payments Today</span><strong>USD {{ fees_dashboard.payments_today|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>This Month</span><strong>USD {{ fees_dashboard.payments_month|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Outstanding Arrears</span><strong>USD {{ fees_dashboard.total_arrears|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Pending Bank Approvals</span><strong>{{ operations.pending_bank|default:0 }}</strong></div></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Students With Balances</span><strong>{{ fees_dashboard.students_with_arrears|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Collection Rate</span><strong>{{ fees_dashboard.collection_percentage|default:0|floatformat:2 }}%</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Expenses</span><strong><a href="/expenses" class="text-decoration-none">Open</a></strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>POS Sales</span><strong><a href="/uniform-pos" class="text-decoration-none">Open</a></strong></div></div>
+</div>
+{% elif dashboard_role == "Registrar / Office Clerk" %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>New Admissions Today</span><strong>{{ operations.new_admissions|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Active Students</span><strong>{{ operations.total_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Retained/Transferred</span><strong>{{ operations.retained_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Guardian Records</span><strong>{{ operations.guardians|default:0 }}</strong></div></div>
+</div>
+{% elif dashboard_role == "Teacher" %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Today's Attendance</span><strong>{{ operations.attendance_today|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Assignment Submissions</span><strong>{{ operations.submissions|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Results Pending</span><strong>{{ operations.results_pending|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>E-Learning Items</span><strong>{{ operations.assignments|default:0 }}</strong></div></div>
+</div>
+{% elif dashboard_role == "Librarian" %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>Books Issued</span><strong>{{ operations.books_issued|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Textbooks Issued</span><strong>{{ operations.textbooks_issued|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Overdue Textbooks</span><strong>{{ operations.overdue_textbooks|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Library Inventory</span><strong>{{ operations.inventory_items|default:0 }}</strong></div></div>
+</div>
+{% else %}
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Total Students</span><strong>{{ operations.total_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total Staff</span><strong>{{ operations.staff|default:0 }}</strong></div></div>
+    {% if show_finance %}
+    <div class="col-md-3"><div class="stat-card"><span>Total Collections</span><strong>USD {{ fees_dashboard.total_collected|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total Arrears</span><strong>USD {{ fees_dashboard.total_arrears|default:0|floatformat:2 }}</strong></div></div>
+    {% else %}
+    <div class="col-md-3"><div class="stat-card"><span>Attendance Today</span><strong>{{ operations.attendance_today|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Results Published</span><strong>{{ operations.published_results|default:0 }}</strong></div></div>
+    {% endif %}
+</div>
+<div class="row g-3 mb-4">
+    {% if dashboard_role == "Super Admin" %}
+    <div class="col-md-3"><div class="stat-card"><span>Payroll Profiles</span><strong>{{ payroll_stats.active_profiles|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Inventory Items</span><strong>{{ operations.inventory_items|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Audit Entries</span><strong>{{ operations.audit_entries|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Backups</span><strong>{{ operations.backups|default:0 }}</strong></div></div>
+    {% elif dashboard_role == "Administrator" %}
+    <div class="col-md-3"><div class="stat-card"><span>Attendance Summary</span><strong>{{ operations.attendance_today|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Results Pending</span><strong>{{ operations.results_pending|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Audit Logs</span><strong>{{ operations.audit_entries|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Low Stock</span><strong>{{ operations.low_stock|default:0 }}</strong></div></div>
+    {% else %}
+    <div class="col-md-3"><div class="stat-card"><span>Attendance</span><strong>{{ operations.attendance_today|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Academic Performance</span><strong>{{ operations.published_results|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Pending Publication</span><strong>{{ operations.results_pending|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Teacher Attendance</span><strong>{{ operations.teacher_attendance_today|default:0 }}</strong></div></div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if show_admin or dashboard_role == "Registrar / Office Clerk" or dashboard_role == "Headmaster" or dashboard_role == "Headmaster / Headmistress" %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="stat-card"><span>O Level Active</span><strong>{{ operations.o_level_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>A Level Active</span><strong>{{ operations.a_level_students|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>O Level ZIMSEC Pending</span><strong>{{ operations.pending_o_level_zimsec|default:0 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>A Level ZIMSEC Pending</span><strong>{{ operations.pending_a_level_zimsec|default:0 }}</strong></div></div>
+</div>
+{% endif %}
+
+{% if show_finance %}
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5">Students With Highest Arrears</h2>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead><tr><th>Admission No</th><th>Student</th><th>Class</th><th class="text-end">Balance</th></tr></thead>
+                    <tbody>
+                    {% for row in fees_dashboard.highest_arrears %}
+                    <tr>
+                        <td><a href="/pupils/{{ row.admission_no }}">{{ row.admission_no }}</a></td>
+                        <td>{{ row.student_name }}</td>
+                        <td>{{ row|class_label }}</td>
+                        <td class="text-end">USD {{ row.current_balance|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-secondary text-center">No arrears found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5">Recent Payments</h2>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead><tr><th>Receipt</th><th>Student</th><th>Date</th><th class="text-end">Amount</th></tr></thead>
+                    <tbody>
+                    {% for row in fees_dashboard.recent_payments %}
+                    <tr>
+                        <td><a href="/receipt/{{ row.receipt_no }}">{{ row.receipt_no }}</a></td>
+                        <td>{{ row.student_name }}<br><small class="text-secondary">{{ row.admission_no }}</small></td>
+                        <td>{{ row.payment_date }}</td>
+                        <td class="text-end">USD {{ row.amount_paid|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-secondary text-center">No payments found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endif %}
+
+{% if dashboard_role == "Super Admin" or dashboard_role == "Administrator" %}
+<div class="row g-3 mt-1">
+    <div class="col-lg-6">
+        <section class="panel">
+            <h2 class="h5">Recent Audit Activity</h2>
+            {% for row in operations.recent_audit %}
+            <div class="border-bottom py-2">
+                <strong>{{ row.action }}</strong><br>
+                <small class="text-secondary">{{ row.username }} | {{ row.created_at }}</small>
+            </div>
+            {% empty %}
+            <p class="text-secondary mb-0">No audit activity found.</p>
+            {% endfor %}
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel">
+            <h2 class="h5">System Health</h2>
+            <div class="row g-3">
+                <div class="col-md-4"><div class="stat-card"><span>Backups</span><strong>{{ operations.backups|default:0 }}</strong></div></div>
+                <div class="col-md-4"><div class="stat-card"><span>Low Stock</span><strong>{{ operations.low_stock|default:0 }}</strong></div></div>
+                <div class="col-md-4"><div class="stat-card"><span>Portal Payments</span><strong>{{ operations.pending_bank|default:0 }}</strong></div></div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

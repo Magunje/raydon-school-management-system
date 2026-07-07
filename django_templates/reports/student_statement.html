@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Student Statement - {{ app_title }}{% endblock %}
+
+{% block content %}
+<style>
+    .statement-document { max-width: 1120px; margin: 0 auto; background: #fff; }
+    .statement-header { border-bottom: 3px solid #102a43; padding-bottom: 1rem; }
+    .statement-title { color: #102a43; font-weight: 800; text-transform: uppercase; }
+    .statement-meta { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: .85rem; }
+    .statement-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: .85rem; height: 100%; }
+    .statement-box span { display: block; color: #64748b; font-size: .8rem; text-transform: uppercase; }
+    .statement-box strong { display: block; font-size: 1.15rem; margin-top: .25rem; }
+    .statement-footer-line { min-height: 58px; border-bottom: 1px solid #334155; }
+    @media print {
+        .no-print, .sidebar, .topbar { display: none !important; }
+        .app-shell { display: block !important; }
+        .content { padding: 0 !important; }
+        body { background: #fff !important; }
+        .statement-document { border: 0 !important; box-shadow: none !important; max-width: 100%; }
+        a { color: #000; text-decoration: none; }
+    }
+</style>
+
+<div class="page-title no-print">
+    <div>
+        <h1 class="h3 mb-1">Student Fees Statement</h1>
+        <p class="text-secondary mb-0">Official fee account statement by admission number.</p>
+    </div>
+    {% if summary %}
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-secondary" type="button" data-print><i class="bi bi-printer"></i> Print</button>
+        {% if portal_statement %}
+        <a class="btn btn-outline-primary" href="/student-portal/statement/pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <a class="btn btn-outline-success" href="/student-portal/statement?export=xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        {% else %}
+        <a class="btn btn-outline-primary" href="/reports/statement/pdf?admission_no={{ pupil.admission_no }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <a class="btn btn-outline-success" href="/reports/statement?admission_no={{ pupil.admission_no }}&export=xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if not portal_statement %}
+<section class="panel mb-3 no-print">
+    <form class="row g-2" method="get">
+        <div class="col-md-10">
+            <label for="admission_no">Admission Number</label>
+            <input id="admission_no" name="admission_no" value="{{ pupil.admission_no|default:'' }}" placeholder="A26001">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search"></i> Open</button>
+        </div>
+    </form>
+</section>
+{% endif %}
+
+{% if summary %}
+<section class="panel statement-document">
+    <div class="statement-header d-flex justify-content-between gap-3 flex-wrap mb-4">
+        <div>
+            <h2 class="h3 mb-1">{{ settings.school_name|default:school_name }}</h2>
+            <div class="text-secondary">{{ settings.school_address|default:"" }}</div>
+            <div class="text-secondary">{{ settings.school_phone|default:"" }}</div>
+        </div>
+        <div class="text-end">
+            <div class="statement-title">Student Account Statement</div>
+            <div><strong>Statement No:</strong> {{ statement_no }}</div>
+            <div><strong>Generated:</strong> {{ today }}</div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="statement-meta">
+                <div class="row g-3">
+                    <div class="col-md-4"><strong>Admission No</strong><br>{{ pupil.admission_no }}</div>
+                    <div class="col-md-4"><strong>Student</strong><br>{{ pupil.first_name }} {{ pupil.surname }}</div>
+                    <div class="col-md-4"><strong>Class</strong><br>{{ pupil|class_label }}</div>
+                    <div class="col-md-4"><strong>Guardian</strong><br>{{ pupil.guardian_name|default:"-" }}</div>
+                    <div class="col-md-4"><strong>Phone</strong><br>{{ pupil.guardian_phone|default:"-" }}</div>
+                    <div class="col-md-4"><strong>Term / Year</strong><br>{{ summary.term }} {{ summary.year }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="statement-box">
+                <span>Closing Balance</span>
+                <strong>USD {{ summary.overall_balance|floatformat:2 }}</strong>
+                {% if summary.credit_balance > 0 %}
+                <small class="text-success">Credit balance: USD {{ summary.credit_balance|floatformat:2 }}</small>
+                {% else %}
+                <small class="text-danger">Amount due: USD {{ summary.amount_due|floatformat:2 }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <h3 class="h5">Account Summary</h3>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="statement-box"><span>Opening Balance</span><strong>USD {{ summary.previous_arrears|floatformat:2 }}</strong></div></div>
+        <div class="col-md-3"><div class="statement-box"><span>Fees Charged</span><strong>USD {{ summary.total_fees_charged|floatformat:2 }}</strong></div></div>
+        <div class="col-md-3"><div class="statement-box"><span>Payments Made</span><strong>USD {{ summary.total_paid|floatformat:2 }}</strong></div></div>
+        <div class="col-md-3"><div class="statement-box"><span>Adjustments</span><strong>USD {{ summary.manual_adjustments|floatformat:2 }}</strong></div></div>
+    </div>
+
+    <h3 class="h5">Term Summary</h3>
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark"><tr><th>Term</th><th class="text-end">Fees Charged</th><th class="text-end">Adjustments / Discounts</th><th class="text-end">Payments Allocated</th><th class="text-end">Balance</th></tr></thead>
+            <tbody>
+            {% for row in summary.periods %}
+            <tr>
+                <td>{{ row.term }} {{ row.year }}</td>
+                <td class="text-end">USD {{ row.fees_charged|floatformat:2 }}</td>
+                <td class="text-end">USD {{ row.adjustments|floatformat:2 }}</td>
+                <td class="text-end">USD {{ row.paid_allocated|floatformat:2 }}</td>
+                <td class="text-end">USD {{ row.balance|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-secondary text-center">No term bills found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="h5">Receipts and Payment Allocation</h3>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+            <tr>
+                <th>Receipt No</th>
+                <th>Date</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Term</th>
+                <th class="text-end">Amount Paid</th>
+                <th class="text-end">Arrears Paid</th>
+                <th class="text-end">Current Fees Paid</th>
+                <th class="text-end">Credit</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td>
+                    {% if portal_statement %}
+                    <a href="/student-portal/receipt/{{ payment.receipt_no }}">{{ payment.receipt_no }}</a>
+                    {% else %}
+                    <a href="/receipt/{{ payment.receipt_no }}">{{ payment.receipt_no }}</a>
+                    {% endif %}
+                </td>
+                <td>{{ payment.payment_date }}</td>
+                <td>{{ payment.payment_method }}</td>
+                <td>{{ payment.reference_no|default:"-" }}</td>
+                <td>{{ payment.term }} {{ payment.year }}</td>
+                <td class="text-end">USD {{ payment.amount_paid|floatformat:2 }}</td>
+                <td class="text-end">USD {{ payment.arrears_paid|floatformat:2 }}</td>
+                <td class="text-end">USD {{ payment.current_paid|floatformat:2 }}</td>
+                <td class="text-end">USD {{ payment.credit_balance|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-secondary text-center">No payments found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <div class="col-md-4">
+            <div class="statement-footer-line"></div>
+            <small class="text-secondary">Prepared by / Bursar</small>
+        </div>
+        <div class="col-md-4">
+            <div class="statement-footer-line"></div>
+            <small class="text-secondary">Parent / Guardian</small>
+        </div>
+        <div class="col-md-4">
+            <div class="statement-footer-line"></div>
+            <small class="text-secondary">School Stamp</small>
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

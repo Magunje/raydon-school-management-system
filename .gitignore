@@ -1,0 +1,86 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+*.venv
+
+# JavaScript / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Databases (SQLite / PostgreSQL credentials)
+*.db
+*.sqlite3
+*.sql
+database_backups/
+
+# Environment files & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pub
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# Logs & Diagnostics
+*.log
+*.err
+*.out
+runserver-*.err.log
+runserver-*.out.log
+wsgi-*.err.log
+wsgi-*.out.log
+django-run-*.err.log
+django-run-*.out.log
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Testing & Coverage
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# OS & Temp Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+tmp/
+temp/
+django_templates/staticfiles/
+staticfiles/
+static/assets/
+media/
+uploads/
+
+# Local School System Specifics
+scratch/
+*.csv
+makemigrations_*.txt

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Student Balance - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Fees Balance</h1>
+        <p class="text-secondary mb-0">{{ pupil.first_name }} {{ pupil.surname }} | {{ pupil.admission_no }}</p>
+    </div>
+    <a class="btn btn-outline-primary" href="/reports/statement?admission_no={{ pupil.admission_no }}"><i class="bi bi-file-text"></i> Full Statement</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Total Fees Charged</span><strong>USD {{ summary.total_fees_charged|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total Paid</span><strong>USD {{ summary.total_paid|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Amount Due</span><strong>USD {{ summary.amount_due|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Credit Balance</span><strong>USD {{ summary.credit_balance|floatformat:2 }}</strong></div></div>
+</div>
+
+<section class="panel">
+    <h2 class="h5">Term Balances</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Term</th><th>Fees Charged</th><th>Adjustments</th><th>Paid</th><th>Balance</th></tr></thead>
+            <tbody>
+            {% for row in summary.periods %}
+            <tr>
+                <td>{{ row.term }} {{ row.year }}</td>
+                <td>USD {{ row.fees_charged|floatformat:2 }}</td>
+                <td>USD {{ row.adjustments|floatformat:2 }}</td>
+                <td>USD {{ row.paid_allocated|floatformat:2 }}</td>
+                <td>USD {{ row.balance|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-secondary text-center">No fees records found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

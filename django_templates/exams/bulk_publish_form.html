@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Bulk Publish Results - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Results Centre</h1>
+        <p class="text-secondary mb-0">Manage subject marks, results publishing, setup, and predictions.</p>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    {% for tab in tabs %}
+    <li class="nav-item">
+        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if current_role == "Administrator" or current_role == "Super Admin" or request.user.is_superuser %}
+<div class="panel mb-4 border-warning bg-light-subtle">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="mb-1 text-warning fw-bold"><i class="bi bi-shield-lock-fill"></i> Administrative Actions</h5>
+            <p class="text-secondary mb-0 small">Publish all draft/pending results across all classes/streams for the current term: <strong>{{ current_term|default:"current term" }} {{ current_year|default:"" }}</strong>.</p>
+        </div>
+        <form method="post" action="{% url 'publish_all_pending' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning text-dark fw-bold" onclick="return confirm('WARNING: This will publish ALL draft results for ALL classes for the current term. Are you sure?')">
+                <i class="bi bi-check-all"></i> Publish All Pending Results
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Selection Filter Panel -->
+<div class="panel mb-4 filter-panel">
+    <form method="get" action="" class="row g-3 align-items-end">
+        <input type="hidden" name="tab" value="{{ active_tab|default:'publish' }}">
+        <div class="col-md-4">
+            <label for="class_id" class="form-label">Class / Stream</label>
+            <select name="class_id" id="class_id" class="form-select" required>
+                <option value="">-- Select Class --</option>
+                {% for c in classes %}
+                <option value="{{ c.class_id }}" {% if c.class_id|stringformat:"s" == selected_class_id|stringformat:"s" %}selected{% endif %}>
+                    {{ c|class_label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="term" class="form-label">Term</label>
+            <select name="term" id="term" class="form-select" required>
+                <option value="Term 1" {% if selected_term == "Term 1" %}selected{% endif %}>Term 1</option>
+                <option value="Term 2" {% if selected_term == "Term 2" %}selected{% endif %}>Term 2</option>
+                <option value="Term 3" {% if selected_term == "Term 3" %}selected{% endif %}>Term 3</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="year" class="form-label">Year</label>
+            <select name="year" id="year" class="form-select" required>
+                {% for y in years %}
+                <option value="{{ y }}" {% if y|stringformat:"s" == selected_year|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Load Results</button>
+        </div>
+    </form>
+</div>
+
+{% if selected_class_id %}
+<!-- Action Panel -->
+<div class="panel mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="h5 mb-1">Publish Status Summary</h2>
+            <p class="text-secondary mb-0">Class: {{ selected_class|class_label }} | {{ selected_term }} {{ selected_year }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="border rounded px-3 py-2 text-center bg-light">
+                <span class="text-secondary small d-block">Drafts</span>
+                <strong class="text-warning h5 mb-0">{{ drafts_count }}</strong>
+            </div>
+            <div class="border rounded px-3 py-2 text-center bg-light">
+                <span class="text-secondary small d-block">Published</span>
+                <strong class="text-success h5 mb-0">{{ published_count }}</strong>
+            </div>
+        </div>
+    </div>
+
+    {% if drafts_count > 0 %}
+    <div class="mt-4 p-3 bg-light rounded border border-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h6 class="mb-1"><i class="bi bi-exclamation-triangle text-warning"></i> Ready to Publish</h6>
+            <p class="text-secondary mb-0 small">Publishing will make all {{ drafts_count }} draft result slips visible to students and parents in their portals.</p>
+        </div>
+        <form method="post" action="">
+            {% csrf_token %}
+            <input type="hidden" name="class_id" value="{{ selected_class_id }}">
+            <input type="hidden" name="term" value="{{ selected_term }}">
+            <input type="hidden" name="year" value="{{ selected_year }}">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Publish all draft result sheets for this class?')">
+                <i class="bi bi-cloud-upload"></i> Publish {{ drafts_count }} Results
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="mt-4 alert alert-success mb-0">
+        <i class="bi bi-check-circle-fill"></i> All results for this class stream are already published. No draft results sheets found.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Student Results Sheet List -->
+<div class="panel">
+    <h3 class="h6 mb-3">Student Results Slips List</h3>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Admission No</th>
+                    <th>Full Name</th>
+                    <th>Average Mark</th>
+                    <th>Class Position</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results_list %}
+                <tr>
+                    <td><strong>{{ r.admission_no }}</strong></td>
+                    <td>{{ r.first_name }} {{ r.surname }}</td>
+                    <td>{{ r.average_mark|floatformat:1 }}%</td>
+                    <td>{{ r.class_position|default:"-" }}</td>
+                    <td>
+                        <span class="badge {% if r.status == 'Published' %}bg-success{% else %}bg-warning{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        No result sheets created yet for this class stream for {{ selected_term }} {{ selected_year }}.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info text-center py-5">
+    <i class="bi bi-send-check display-6 mb-3 d-block text-secondary"></i>
+    <h5>Select Class Stream to Publish</h5>
+    <p class="text-secondary mb-0">Please choose a Class Stream, Term, and Year above to manage and publish results in bulk.</p>
+</div>
+{% endif %}
+{% endblock %}

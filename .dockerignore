@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+build/
+dist/
+staticfiles/
+database_backups/
+*.log
+*.spec
+school_system.db
+school_system.*.db
+scratch/*.db
+*.sqlite3

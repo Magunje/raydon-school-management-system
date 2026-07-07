@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block auth_content %}
+<section class="auth-panel p-4">
+    <div class="text-center mb-3">
+        <img src="{% static 'img/raydon-system-logo.svg' %}" alt="Logo" class="img-fluid rounded" style="max-height: 80px;">
+    </div>
+    <h1 class="h4 mb-1 text-center">Student Portal</h1>
+    <p class="text-secondary text-center">Sign in with admission number, student ID, or linked username.</p>
+    {% if messages %}
+    {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+    {% endif %}
+    <form method="post" class="form-panel">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="admission_no">Admission number / student ID</label>
+            <input id="admission_no" name="admission_no" autocomplete="username" required>
+        </div>
+        <div class="mb-3">
+            <label for="date_of_birth">Date of birth</label>
+            <input id="date_of_birth" name="date_of_birth" type="date" required>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Login</button>
+    </form>
+</section>
+{% endblock %}

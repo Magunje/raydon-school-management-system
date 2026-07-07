@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Balance Sheet Statement - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-1 text-primary">Balance Sheet Statement</h1>
+            <p class="text-secondary mb-0">Financial position snapshot showing school assets, liabilities, and equity.</p>
+        </div>
+        <a href="{% url 'accounting_reports' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Ledger</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    
+    <!-- 1. Assets Section -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-light h-100">
+            <div class="card-body">
+                <h5 class="card-title text-primary mb-3"><i class="bi bi-safe-fill me-1"></i> Assets</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Balance ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asset in assets %}
+                            <tr>
+                                <td>{{ asset.name }}</td>
+                                <td class="text-end fw-semibold text-success">${{ asset.current_balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">No asset records found.</td></tr>
+                            {% endfor %}
+                            <tr class="fw-bold table-primary text-dark">
+                                <td>Total Assets:</td>
+                                <td class="text-end">${{ total_assets }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Liabilities & Equity Section -->
+    <div class="col-md-6">
+        <div class="card shadow-sm border-light h-100">
+            <div class="card-body">
+                <h5 class="card-title text-warning mb-3"><i class="bi bi-credit-card-fill me-1"></i> Liabilities & Equity</h5>
+                
+                <h6 class="text-dark fw-bold mb-2">Liabilities</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Balance ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for liab in liabilities %}
+                            <tr>
+                                <td>{{ liab.name }}</td>
+                                <td class="text-end fw-semibold text-danger">${{ liab.current_balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">No liability records found.</td></tr>
+                            {% endfor %}
+                            <tr class="fw-bold table-light text-dark">
+                                <td>Total Liabilities:</td>
+                                <td class="text-end">${{ total_liabilities }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h6 class="text-dark fw-bold mb-2">Equity</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Balance ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for eq in equity %}
+                            <tr>
+                                <td>{{ eq.name }}</td>
+                                <td class="text-end fw-semibold text-info">${{ eq.current_balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">No equity records found.</td></tr>
+                            {% endfor %}
+                            <tr class="fw-bold table-light text-dark">
+                                <td>Total Equity:</td>
+                                <td class="text-end">${{ total_equity }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card bg-light border-light p-3 mt-4">
+                    <div class="d-flex justify-content-between align-items-center fw-bold text-dark fs-5">
+                        <span>Total Liabilities & Equity:</span>
+                        <span>${{ total_liabilities|add:total_equity }}</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

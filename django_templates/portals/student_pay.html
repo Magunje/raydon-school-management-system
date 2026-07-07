@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Pay Fees - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Pay Fees</h1>
+        <p class="text-secondary mb-0">{{ pupil.first_name }} {{ pupil.surname }} | {{ pupil.admission_no }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="stat-card"><span>Amount Due</span><strong>USD {{ summary.amount_due|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-4"><div class="stat-card"><span>Credit Balance</span><strong>USD {{ summary.credit_balance|default:0|floatformat:2 }}</strong></div></div>
+    <div class="col-md-4"><div class="stat-card"><span>Account</span><strong>{{ pupil.admission_no }}</strong></div></div>
+</div>
+
+{% if request_row %}
+<section class="panel mb-3">
+    <h2 class="h5 mb-3">Payment Request Status</h2>
+    <div class="table-responsive">
+        <table class="table">
+            <tbody>
+                <tr><th>Reference</th><td>{{ request_row.reference_no }}</td></tr>
+                <tr><th>Amount</th><td>USD {{ request_row.amount|floatformat:2 }}</td></tr>
+                <tr><th>Method</th><td>{{ request_row.method }}</td></tr>
+                <tr><th>Status</th><td><span class="badge {% if request_row.status == 'Approved' %}bg-success{% elif request_row.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ request_row.status }}</span></td></tr>
+                <tr><th>Updated</th><td>{{ request_row.updated_at|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="panel form-panel mb-3">
+    <h2 class="h5 mb-2">Submit Payment Reference</h2>
+    <p class="text-secondary">The bursar must approve the reference before it becomes a receipt.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-4"><label>Amount</label><input name="amount" type="number" step="0.01" min="0.01" required></div>
+            <div class="col-md-4"><label>Method</label><input name="method" placeholder="Bank transfer, EcoCash, Paynow" required></div>
+            <div class="col-md-4"><label>Reference</label><input name="reference" required></div>
+        </div>
+        <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-bank"></i> Submit reference</button>
+    </form>
+</section>
+
+{% if pending_payments %}
+<section class="panel">
+    <h2 class="h5 mb-3">Recent Portal Payment Requests</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead><tr><th>Reference</th><th>Amount</th><th>Method</th><th>Status</th><th>Updated</th></tr></thead>
+            <tbody>
+            {% for row in pending_payments %}
+                <tr>
+                    <td>{{ row.reference_no }}</td>
+                    <td>USD {{ row.amount|floatformat:2 }}</td>
+                    <td>{{ row.method }}</td>
+                    <td><span class="badge {% if row.status == 'Approved' %}bg-success{% elif row.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ row.status }}</span></td>
+                    <td>{{ row.updated_at|default:row.created_at }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

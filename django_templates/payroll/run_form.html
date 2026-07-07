@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Payroll Run - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ run.employee_name }}</h1>
+        <p class="text-secondary mb-0">{{ run.period.period_code }} | {{ run.employee_number }} | {{ run.department }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'payroll:period_detail' run.period_id %}"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Basic salary</span><strong>USD {{ run.basic_salary|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Gross</span><strong>USD {{ run.gross_salary|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Deductions</span><strong>USD {{ run.total_deductions|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Net</span><strong>USD {{ run.net_salary|floatformat:2 }}</strong></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <section class="panel form-panel">
+            <h2 class="h5 mb-3">Monthly Adjustments</h2>
+            {% if run.locked or run.period.locked %}
+            <div class="alert alert-warning">This payroll run is locked.</div>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <input name="form_kind" type="hidden" value="run">
+                {{ run_form.non_field_errors }}
+                <div class="row g-3">
+                    {% for field in run_form %}
+                    <div class="col-md-6 {% if field.name == 'notes' %}col-md-12{% endif %}">
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-primary" type="submit" {% if run.locked or run.period.locked %}disabled{% endif %}><i class="bi bi-save"></i> Save Adjustments</button>
+                </div>
+            </form>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="panel form-panel mb-3">
+            <h2 class="h5 mb-3">Add Adjustment</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input name="form_kind" type="hidden" value="adjustment">
+                {{ adjustment_form.non_field_errors }}
+                {% for field in adjustment_form %}
+                <div class="mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+                {% endfor %}
+                <button class="btn btn-outline-primary w-100" type="submit" {% if run.locked or run.period.locked %}disabled{% endif %}><i class="bi bi-plus-circle"></i> Add Adjustment</button>
+            </form>
+        </section>
+        <section class="panel">
+            <h2 class="h5 mb-3">Adjustment Lines</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <tbody>
+                    {% for adjustment in adjustments %}
+                    <tr>
+                        <td><strong>{{ adjustment.description }}</strong><br><small class="text-secondary">{{ adjustment.adjustment_type }} | {{ adjustment.code }}</small></td>
+                        <td class="text-end">USD {{ adjustment.amount|floatformat:2 }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'payroll:adjustment_delete' adjustment.id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger" type="submit" {% if run.locked or run.period.locked %}disabled{% endif %}><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="text-secondary">No additional adjustment lines.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

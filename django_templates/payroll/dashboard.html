@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Payroll</h1>
+        <p class="text-secondary mb-0">Monthly salary processing</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="{% url 'payroll:profile_list' %}"><i class="bi bi-person-vcard"></i> Profiles</a>
+        <a class="btn btn-outline-primary" href="{% url 'payroll:reports' %}"><i class="bi bi-bar-chart"></i> Reports</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Active employees</span><strong>{{ stats.active_profiles }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total profiles</span><strong>{{ stats.profiles }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Processed periods</span><strong>{{ stats.periods }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Latest net payroll</span><strong>USD {{ stats.latest_net|default:0|floatformat:2 }}</strong></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <section class="panel form-panel">
+            <h2 class="h5 mb-3">Process Payroll</h2>
+            <form method="post" action="{% url 'payroll:process' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_period">Payroll month</label>
+                    <input id="id_period" name="period" type="month" value="{{ process_form.period.value|default:'' }}" required>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" id="id_copy_previous" name="copy_previous" type="checkbox">
+                    <label class="form-check-label" for="id_copy_previous">Copy previous month adjustments</label>
+                </div>
+                <button class="btn btn-primary w-100" type="submit"><i class="bi bi-play-circle"></i> Process Payroll</button>
+            </form>
+        </section>
+    </div>
+    <div class="col-lg-8">
+        <section class="panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Payroll Periods</h2>
+                <span class="text-secondary small">{{ periods|length }} shown</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th>Status</th>
+                        <th class="text-end">Employees</th>
+                        <th class="text-end">Gross</th>
+                        <th class="text-end">Net</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for period in periods %}
+                    <tr>
+                        <td><strong>{{ period.period_code }}</strong></td>
+                        <td><span class="status-pill {{ period.status|lower }}">{{ period.status }}</span></td>
+                        <td class="text-end">{{ period.employee_count }}</td>
+                        <td class="text-end">USD {{ period.gross_total|default:0|floatformat:2 }}</td>
+                        <td class="text-end">USD {{ period.net_total|default:0|floatformat:2 }}</td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'payroll:period_detail' period.id %}"><i class="bi bi-folder2-open"></i></a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-secondary py-4">No payroll periods yet.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

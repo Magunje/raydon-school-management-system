@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">Manage announcements, notices, and banners displayed on the public landing page.</p>
+    </div>
+    <div>
+        <a href="{% url 'notifications:announcement_new' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Create Announcement</a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 80px;">Image</th>
+                    <th>Title</th>
+                    <th>Content Snippet</th>
+                    <th>Status</th>
+                    <th>Uploaded At</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in announcements %}
+                <tr>
+                    <td>
+                        {% if a.image_path %}
+                        <img src="/media/{{ a.image_path }}" class="rounded shadow-sm" style="width: 60px; height: 45px; object-fit: cover;" alt="Thumbnail">
+                        {% else %}
+                        <div class="bg-light rounded text-muted d-flex align-items-center justify-content-center" style="width: 60px; height: 45px; font-size: 0.75rem;">
+                            No Image
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ a.title }}</strong></td>
+                    <td class="text-truncate" style="max-width: 300px;">{{ a.content|default:"-"|truncatewords:20 }}</td>
+                    <td>
+                        <span class="status-pill {% if a.status == 'Published' %}approved{% else %}draft{% endif %}">
+                            {{ a.status }}
+                        </span>
+                    </td>
+                    <td><small class="text-muted">{{ a.created_at }}</small></td>
+                    <td class="text-end">
+                        <form action="{% url 'notifications:announcement_delete' a.announcement_id %}" method="post" class="d-inline" onsubmit="return confirm('Delete this announcement?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">No announcements posted yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Income Statement (Profit & Loss) - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-1 text-primary">Income Statement (Profit & Loss)</h1>
+            <p class="text-secondary mb-0">Financial statement showing school revenue, operating expenses, and net surplus/deficit.</p>
+        </div>
+        <a href="{% url 'accounting_reports' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Ledger</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Revenue Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-light h-100">
+            <div class="card-body">
+                <h5 class="card-title text-success mb-3"><i class="bi bi-arrow-down-left-circle me-1"></i> Revenue Accounts</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Balance ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rev in statement.revenue_items %}
+                            <tr>
+                                <td>{{ rev.name }}</td>
+                                <td class="text-end fw-semibold text-success">${{ rev.balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">No revenue records found.</td></tr>
+                            {% endfor %}
+                            <tr class="fw-bold table-success text-dark">
+                                <td>Total Revenue:</td>
+                                <td class="text-end">${{ statement.total_revenue }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-light h-100">
+            <div class="card-body">
+                <h5 class="card-title text-danger mb-3"><i class="bi bi-arrow-up-right-circle me-1"></i> Expense Accounts</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Account</th>
+                                <th class="text-end">Balance ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in statement.expense_items %}
+                            <tr>
+                                <td>{{ exp.name }}</td>
+                                <td class="text-end fw-semibold text-danger">${{ exp.balance }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">No expense records found.</td></tr>
+                            {% endfor %}
+                            <tr class="fw-bold table-danger text-dark">
+                                <td>Total Expenses:</td>
+                                <td class="text-end">${{ statement.total_expenses }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-light mb-4 mt-2">
+    <div class="card-body text-center p-4">
+        <h3 class="text-dark">Net Operational Surplus / Deficit</h3>
+        <p class="text-secondary mb-3">Calculated as Total Revenue minus Total Expenses.</p>
+        <h1 class="display-4 fw-bold {% if statement.net_surplus >= 0 %}text-success{% else %}text-danger{% endif %}">
+            ${{ statement.net_surplus }}
+        </h1>
+        <p class="lead mt-2">
+            {% if statement.net_surplus >= 0 %}
+            <span class="badge bg-success fs-6"><i class="bi bi-caret-up-fill me-1"></i> Net Operating Surplus</span>
+            {% else %}
+            <span class="badge bg-danger fs-6"><i class="bi bi-caret-down-fill me-1"></i> Net Operating Deficit</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+{% endblock %}

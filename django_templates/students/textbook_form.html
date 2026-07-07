@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">{{ subtitle }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <section class="panel form-panel">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-12 position-relative">
+                        <label for="pupil_search">Student Name or Admission Number</label>
+                        {% if is_edit %}
+                        <input type="text" id="pupil_search" class="form-control" value="{{ pupil.first_name }} {{ pupil.surname }} ({{ pupil.admission_no }})" readonly>
+                        <input type="hidden" id="pupil_id" name="pupil_id" value="{{ pupil.pupil_id }}" required>
+                        {% else %}
+                        <input type="text" id="pupil_search" class="form-control" placeholder="Search student name or admission number..." autocomplete="off" required>
+                        <input type="hidden" id="pupil_id" name="pupil_id" required>
+                        <div id="autocomplete-results" class="list-group position-absolute w-100 z-3 shadow d-none" style="max-height: 200px; overflow-y: auto;"></div>
+                        <div id="selected-pupil-info" class="mt-2 text-success fw-bold d-none"></div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12">
+                        <label for="book_id">Select Textbook from Library</label>
+                        <select id="book_id" name="book_id" class="form-select" required>
+                            <option value="">-- Choose Book --</option>
+                            {% for b in books %}
+                            <option value="{{ b.book_id }}" {% if b.book_id|stringformat:"s" == current_book_id|stringformat:"s" %}selected{% endif %}>
+                                {{ b.title }} (Available: {{ b.available_copies }} of {{ b.total_copies }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="borrowed_date">Borrowed Date</label>
+                        <input type="date" id="borrowed_date" name="borrowed_date" value="{{ loan.borrowed_date|default:today }}" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="return_date">Expected Return Date</label>
+                        <input type="date" id="return_date" name="return_date" value="{{ loan.return_date|default:'' }}" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="status">Status</label>
+                        <select id="status" name="status" required>
+                            <option value="Borrowed" {% if loan.status == "Borrowed" %}selected{% endif %}>Borrowed</option>
+                            <option value="Returned" {% if loan.status == "Returned" %}selected{% endif %}>Returned</option>
+                            <option value="Overdue" {% if loan.status == "Overdue" %}selected{% endif %}>Overdue</option>
+                            <option value="Lost" {% if loan.status == "Lost" %}selected{% endif %}>Lost</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes" rows="2" class="form-control">{{ loan.notes|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Loan</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+{% if not is_edit %}
+<!-- Autocomplete Script for new textbook loan -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById("pupil_search");
+    const resultsContainer = document.getElementById("autocomplete-results");
+    const pupilIdInput = document.getElementById("pupil_id");
+    const infoContainer = document.getElementById("selected-pupil-info");
+
+    let timeout = null;
+
+    searchInput.addEventListener("input", function() {
+        clearTimeout(timeout);
+        const query = searchInput.value.trim();
+        if (query.length < 1) {
+            resultsContainer.classList.add("d-none");
+            return;
+        }
+
+        timeout = setTimeout(() => {
+            fetch(`/api/result-pupil-search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsContainer.innerHTML = "";
+                    if (data.results && data.results.length > 0) {
+                        data.results.forEach(student => {
+                            const btn = document.createElement("button");
+                            btn.type = "button";
+                            btn.className = "list-group-item list-group-item-action text-start";
+                            const classLabel = student.class_label || `${student.grade || ""}${student.class_stream || ""}`;
+                            btn.innerHTML = `<strong>${student.first_name} ${student.surname}</strong> (${student.admission_no}) <br><small class="text-muted">${classLabel}</small>`;
+                            btn.addEventListener("click", () => {
+                                pupilIdInput.value = student.pupil_id;
+                                searchInput.value = `${student.first_name} ${student.surname}`;
+                                infoContainer.innerHTML = `Selected Student: ${student.first_name} ${student.surname} (${student.admission_no})`;
+                                infoContainer.classList.remove("d-none");
+                                resultsContainer.classList.add("d-none");
+                            });
+                            resultsContainer.appendChild(btn);
+                        });
+                        resultsContainer.classList.remove("d-none");
+                    } else {
+                        resultsContainer.innerHTML = "<div class='list-group-item text-muted'>No matching student found</div>";
+                        resultsContainer.classList.remove("d-none");
+                    }
+                });
+        }, 300);
+    });
+
+    document.addEventListener("click", function(e) {
+        if (e.target !== searchInput && e.target !== resultsContainer) {
+            resultsContainer.classList.add("d-none");
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

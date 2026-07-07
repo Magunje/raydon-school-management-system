@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}E-Learning - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">E-Learning Portal</h1>
+        <p class="text-secondary mb-0">Access your class assignments, homework, and study resources.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="elearningTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="assignments-tab" data-bs-toggle="tab" data-bs-target="#assignments" type="button" role="tab" aria-controls="assignments" aria-selected="true"><i class="bi bi-journal-text"></i> Assignments ({{ assignments|length }})</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false"><i class="bi bi-file-earmark-pdf"></i> Class Notes ({{ notes|length }})</button>
+    </li>
+</ul>
+
+<div class="tab-content" id="elearningTabContent">
+    <!-- Assignments Tab -->
+    <div class="tab-pane fade show active" id="assignments" role="tabpanel" aria-labelledby="assignments-tab">
+        <div class="panel">
+            <h2 class="h5 mb-3">Academic Assignments & Tasks</h2>
+            {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Title / Description</th>
+                            <th>Due Date</th>
+                            <th>Attachment</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in assignments %}
+                        <tr>
+                            <td><strong>{{ a.subject_name|default:"General" }}</strong></td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ a.title }}</div>
+                                <div class="text-muted small text-truncate" style="max-width: 300px;">{{ a.instructions|default:"No instructions" }}</div>
+                            </td>
+                            <td>
+                                <span class="text-danger"><i class="bi bi-calendar-event"></i> {{ a.due_date|default:"-" }}</span>
+                            </td>
+                            <td>
+                                {% if a.original_filename %}
+                                <a href="/e-learning/download/assignment/{{ a.assignment_id }}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                                    <i class="bi bi-download"></i> {{ a.original_filename|truncatechars:20 }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.submission_status == "Marked" %}
+                                <span class="badge bg-success">Marked</span>
+                                {% elif a.submission_status == "Submitted" %}
+                                <span class="badge bg-info">Submitted</span>
+                                {% else %}
+                                <span class="badge bg-warning">Not Submitted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.submission_status == "Marked" %}
+                                <strong>{{ a.score|floatformat:1 }}</strong> <span class="text-muted small">/ {{ a.max_score }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if a.submission_status %}
+                                <a href="/student-portal/e-learning/submit/{{ a.assignment_id }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i> View Submission
+                                </a>
+                                {% else %}
+                                    {% if a.status == "Open" %}
+                                    <a href="/student-portal/e-learning/submit/{{ a.assignment_id }}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-cloud-upload"></i> Submit Work
+                                    </a>
+                                    {% else %}
+                                    <span class="text-muted small">Closed</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info py-4 text-center">
+                <i class="bi bi-journal-check display-6 mb-2 d-block text-secondary"></i>
+                <h5>No Assignments Found</h5>
+                <p class="text-secondary mb-0">No active assignments are currently assigned to your class.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notes Tab -->
+    <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
+        <div class="panel">
+            <h2 class="h5 mb-3">Study Notes & Resources</h2>
+            {% if notes %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Note Title / Info</th>
+                            <th>Upload Date</th>
+                            <th class="text-end">Download</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for n in notes %}
+                        <tr>
+                            <td><strong>{{ n.subject_name|default:"General" }}</strong></td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ n.title }}</div>
+                                <div class="text-muted small text-truncate" style="max-width: 400px;">{{ n.description|default:"-" }}</div>
+                            </td>
+                            <td>{{ n.uploaded_at|default:"-" }}</td>
+                            <td class="text-end">
+                                {% if n.original_filename %}
+                                <a href="/e-learning/download/note/{{ n.note_id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-download"></i> Download Note
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">No file</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning py-4 text-center">
+                <i class="bi bi-file-earmark-x display-6 mb-2 d-block text-secondary"></i>
+                <h5>No Class Notes Found</h5>
+                <p class="text-secondary mb-0">No class notes or resources have been uploaded for your grade yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

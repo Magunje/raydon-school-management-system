@@ -1,0 +1,479 @@
+{% load static school_extras %}
+
+<style>
+  .official-receipt {
+    --navy: #071f4d;
+    --gold: #c18a13;
+    --ink: #081b3f;
+    --line: #9db2d0;
+    --soft: #edf5ff;
+    background: #fff;
+    color: var(--ink);
+    border: 2px solid var(--navy);
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 210mm;
+    margin: 0 auto;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+  .official-receipt * { box-sizing: border-box; }
+  .receipt-head {
+    display: grid;
+    grid-template-columns: 75px minmax(0, 1fr) 230px;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 2.5px solid var(--navy);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  .receipt-logo {
+    width: 65px;
+    height: 65px;
+    object-fit: contain;
+  }
+  .receipt-school-name {
+    margin: 0;
+    color: var(--navy);
+    font-size: clamp(20px, 3.2vw, 28px);
+    letter-spacing: 0.04em;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .receipt-motto {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 700;
+    margin: 3px 0;
+  }
+  .receipt-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    color: var(--ink);
+    font-size: 10.5px;
+  }
+  .receipt-meta {
+    border: 1.5px solid var(--navy);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .receipt-meta-title,
+  .receipt-section-title {
+    background: var(--navy);
+    color: #fff;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .receipt-meta-title {
+    text-align: center;
+    font-size: 12.5px;
+    padding: 4px;
+  }
+  .receipt-meta-grid {
+    display: grid;
+    grid-template-columns: 95px 1fr;
+    gap: 2.5px 6px;
+    padding: 6px;
+    font-size: 11px;
+  }
+  .receipt-label {
+    font-weight: 800;
+    color: var(--ink);
+  }
+  
+  /* 2-Column main layout */
+  .receipt-body-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  
+  .receipt-section {
+    border: 1.5px solid var(--navy);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .receipt-section-title {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .receipt-info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px;
+  }
+  .receipt-info-grid .line {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 18px;
+  }
+  
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .receipt-table th {
+    background: var(--navy);
+    color: #fff;
+    text-align: left;
+    padding: 5px 8px;
+  }
+  .receipt-table td {
+    border: 1px solid var(--line);
+    padding: 5px 8px;
+  }
+  .receipt-table .amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .receipt-table .total-row td {
+    background: #fff5df;
+    font-weight: 900;
+  }
+  .receipt-table .paid-row td {
+    font-weight: 900;
+  }
+  .receipt-table .balance-row td {
+    background: #eaf8ef;
+    color: #16803a;
+    font-weight: 900;
+  }
+  .receipt-table .balance-row.due td {
+    background: #ffecec;
+    color: #b91c1c;
+    font-weight: 900;
+  }
+  
+  .receipt-summary {
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .receipt-summary h3,
+  .receipt-box-title {
+    background: var(--soft);
+    color: var(--navy);
+    margin: 0;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .summary-lines {
+    padding: 8px;
+    display: grid;
+    gap: 6px;
+  }
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .summary-line strong:last-child { white-space: nowrap; }
+  .amount-words {
+    border-top: 1px solid var(--line);
+    line-height: 1.4;
+  }
+  .amount-words div {
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-stamp {
+    border-top: 1px solid var(--line);
+    text-align: center;
+    background: #fcfcfc;
+  }
+  .status-stamp .status {
+    display: inline-block;
+    border: 2px solid #16803a;
+    border-radius: 4px;
+    color: #16803a;
+    font-weight: 900;
+    font-size: 18px;
+    padding: 1px 12px;
+    margin: 6px 0;
+    text-transform: uppercase;
+  }
+  .status-stamp .status.due {
+    border-color: #b91c1c;
+    color: #b91c1c;
+  }
+  
+  /* Verification Block with side-by-side Stamp and QR */
+  .receipt-verification-box {
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .receipt-verification-flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 8px;
+    gap: 8px;
+    background: #fcfcfc;
+  }
+  .electronic-stamp-wrapper {
+    display: grid;
+    place-items: center;
+  }
+  .receipt-qr-wrapper {
+    text-align: center;
+    font-size: 10px;
+  }
+  .receipt-qr {
+    width: 75px;
+    height: 75px;
+    object-fit: contain;
+    margin-bottom: 2px;
+  }
+  .verification-instructions {
+    border-top: 1px solid var(--line);
+    padding: 6px 8px;
+    font-size: 10px;
+    color: #475569;
+    background: var(--soft);
+  }
+  .verification-instructions p {
+    margin: 2px 0;
+  }
+  
+  .receipt-signatures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .signature-line {
+    display: grid;
+    grid-template-columns: 75px minmax(0, 1fr);
+    gap: 6px;
+    margin: 3px 0;
+  }
+  .signature-script {
+    font-size: 16px;
+    font-style: italic;
+    font-family: 'Georgia', serif;
+    min-height: 20px;
+    border-bottom: 1px dashed var(--ink);
+    color: #0c4a6e;
+  }
+  .receipt-footer {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 6px;
+    text-align: center;
+    padding: 6px;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .receipt-footer span {
+    color: #f7c948;
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  
+  @media (max-width: 768px) {
+    .receipt-head {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .receipt-logo { margin: 0 auto; }
+    .receipt-body-grid {
+      grid-template-columns: 1fr;
+    }
+    .receipt-signatures {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media print {
+    body { background: #fff !important; }
+    .official-receipt {
+      border-radius: 0;
+      border-width: 1.5px;
+      box-shadow: none;
+      page-break-inside: avoid;
+    }
+  }
+</style>
+
+<section class="official-receipt">
+  <header class="receipt-head">
+    <img class="receipt-logo" src="{% static 'img/raydon-system-logo.png' %}" alt="{{ settings.school_name|default:'School' }} logo" onerror="this.src='/static/img/raydon-system-logo.svg'">
+    <div>
+      <h2 class="receipt-school-name">{{ settings.school_name|default:"RAYDON HIGH SCHOOL" }}</h2>
+      <div class="receipt-motto">{{ settings.school_motto|default:"Knowledge • Discipline • Excellence" }}</div>
+      <div class="receipt-contact">
+        <span><i class="bi bi-geo-alt-fill"></i> {{ settings.school_address|default:"22521 Ndira Street, Masvingo, Zimbabwe" }}</span>
+        <span><i class="bi bi-telephone-fill"></i> {{ settings.school_phone|default:"+263 777 921 440" }}</span>
+        <span><i class="bi bi-envelope-fill"></i> {{ settings.school_email|default:"info@raydonschool.ac.zw" }}{% if settings.school_website %} &nbsp; | &nbsp; {{ settings.school_website }}{% endif %}</span>
+      </div>
+    </div>
+    <aside class="receipt-meta">
+      <div class="receipt-meta-title">Official Receipt</div>
+      <div class="receipt-meta-grid">
+        <span class="receipt-label">Receipt No:</span><strong class="text-danger">{{ payment.receipt_no }}</strong>
+        <span class="receipt-label">Date/Time:</span><span>{{ receipt_date }} &middot; {{ receipt_time }}</span>
+        <span class="receipt-label">Academic Period:</span><span>Term {{ payment.term|slice:"-1:" }} &middot; {{ payment.year }}</span>
+        <span class="receipt-label">Method/Cashier:</span><span>{{ payment.payment_method }} / {{ cashier_name }}</span>
+      </div>
+    </aside>
+  </header>
+
+  <div class="receipt-body-grid">
+    <!-- Left Column: Student info and Payment table -->
+    <div>
+      <section class="receipt-section">
+        <div class="receipt-section-title">Student Information</div>
+        <div class="receipt-info-grid">
+          <div class="line"><span class="receipt-label">Admission No:</span><span>{{ pupil.admission_no }}</span></div>
+          <div class="line"><span class="receipt-label">Student Name:</span><span>{{ pupil.first_name }} {{ pupil.surname }}</span></div>
+          <div class="line"><span class="receipt-label">Class & Stream:</span><span>{{ pupil|class_label }} &middot; {{ pupil.stream|default:"Ordinary Level" }}</span></div>
+          <div class="line"><span class="receipt-label">Parent & Contact:</span><span>{{ pupil.guardian_name|default:"-" }} &middot; {{ pupil.guardian_phone|default:"-" }}</span></div>
+        </div>
+      </section>
+
+      <section class="receipt-section" style="margin-bottom:0;">
+        <div class="receipt-section-title">Payment Details</div>
+        <table class="receipt-table">
+          <thead>
+            <tr><th>Description</th><th class="amount">Amount (USD)</th></tr>
+          </thead>
+          <tbody>
+            {% for allocation in allocations %}
+            <tr>
+              <td>Fees Allocation - {{ allocation.term }} {{ allocation.year }}</td>
+              <td class="amount">${{ allocation.amount_allocated|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td>Fees Payment - {{ payment.term }} {{ payment.year }}</td>
+              <td class="amount">${{ payment.amount_paid|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row"><td>SUBTOTAL</td><td class="amount">${{ payment.amount_paid|floatformat:2 }}</td></tr>
+            <tr><td>Discount</td><td class="amount">$0.00</td></tr>
+            <tr class="total-row"><td>TOTAL AMOUNT DUE</td><td class="amount">${{ payment.amount_paid|floatformat:2 }}</td></tr>
+            <tr class="paid-row"><td>AMOUNT PAID</td><td class="amount">${{ payment.amount_paid|floatformat:2 }}</td></tr>
+            <tr class="balance-row {% if current_balance > 0 %}due{% endif %}"><td>BALANCE REMAINING</td><td class="amount">${{ current_balance|floatformat:2 }}</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- Right Column: Summary and Verification -->
+    <div>
+      <aside class="receipt-summary" style="margin-bottom:8px;">
+        <h3>Account Summary</h3>
+        <div class="summary-lines">
+          <div class="summary-line"><span>Previous Balance:</span><strong>${{ previous_balance|floatformat:2 }}</strong></div>
+          <div class="summary-line"><span>Amount Paid:</span><strong>${{ payment.amount_paid|floatformat:2 }}</strong></div>
+          <div class="summary-line"><span>Current Balance:</span><strong class="{% if current_balance > 0 %}text-danger{% else %}text-success{% endif %}">${{ current_balance|floatformat:2 }}</strong></div>
+        </div>
+        <div class="amount-words">
+          <h3>Amount In Words</h3>
+          <div>{{ amount_words }}</div>
+        </div>
+        <div class="status-stamp">
+          <h3>Payment Status</h3>
+          <span class="status {% if current_balance > 0 %}due{% endif %}">{{ receipt_status }}</span>
+        </div>
+      </aside>
+
+      <section class="receipt-verification-box">
+        <h3>Receipt Verification</h3>
+        <div class="receipt-verification-flex">
+          <!-- Realistic SVG Stamp -->
+          <div class="electronic-stamp-wrapper">
+            <svg width="95" height="95" viewBox="0 0 100 100" style="transform: rotate(-6deg); filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.12));">
+              <!-- Concentric Rings -->
+              <circle cx="50" cy="50" r="46" fill="none" stroke="#071f4d" stroke-width="1.8" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#071f4d" stroke-width="0.8" stroke-dasharray="2.5,1.5" />
+              
+              <!-- Curved Text Paths -->
+              <path id="textPathTop" d="M 16,50 A 34,34 0 0,1 84,50" fill="none" />
+              <path id="textPathBottom" d="M 84,50 A 34,34 0 0,1 16,50" fill="none" />
+              
+              <!-- School Name along top curve -->
+              <text font-family="Helvetica, Arial, sans-serif" font-size="5" font-weight="bold" fill="#071f4d" letter-spacing="0.4">
+                <textPath href="#textPathTop" startOffset="50%" text-anchor="middle">
+                  {{ settings.school_name|default:"RAYDON HIGH SCHOOL"|upper }}
+                </textPath>
+              </text>
+              
+              <!-- Bottom curve metadata -->
+              <text font-family="Helvetica, Arial, sans-serif" font-size="5" font-weight="bold" fill="#071f4d" letter-spacing="0.5">
+                <textPath href="#textPathBottom" startOffset="50%" text-anchor="middle">
+                  ★ OFFICIAL SEAL ★
+                </textPath>
+              </text>
+              
+              <!-- Center Details -->
+              <g transform="translate(50, 50)">
+                <text y="-5" font-family="Helvetica, Arial, sans-serif" font-size="7.5" font-weight="900" fill="#071f4d" text-anchor="middle" letter-spacing="0.5">
+                  VERIFIED
+                </text>
+                <text y="4" font-family="monospace" font-size="4.2" font-weight="bold" fill="#071f4d" text-anchor="middle">
+                  {{ receipt_date }}
+                </text>
+                <text y="10" font-family="monospace" font-size="4.2" font-weight="bold" fill="#071f4d" text-anchor="middle">
+                  {{ receipt_time }}
+                </text>
+                <circle cx="0" cy="-14" r="1" fill="#071f4d" />
+              </g>
+            </svg>
+          </div>
+          
+          <!-- Verification QR -->
+          <div class="receipt-qr-wrapper">
+            {% if receipt_qr_data_uri %}
+            <img class="receipt-qr" src="{{ receipt_qr_data_uri }}" alt="Receipt QR code">
+            {% endif %}
+            <div>Scan to verify authenticity</div>
+            <strong>ID: {{ payment.receipt_no }}</strong>
+          </div>
+        </div>
+        
+        <div class="verification-instructions">
+          <p>Scan the QR code or visit: <code>{{ receipt_verify_url }}</code></p>
+          <p>This document is digitally stamped and legally verified online.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="receipt-signatures">
+    <div>
+      <strong>Received By</strong>
+      <div class="signature-line"><span>Name:</span><span>{{ cashier_name }}</span></div>
+      <div class="signature-line"><span>Signature:</span><span class="signature-script">{{ cashier_name }}</span></div>
+      <div class="signature-line"><span>Date:</span><span>{{ receipt_date }}</span></div>
+    </div>
+    <div>
+      <strong>Approved By</strong>
+      <div class="signature-line"><span>Name:</span><span>Accounts Officer</span></div>
+      <div class="signature-line"><span>Signature:</span><span class="signature-script">Accounts Officer</span></div>
+      <div class="signature-line"><span>Date:</span><span>{{ receipt_date }}</span></div>
+    </div>
+  </section>
+
+  <footer class="receipt-footer">
+    THIS IS A COMPUTER GENERATED RECEIPT. ANY ALTERATION OR TAMPERING IS ILLEGAL.
+    <span>Thank you for your payment.</span>
+  </footer>
+</section>

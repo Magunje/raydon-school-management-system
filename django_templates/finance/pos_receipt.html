@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}POS Receipt - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">POS Receipt {{ sale.receipt_no }}</h1>
+        <p class="text-secondary mb-0">{{ sale.sale_date }} | {{ sale.payment_method }} | {{ sale.customer_name }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-primary" href="/uniform-pos/receipt/{{ sale.sale_id }}/pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div>
+</div>
+
+<section class="panel">
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><strong>Receipt No</strong><br>{{ sale.receipt_no }}</div>
+        <div class="col-md-3"><strong>Date/Time</strong><br>{{ receipt_date }} {{ receipt_time }}</div>
+        <div class="col-md-3"><strong>Method</strong><br>{{ sale.payment_method }}</div>
+        <div class="col-md-3"><strong>Reference</strong><br>{{ sale.reference_no|default:"-" }}</div>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Line Total</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.item_name }}</td>
+                <td class="text-end">{{ item.quantity }}</td>
+                <td class="text-end">USD {{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-end">USD {{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot>
+            <tr><th colspan="3" class="text-end">Total</th><th class="text-end">USD {{ sale.total_amount|floatformat:2 }}</th></tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="border rounded p-3 mt-3 d-flex flex-wrap align-items-center gap-3 bg-light">
+        {% if receipt_qr_data_uri %}
+        <img src="{{ receipt_qr_data_uri }}" alt="POS receipt verification QR code" width="96" height="96" class="bg-white border rounded p-1">
+        {% endif %}
+        <div class="small">
+            <strong class="d-block text-success mb-1"><i class="bi bi-shield-check"></i> Scan to verify authenticity</strong>
+            <span class="d-block text-secondary">Verification ID: {{ sale.receipt_no }}</span>
+            <span class="d-block text-secondary">Issued: {{ receipt_date }} {{ receipt_time }}</span>
+            <a class="text-break" href="{{ receipt_verify_url }}">{{ receipt_verify_url }}</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Class Mark Schedule - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Results Centre</h1>
+        <p class="text-secondary mb-0">Manage subject marks, results publishing, setup, and predictions.</p>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    {% for tab in tabs %}
+    <li class="nav-item">
+        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Filter Panel -->
+<div class="panel mb-4 filter-panel">
+    <form method="get" action="" class="row g-3 align-items-end">
+        <input type="hidden" name="tab" value="schedule">
+        
+        <div class="col-md-4">
+            <label for="class_id" class="form-label">Class Stream</label>
+            <select name="class_id" id="class_id" class="form-select" required>
+                <option value="">-- Select Class --</option>
+                {% for c in classes %}
+                <option value="{{ c.class_id }}" {% if c.class_id|stringformat:"s" == selected_class_id|stringformat:"s" %}selected{% endif %}>
+                    {{ c|class_label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="term" class="form-label">Term</label>
+            <select name="term" id="term" class="form-select" required>
+                <option value="Term 1" {% if selected_term == "Term 1" %}selected{% endif %}>Term 1</option>
+                <option value="Term 2" {% if selected_term == "Term 2" %}selected{% endif %}>Term 2</option>
+                <option value="Term 3" {% if selected_term == "Term 3" %}selected{% endif %}>Term 3</option>
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="year" class="form-label">Year</label>
+            <select name="year" id="year" class="form-select" required>
+                {% for y in years %}
+                <option value="{{ y }}" {% if y|stringformat:"s" == selected_year|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Load Schedule</button>
+        </div>
+    </form>
+</div>
+
+{% if selected_class_id and selected_class %}
+<div class="panel">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="h5 mb-1">
+                Class Mark Broadsheet &middot; <span class="text-primary">{{ selected_class|class_label }}</span>
+            </h2>
+            <p class="text-secondary mb-0 small">Academic Period: {{ selected_term }} {{ selected_year }}</p>
+        </div>
+        <a href="{% url 'result_mark_schedule_pdf' %}?class_id={{ selected_class_id }}&term={{ selected_term }}&year={{ selected_year }}" class="btn btn-outline-info">
+            <i class="bi bi-file-earmark-pdf"></i> Download landscape PDF Broadsheet
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle text-center small">
+            <thead class="table-dark">
+                <tr>
+                    <th class="text-start" style="min-width: 200px;">Student Name</th>
+                    {% for sub in subjects %}
+                    <th title="{{ sub.subject_name }}">{{ sub.subject_code }}</th>
+                    {% endfor %}
+                    <th>Total Marks</th>
+                    <th>Average %</th>
+                    <th>Class Position</th>
+                    <th>Form Position</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in students_data %}
+                <tr>
+                    <td class="text-start">
+                        <strong>{{ row.student.first_name }} {{ row.student.surname }}</strong> <br>
+                        <small class="text-muted">{{ row.student.admission_no }}</small>
+                    </td>
+                    {% for sub in subjects %}
+                    <td>
+                        {% with mark=row.marks|get_item:sub.subject_id %}
+                            {% if mark is not None %}
+                                <span class="{% if mark < 40.0 %}text-danger fw-bold{% endif %}">
+                                    {{ mark|floatformat:0 }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    {% endfor %}
+                    
+                    {% if row.sheet %}
+                    <td><strong>{{ row.sheet.total_marks|floatformat:0 }}</strong></td>
+                    <td><strong class="text-teal">{{ row.sheet.average_mark|floatformat:1 }}%</strong></td>
+                    <td><span class="badge bg-secondary">{{ row.sheet.class_position|default:"-" }}</span></td>
+                    <td><span class="badge bg-info">{{ row.sheet.grade_position|default:"-" }}</span></td>
+                    <td>
+                        {% if row.passed_all %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> PASS</span>
+                        {% else %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> FAIL</span>
+                        {% endif %}
+                    </td>
+                    {% else %}
+                    <td colspan="5" class="text-muted italic small">No results entered</td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ subjects|length|add:6 }}" class="text-center py-4 text-muted">
+                        No active students registered in this class.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info text-center py-5">
+    <i class="bi bi-grid-3x3-gap display-6 mb-3 d-block text-secondary"></i>
+    <h5>Load Mark Broadsheet</h5>
+    <p class="text-secondary mb-0">Please choose a Class Stream, Term, and Year above to generate the subject marks matrix broadsheet.</p>
+</div>
+{% endif %}
+{% endblock %}

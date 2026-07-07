@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Attendance Register - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Attendance Register</h1>
+        <p class="text-secondary mb-0">Record, mark, and review daily and monthly learner attendance.</p>
+    </div>
+    {% if selected_class_id %}
+    <a class="btn btn-outline-primary" href="?tab=register&class_id={{ selected_class_id }}&date={{ selected_date }}&export=pdf"><i class="bi bi-file-earmark-pdf"></i> Register PDF</a>
+    {% endif %}
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    {% for tab in tabs %}
+    <li class="nav-item">
+        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Selection Filter Panel -->
+<div class="panel mb-4 filter-panel">
+    <form method="get" action="" class="row g-3 align-items-end">
+        <div class="col-md-5">
+            <label for="class_id" class="form-label">Class / Stream</label>
+            <select name="class_id" id="class_id" class="form-select" required>
+                <option value="">-- Select Class --</option>
+                {% for c in classes %}
+                <option value="{{ c.class_id }}" {% if c.class_id|stringformat:"s" == selected_class_id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.class_label|default:c.class_name }} ({{ c.academic_year }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="date" class="form-label">Attendance Date</label>
+            <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}" required>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Load Register</button>
+        </div>
+    </form>
+</div>
+
+{% if selected_class_id %}
+<!-- Attendance Register Grid -->
+<div class="panel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">
+            Attendance Roster &middot; <span class="text-primary">{{ selected_date }}</span>
+        </h2>
+        <span class="badge bg-secondary">Total Students: {{ students_with_attendance|length }}</span>
+    </div>
+
+    <form method="post" action="" data-offline-queue>
+        {% csrf_token %}
+        <input type="hidden" name="class_id" value="{{ selected_class_id }}">
+        <input type="hidden" name="date" value="{{ selected_date }}">
+
+        <div class="table-responsive mb-3">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 150px;">Admission No</th>
+                        <th>Student Name</th>
+                        <th>Gender</th>
+                        <th style="width: 320px;">Attendance Status</th>
+                        <th>Notes / Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in students_with_attendance %}
+                    <tr>
+                        <td><strong>{{ item.admission_no }}</strong></td>
+                        <td>{{ item.first_name }} {{ item.surname }}</td>
+                        <td>{{ item.gender }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Attendance status">
+                                <input type="radio" class="btn-check" name="status_{{ item.pupil_id }}" id="present_{{ item.pupil_id }}" value="Present" {% if item.status == "Present" %}checked{% endif %}>
+                                <label class="btn btn-outline-success" for="present_{{ item.pupil_id }}">Present</label>
+
+                                <input type="radio" class="btn-check" name="status_{{ item.pupil_id }}" id="absent_{{ item.pupil_id }}" value="Absent" {% if item.status == "Absent" %}checked{% endif %}>
+                                <label class="btn btn-outline-danger" for="absent_{{ item.pupil_id }}">Absent</label>
+
+                                <input type="radio" class="btn-check" name="status_{{ item.pupil_id }}" id="late_{{ item.pupil_id }}" value="Late" {% if item.status == "Late" %}checked{% endif %}>
+                                <label class="btn btn-outline-warning" for="late_{{ item.pupil_id }}">Late</label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" name="notes_{{ item.pupil_id }}" value="{{ item.notes|default:'' }}" class="form-control form-control-sm" placeholder="e.g. Sick leave, Late bus">
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            No students registered in this class stream.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if students_with_attendance %}
+        <div class="d-flex justify-content-end gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Save Attendance Register</button>
+            <a href="/attendance" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% else %}
+<div class="alert alert-info text-center py-5">
+    <i class="bi bi-calendar-check display-6 mb-3 d-block text-secondary"></i>
+    <h5>Select Class and Date</h5>
+    <p class="text-secondary mb-0">Please choose a Class Stream and Attendance Date above to load the student list and mark daily attendance.</p>
+</div>
+{% endif %}
+{% endblock %}

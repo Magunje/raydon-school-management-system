@@ -1,0 +1,491 @@
+{% extends "base.html" %}
+{% block title %}Interactive Timetable Board{% endblock %}
+
+{% block content %}
+<style>
+    .timetable-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: grab;
+        border-left: 3px solid #0f766e;
+    }
+    .timetable-card:active {
+        cursor: grabbing;
+    }
+    .timetable-card.locked {
+        cursor: not-allowed;
+        border-left: 3px solid #64748b;
+        background-color: #f1f5f9;
+        opacity: 0.85;
+    }
+    .slot-cell {
+        min-height: 80px;
+        transition: background-color 0.2s;
+    }
+    .slot-cell.drag-over {
+        background-color: #e2e8f0 !important;
+        border: 2px dashed #0f766e !important;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-gray-800">Timetable Board</h1>
+        <p class="text-muted mb-0"><small>Drag and drop lessons to adjust schedules, swap classes, and lock specific periods.</small></p>
+    </div>
+    <div class="d-flex align-items-center">
+        {% if request.user.profile.role != 'Teacher' %}
+        <a href="{% url 'timetable:dashboard' %}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        {% endif %}
+        {% if target or view_type == 'master' %}
+            {% if view_type != 'master' %}
+            <a href="{% url 'timetable:export_pdf' %}?type={{ view_type }}&target={{ target }}" target="_blank" class="btn btn-outline-danger btn-sm me-2">
+                <i class="bi bi-file-pdf"></i> Export PDF
+            </a>
+            <a href="{% url 'timetable:export_excel' %}?type={{ view_type }}&target={{ target }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-excel"></i> Export Excel
+            </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Board Selector Toolbar -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body bg-light">
+        {% if request.user.profile.role == 'Teacher' %}
+        <form method="get" class="row g-2 align-items-end" id="filter-form">
+            <div class="col-md-6">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-class">Your Assigned Class Timetable</label>
+                <select class="form-select target-input" id="target-class" name="target" disabled>
+                    {% for c in classes %}
+                    <option value="{{ c.class_id }}" selected>{{ c.class_name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="type" value="class">
+                <input type="hidden" name="target" value="{{ target }}">
+            </div>
+        </form>
+        {% else %}
+        <form method="get" class="row g-2 align-items-end" id="filter-form">
+            <div class="col-md-3">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="board-type">View Board By</label>
+                <select class="form-select" id="board-type" name="type" onchange="toggleTargetSelects()">
+                    <option value="class" {% if view_type == 'class' %}selected{% endif %}>Class Timetable</option>
+                    <option value="teacher" {% if view_type == 'teacher' %}selected{% endif %}>Teacher Timetable</option>
+                    <option value="room" {% if view_type == 'room' %}selected{% endif %}>Room Timetable</option>
+                    <option value="subject" {% if view_type == 'subject' %}selected{% endif %}>Subject Timetable</option>
+                    <option value="master" {% if view_type == 'master' %}selected{% endif %}>Master School Board</option>
+                </select>
+            </div>
+            
+            <!-- Target Selects -->
+            <div class="col-md-4 select-target" id="class-select-div" style="display: none;">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-class">Select Class</label>
+                <select class="form-select target-input" id="target-class" name="target">
+                    {% for c in classes %}
+                    <option value="{{ c.class_id }}" {% if target == c.class_id|stringformat:"s" %}selected{% endif %}>{{ c.class_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4 select-target" id="teacher-select-div" style="display: none;">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-teacher">Select Teacher</label>
+                <select class="form-select target-input" id="target-teacher" name="target">
+                    {% for t in teachers %}
+                    <option value="{{ t.full_name }}" {% if target == t.full_name %}selected{% endif %}>{{ t.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 select-target" id="room-select-div" style="display: none;">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-room">Select Room</label>
+                <select class="form-select target-input" id="target-room" name="target">
+                    {% for r in rooms %}
+                    <option value="{{ r.room_name }}" {% if target == r.room_name %}selected{% endif %}>{{ r.room_name }} ({{ r.get_room_type_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 select-target" id="subject-select-div" style="display: none;">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-subject">Select Subject</label>
+                <select class="form-select target-input" id="target-subject" name="target">
+                    {% for s in subjects %}
+                    <option value="{{ s.subject_id }}" {% if target == s.subject_id|stringformat:"s" %}selected{% endif %}>{{ s.subject_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Day Selector for Master Grid -->
+            <div class="col-md-4 select-target" id="day-select-div" style="display: none;">
+                <label class="form-label font-weight-bold" style="color: #475569;" for="target-day">Select Day</label>
+                <select class="form-select" id="target-day" name="day">
+                    <option value="Monday" {% if selected_day == 'Monday' %}selected{% endif %}>Monday</option>
+                    <option value="Tuesday" {% if selected_day == 'Tuesday' %}selected{% endif %}>Tuesday</option>
+                    <option value="Wednesday" {% if selected_day == 'Wednesday' %}selected{% endif %}>Wednesday</option>
+                    <option value="Thursday" {% if selected_day == 'Thursday' %}selected{% endif %}>Thursday</option>
+                    <option value="Friday" {% if selected_day == 'Friday' %}selected{% endif %}>Friday</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-teal w-100" style="background-color: #0f766e; color: white;"><i class="bi bi-search"></i> Load Board</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if view_type == 'master' %}
+    <!-- Master Grid Board -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header py-3 bg-white border-bottom">
+            <h6 class="m-0 font-weight-bold text-teal" style="color: #0f766e;"><i class="bi bi-grid-3x3-gap-fill me-1"></i> Master School Timetable - {{ selected_day }}</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0 text-center fs-8">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 px-3 text-start" style="min-width: 120px;">Class Name</th>
+                            {% for p in periods %}
+                            <th class="py-2" style="min-width: 100px;">
+                                <div class="font-weight-bold">{{ p.start_time }} - {{ p.end_time }}</div>
+                                <div class="text-secondary font-weight-light" style="font-size: 0.85em;">{{ p.label|default:p.period_type }}</div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in master_grid %}
+                        <tr>
+                            <td class="text-start px-3 font-weight-bold text-secondary">{{ row.class_name }}</td>
+                            {% for cell in row.cells %}
+                                {% if cell.is_break %}
+                                <td class="table-light font-weight-bold text-muted text-uppercase" style="background-color: #f1f5f9; letter-spacing: 2px; font-size: 0.8em;">{{ cell.label }}</td>
+                                {% elif cell.is_empty %}
+                                <td class="text-muted">-</td>
+                                {% else %}
+                                <td>
+                                    <div class="font-weight-bold text-dark">{{ cell.subject_name }}</div>
+                                    <div class="text-secondary" style="font-size: 0.85em;">{{ cell.teacher_name }}</div>
+                                    <div class="text-muted" style="font-size: 0.8em;">({{ cell.room_name }})</div>
+                                </td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <!-- Weekly Grid (Class, Teacher, Room, Subject) -->
+    {% if selected_name %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header py-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-teal" style="color: #0f766e;"><i class="bi bi-calendar3 me-1"></i> Weekly Board: {{ selected_name }}</h6>
+                <span class="badge rounded-pill bg-teal text-white" style="background-color: #0f766e;">{{ view_type|title }} View</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0 text-center">
+                        <thead class="table-light fs-8">
+                            <tr>
+                                <th class="py-3 px-3 text-start" style="width: 100px;">Day</th>
+                                {% for p in periods %}
+                                <th class="py-2" style="min-width: 110px; width: calc((100% - 100px) / {{ periods|length }});">
+                                    <div class="font-weight-bold">{{ p.start_time }} - {{ p.end_time }}</div>
+                                    <div class="text-secondary font-weight-light" style="font-size: 0.85em;">{{ p.label|default:p.period_type }}</div>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in timetable_rows %}
+                            <tr>
+                                <td class="text-start px-3 font-weight-bold text-secondary">{{ row.day_name }}</td>
+                                {% for cell in row.cells %}
+                                    {% if cell.is_break %}
+                                        <td class="table-light font-weight-bold text-muted text-uppercase" style="background-color: #f1f5f9; letter-spacing: 2px; font-size: 0.85em;">
+                                            {{ cell.label }}
+                                        </td>
+                                    {% elif cell.is_empty %}
+                                        <td class="slot-cell border-dashed bg-light p-2" 
+                                            data-day="{{ cell.day_name }}" 
+                                            data-period="{{ cell.period_no }}"
+                                            {% if request.user.profile.role != 'Teacher' %}
+                                            ondragover="allowDrop(event)" 
+                                            ondragleave="dragLeave(event)" 
+                                            ondrop="drop(event)"
+                                            {% endif %}
+                                            style="background-color: #f8fafc; border: 1px dashed #cbd5e1;">
+                                            <div class="text-muted fs-8">-</div>
+                                        </td>
+                                    {% else %}
+                                        <td class="slot-cell p-2" 
+                                            data-day="{{ row.day_name }}" 
+                                            data-period="{{ forloop.index }}"
+                                            {% if request.user.profile.role != 'Teacher' %}
+                                            ondragover="allowDrop(event)" 
+                                            ondragleave="dragLeave(event)" 
+                                            ondrop="drop(event)"
+                                            {% endif %}>
+                                            
+                                            <!-- Timetable lesson card -->
+                                            <div class="card p-2 text-start timetable-card shadow-xs {% if cell.is_locked or request.user.profile.role == 'Teacher' %}locked{% endif %}"
+                                                 draggable="{% if cell.is_locked or request.user.profile.role == 'Teacher' %}false{% else %}true{% endif %}" 
+                                                 id="card-{{ cell.timetable_id }}"
+                                                 data-id="{{ cell.timetable_id }}"
+                                                 data-class-id="{{ cell.class_id }}"
+                                                 data-teacher="{{ cell.teacher_name }}"
+                                                 data-room="{{ cell.room_name }}"
+                                                 data-subject-id="{{ cell.subject_id }}"
+                                                 ondragstart="drag(event)">
+                                                 
+                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                    <div class="font-weight-bold text-dark fs-8">{{ cell.subject_name }}</div>
+                                                    <!-- Lock toggle -->
+                                                    {% if request.user.profile.role != 'Teacher' %}
+                                                    <button type="button" class="btn btn-xs p-0 text-secondary border-0 bg-transparent" onclick="toggleLock({{ cell.timetable_id }}, this)">
+                                                        <i class="bi {% if cell.is_locked %}bi-lock-fill text-dark{% else %}bi-unlock text-muted{% endif %}" style="font-size: 0.95em;"></i>
+                                                    </button>
+                                                    {% else %}
+                                                    <span class="text-secondary"><i class="bi {% if cell.is_locked %}bi-lock-fill text-dark{% else %}bi-unlock text-muted{% endif %}" style="font-size: 0.95em;"></i></span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if cell.extra_label %}
+                                                <div class="text-secondary font-weight-bold" style="font-size: 0.75em;"><i class="bi bi-people me-1"></i>{{ cell.extra_label }}</div>
+                                                {% endif %}
+                                                
+                                                <div class="text-secondary" style="font-size: 0.75em;"><i class="bi bi-person me-1"></i>{{ cell.teacher_name }}</div>
+                                                <div class="text-muted" style="font-size: 0.7em;"><i class="bi bi-building me-1"></i>{{ cell.room_name }}</div>
+                                            </div>
+                                            
+                                        </td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endif %}
+
+<!-- Conflict Alert Dialog Modal -->
+<div class="modal fade" id="conflictModal" tabindex="-1" aria-labelledby="conflictModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-3">
+                <h6 class="modal-title font-weight-bold" id="conflictModalLabel"><i class="bi bi-exclamation-octagon-fill me-1"></i> Double Booking Warning</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="font-weight-bold text-gray-800">Moving this lesson creates the following conflicts:</p>
+                <div class="list-group list-group-flush mb-3" id="conflicts-list">
+                    <!-- Dynamic conflicts go here -->
+                </div>
+                <p class="text-secondary mb-0"><small>Are you sure you want to proceed and save anyway? This will override the conflicts.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel Swap</button>
+                <button type="button" class="btn btn-danger" id="btn-force-save">Override & Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const csrfToken = '{{ csrf_token }}';
+
+    function toggleTargetSelects() {
+        const type = document.getElementById('board-type').value;
+        
+        // Hide all
+        document.querySelectorAll('.select-target').forEach(div => div.style.display = 'none');
+        document.querySelectorAll('.target-input').forEach(input => input.disabled = true);
+        
+        // Show selected
+        if (type === 'class') {
+            document.getElementById('class-select-div').style.display = 'block';
+            document.getElementById('target-class').disabled = false;
+        } else if (type === 'teacher') {
+            document.getElementById('teacher-select-div').style.display = 'block';
+            document.getElementById('target-teacher').disabled = false;
+        } else if (type === 'room') {
+            document.getElementById('room-select-div').style.display = 'block';
+            document.getElementById('target-room').disabled = false;
+        } else if (type === 'subject') {
+            document.getElementById('subject-select-div').style.display = 'block';
+            document.getElementById('target-subject').disabled = false;
+        } else if (type === 'master') {
+            document.getElementById('day-select-div').style.display = 'block';
+        }
+    }
+    
+    // Run on load
+    toggleTargetSelects();
+
+    // --- Drag and Drop JS ---
+    let draggedCard = null;
+    let pendingMove = null;
+
+    function drag(ev) {
+        draggedCard = ev.target;
+        ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        const cell = ev.currentTarget;
+        cell.classList.add('drag-over');
+    }
+
+    function dragLeave(ev) {
+        ev.currentTarget.classList.remove('drag-over');
+    }
+
+    function drop(ev) {
+        ev.preventDefault();
+        const cell = ev.currentTarget;
+        cell.classList.remove('drag-over');
+
+        if (!draggedCard) return;
+
+        const day = cell.getAttribute('data-day');
+        const period = cell.getAttribute('data-period');
+        const timetableId = draggedCard.getAttribute('data-id');
+        const classId = draggedCard.getAttribute('data-class-id');
+        const teacherName = draggedCard.getAttribute('data-teacher');
+        const roomName = draggedCard.getAttribute('data-room');
+        const subjectId = draggedCard.getAttribute('data-subject-id');
+
+        pendingMove = {
+            timetable_id: timetableId,
+            class_id: classId,
+            day_name: day,
+            period_no: period,
+            teacher_name: teacherName,
+            room_name: roomName,
+            subject_id: subjectId,
+            cellElement: cell
+        };
+
+        // 1. Check conflicts via API
+        const params = new URLSearchParams();
+        params.append('class_id', classId);
+        params.append('teacher_name', teacherName);
+        params.append('room_name', roomName);
+        params.append('day_name', day);
+        params.append('period_no', period);
+        params.append('exclude_id', timetableId);
+
+        fetch('{% url "timetable:api_check_conflict" %}', {
+            method: 'POST',
+            body: params,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (data.conflicts && data.conflicts.length > 0) {
+                    // Show conflicts modal
+                    const conflictsList = document.getElementById('conflicts-list');
+                    conflictsList.innerHTML = '';
+                    data.conflicts.forEach(c => {
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item px-0 border-0';
+                        item.innerHTML = `<span class="badge bg-danger-soft text-danger me-2" style="background-color:#fef2f2; color:#ef4444;">${c.type}</span><p class="mb-0 fs-8 text-secondary mt-1">${c.message}</p>`;
+                        conflictsList.appendChild(item);
+                    });
+                    
+                    const myModal = new bootstrap.Modal(document.getElementById('conflictModal'));
+                    myModal.show();
+                } else {
+                    // Directly save
+                    saveMove();
+                }
+            }
+        });
+    }
+
+    function saveMove() {
+        if (!pendingMove) return;
+
+        const params = new URLSearchParams();
+        params.append('timetable_id', pendingMove.timetable_id);
+        params.append('class_id', pendingMove.class_id);
+        params.append('day_name', pendingMove.day_name);
+        params.append('period_no', pendingMove.period_no);
+        params.append('subject_id', pendingMove.subject_id);
+        params.append('teacher_name', pendingMove.teacher_name);
+        params.append('room_name', pendingMove.room_name);
+
+        fetch('{% url "timetable:api_save_slot" %}', {
+            method: 'POST',
+            body: params,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Reload to reflect all database state changes (including room changes)
+                window.location.reload();
+            } else {
+                alert('Error moving slot: ' + data.message);
+            }
+        });
+    }
+
+    document.getElementById('btn-force-save').addEventListener('click', function() {
+        const modalEl = document.getElementById('conflictModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+        saveMove();
+    });
+
+    // --- Locking JS ---
+    function toggleLock(timetableId, btn) {
+        const icon = btn.querySelector('i');
+        const card = document.getElementById('card-' + timetableId);
+        const willLock = icon.classList.contains('bi-unlock');
+
+        const params = new URLSearchParams();
+        params.append('timetable_id', timetableId);
+        params.append('is_locked', willLock ? 'true' : 'false');
+
+        fetch('{% url "timetable:api_toggle_lock" %}', {
+            method: 'POST',
+            body: params,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (data.is_locked) {
+                    icon.className = 'bi bi-lock-fill text-dark';
+                    card.classList.add('locked');
+                    card.setAttribute('draggable', 'false');
+                } else {
+                    icon.className = 'bi bi-unlock text-muted';
+                    card.classList.remove('locked');
+                    card.setAttribute('draggable', 'true');
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}{{ title }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ title }}</h1>
+        <p class="text-secondary mb-0">{{ subtitle }}</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <section class="panel form-panel">
+            <form method="post" data-offline-queue>
+                {% csrf_token %}
+                
+                {% if is_new %}
+                <!-- Create Result Sheet Step -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="pupil_search">Search Student (Name or Admission Number)</label>
+                        <input type="text" id="pupil_search" class="form-control" placeholder="Type at least 2 characters..." autocomplete="off" required>
+                        <input type="hidden" id="pupil_id" name="pupil_id" required>
+                        <div id="autocomplete-results" class="list-group position-absolute w-50 z-3 shadow d-none" style="max-height: 200px; overflow-y: auto;"></div>
+                        <div id="selected-pupil-info" class="mt-2 text-success fw-bold d-none"></div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="term">Term</label>
+                        <select id="term" name="term" required>
+                            <option value="Term 1" {% if current_term == "Term 1" %}selected{% endif %}>Term 1</option>
+                            <option value="Term 2" {% if current_term == "Term 2" %}selected{% endif %}>Term 2</option>
+                            <option value="Term 3" {% if current_term == "Term 3" %}selected{% endif %}>Term 3</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="year">Year</label>
+                        <input type="number" id="year" name="year" value="{{ current_year }}" required>
+                    </div>
+
+                    <div class="col-12 mt-3">
+                        <label for="teacher_comment">Teacher Comment (Optional)</label>
+                        <textarea id="teacher_comment" name="teacher_comment" rows="3" class="form-control" placeholder="Enter remarks..."></textarea>
+                    </div>
+                </div>
+                
+                {% else %}
+                <!-- Edit Result Sheet & Subject Marks Step -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Student</label>
+                        <div class="fs-5 fw-bold">{{ pupil.first_name }} {{ pupil.surname }} ({{ pupil.admission_no }})</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Form / Stream</label>
+                        <div class="fs-5 fw-bold">{{ result|class_label }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Academic Period</label>
+                        <div class="fs-5 fw-bold">{{ result.term }} {{ result.year }}</div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h4 class="mb-3">Subject Marks</h4>
+                {% if subjects %}
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped table-bordered align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Subject Code</th>
+                                <th>Subject Name</th>
+                                <th style="width: 180px;">Mark (%)</th>
+                                <th style="width: 120px;">Grade (Auto)</th>
+                                <th>Subject Comment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sub in subjects %}
+                            <tr>
+                                <td><code>{{ sub.subject_code }}</code></td>
+                                <td>{{ sub.subject_name }}</td>
+                                <td>
+                                    <input type="number" 
+                                           name="subject_{{ sub.subject_id }}" 
+                                           class="form-control form-control-sm subject-mark" 
+                                           min="0" 
+                                           max="100" 
+                                           step="0.1" 
+                                           value="{{ sub.mark|default:'' }}" 
+                                           data-subject-id="{{ sub.subject_id }}"
+                                           placeholder="0 - 100">
+                                </td>
+                                <td>
+                                    <span id="grade_{{ sub.subject_id }}" class="badge bg-secondary fs-6">
+                                        {{ sub.grade|default:"-" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <input type="text" 
+                                           name="comment_{{ sub.subject_id }}" 
+                                           class="form-control form-control-sm" 
+                                           value="{{ sub.subject_comment|default:'' }}" 
+                                           placeholder="Enter subject comment...">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">No active subjects found for this student's grade. Please set up subjects first.</div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label for="teacher_comment">Teacher Comment</label>
+                    <textarea id="teacher_comment" name="teacher_comment" rows="3" class="form-control" placeholder="Overall comment...">{{ result.teacher_comment|default:'' }}</textarea>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Save Results</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+{% if is_new %}
+<!-- Autocomplete Script for creating a result sheet -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const searchInput = document.getElementById("pupil_search");
+    const resultsContainer = document.getElementById("autocomplete-results");
+    const pupilIdInput = document.getElementById("pupil_id");
+    const infoContainer = document.getElementById("selected-pupil-info");
+
+    let timeout = null;
+
+    searchInput.addEventListener("input", function() {
+        clearTimeout(timeout);
+        const query = searchInput.value.trim();
+        if (query.length < 1) {
+            resultsContainer.classList.add("d-none");
+            return;
+        }
+
+        timeout = setTimeout(() => {
+            fetch(`/api/result-pupil-search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsContainer.innerHTML = "";
+                    if (data.results && data.results.length > 0) {
+                        data.results.forEach(student => {
+                            const btn = document.createElement("button");
+                            btn.type = "button";
+                            btn.className = "list-group-item list-group-item-action text-start";
+                            const classLabel = student.class_label || `${student.grade || ""}${student.class_stream || ""}`;
+                            btn.innerHTML = `<strong>${student.first_name} ${student.surname}</strong> (${student.admission_no}) <br><small class="text-muted">${classLabel}</small>`;
+                            btn.addEventListener("click", () => {
+                                pupilIdInput.value = student.pupil_id;
+                                searchInput.value = `${student.first_name} ${student.surname}`;
+                                infoContainer.innerHTML = `Selected Student: ${student.first_name} ${student.surname} (${student.admission_no}) [${classLabel}]`;
+                                infoContainer.classList.remove("d-none");
+                                resultsContainer.classList.add("d-none");
+                            });
+                            resultsContainer.appendChild(btn);
+                        });
+                        resultsContainer.classList.remove("d-none");
+                    } else {
+                        resultsContainer.innerHTML = "<div class='list-group-item text-muted'>No matching student found</div>";
+                        resultsContainer.classList.remove("d-none");
+                    }
+                });
+        }, 300);
+    });
+
+    document.addEventListener("click", function(e) {
+        if (e.target !== searchInput && e.target !== resultsContainer) {
+            resultsContainer.classList.add("d-none");
+        }
+    });
+});
+</script>
+{% else %}
+<!-- Grade Calculator Script for editing marks -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const markInputs = document.querySelectorAll(".subject-mark");
+    
+    function calculateGrade(mark) {
+        if (mark === "" || isNaN(mark)) return "-";
+        const val = parseFloat(mark);
+        if (val >= 80) return "A";
+        if (val >= 70) return "B";
+        if (val >= 60) return "C";
+        if (val >= 50) return "D";
+        if (val >= 40) return "E";
+        return "U";
+    }
+
+    markInputs.forEach(input => {
+        input.addEventListener("input", function() {
+            const subId = input.getAttribute("data-subject-id");
+            const gradeSpan = document.getElementById(`grade_${subId}`);
+            const mark = input.value.trim();
+            const grade = calculateGrade(mark);
+            gradeSpan.textContent = grade;
+            
+            // Adjust styling of badge based on pass/fail
+            if (grade === "U" || grade === "-") {
+                gradeSpan.className = "badge bg-danger fs-6";
+            } else if (grade === "A") {
+                gradeSpan.className = "badge bg-success fs-6";
+            } else {
+                gradeSpan.className = "badge bg-primary fs-6";
+            }
+        });
+        
+        // Initial trigger
+        input.dispatchEvent(new Event("input"));
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

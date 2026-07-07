@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Student Profile - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">{{ pupil.first_name }} {{ pupil.surname }}</h1>
+        <p class="text-secondary mb-0">{{ pupil.admission_no }} | {{ pupil|class_label }}</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="/pupils/{{ pupil.admission_no }}/edit"><i class="bi bi-pencil"></i> Edit</a>
+        <a class="btn btn-outline-info" href="/pupils/{{ pupil.admission_no }}/subjects"><i class="bi bi-book"></i> Manage Subjects</a>
+        <a class="btn btn-outline-secondary" href="/pupils/{{ pupil.admission_no }}/print"><i class="bi bi-printer"></i> Print Profile</a>
+        <a class="btn btn-outline-success" href="/pupils/{{ pupil.admission_no }}/offer-letter/pdf"><i class="bi bi-file-earmark-pdf"></i> Print Admission Letter</a>
+        <a class="btn btn-outline-primary" href="/reports/statement?admission_no={{ pupil.admission_no }}"><i class="bi bi-file-text"></i> Fees Statement</a>
+        <a class="btn btn-outline-secondary" href="/pupils/{{ pupil.admission_no }}/payments"><i class="bi bi-clock-history"></i> Payment History</a>
+        {% if pupil.status == "Transferred" %}
+        <a class="btn btn-outline-success" href="/pupils/{{ pupil.admission_no }}/transfer-letter/pdf"><i class="bi bi-file-earmark-pdf"></i> Transfer Letter</a>
+        {% endif %}
+        <a class="btn btn-outline-warning" href="/pupils/{{ pupil.admission_no }}/balance"><i class="bi bi-wallet2"></i> Balance</a>
+        <a class="btn btn-outline-info" href="/pupils/{{ pupil.pupil_id }}/balance-adjustments"><i class="bi bi-gear-fill"></i> Adjust Balance</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="stat-card"><span>Current Balance</span><strong>USD {{ summary.overall_balance|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Previous Arrears</span><strong>USD {{ summary.previous_arrears|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Total Paid</span><strong>USD {{ summary.total_paid|floatformat:2 }}</strong></div></div>
+    <div class="col-md-3"><div class="stat-card"><span>Credit</span><strong>USD {{ summary.credit_balance|floatformat:2 }}</strong></div></div>
+</div>
+
+<section class="panel mb-3">
+    <h2 class="h5 mb-3">Student Details</h2>
+    <div class="p-3 border rounded bg-white">
+        <dl class="row mb-0">
+            <dt class="col-md-3">Admission Number</dt><dd class="col-md-9">{{ pupil.admission_no }}</dd>
+            <dt class="col-md-3">Full Name</dt><dd class="col-md-9">{{ pupil.first_name }} {{ pupil.surname }}</dd>
+            <dt class="col-md-3">Gender</dt><dd class="col-md-9">{{ pupil.gender|default:"-" }}</dd>
+            <dt class="col-md-3">Date of Birth</dt><dd class="col-md-9">{{ pupil.date_of_birth|default:"-" }}</dd>
+            <dt class="col-md-3">Age</dt><dd class="col-md-9">{{ pupil.age|default:"-" }}</dd>
+            <dt class="col-md-3">Class</dt><dd class="col-md-9">{{ pupil|class_label|default:"-" }}</dd>
+            <dt class="col-md-3">Stream</dt><dd class="col-md-9">{{ pupil.class_stream|default:"-" }}</dd>
+            <dt class="col-md-3">Parent/Guardian</dt><dd class="col-md-9">{{ pupil.guardian_name|default:"-" }} | {{ pupil.guardian_phone|default:"-" }}</dd>
+            <dt class="col-md-3">Address</dt><dd class="col-md-9">{{ pupil.address|default:"-" }}</dd>
+            <dt class="col-md-3">Admission Date</dt><dd class="col-md-9">{{ pupil.admission_date|default:"-" }}</dd>
+            <dt class="col-md-3">School Finish Date</dt><dd class="col-md-9">{{ pupil.school_finish_date|default:"-" }}</dd>
+            <dt class="col-md-3">Status</dt><dd class="col-md-9">{{ pupil.status|default:"-" }}</dd>
+            {% if pupil.completed_on %}<dt class="col-md-3">Completed On</dt><dd class="col-md-9">{{ pupil.completed_on }}</dd>{% endif %}
+            <dt class="col-md-3">Medical Notes</dt><dd class="col-md-9">{{ pupil.medical_notes|default:"-" }}</dd>
+        </dl>
+    </div>
+</section>
+
+<section class="panel mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0">Registered Subjects</h2>
+        <a class="btn btn-sm btn-outline-primary" href="/pupils/{{ pupil.admission_no }}/subjects"><i class="bi bi-pencil"></i> Manage Subjects</a>
+    </div>
+    {% if registered_subjects %}
+    <div class="row g-2">
+        {% for sub in registered_subjects %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border p-2 bg-light">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-book text-primary me-2 fs-5"></i>
+                    <div>
+                        <strong class="small d-block">{{ sub.subject_name }}</strong>
+                        <span class="text-secondary small">{{ sub.subject_code }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted small mb-0">No registered subjects found for the current academic year.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <h2 class="h5">Student Actions</h2>
+    <div class="d-flex flex-wrap gap-2">
+        {% if pupil.status == "Active" %}
+        <a class="btn btn-outline-success" href="/pupils/{{ pupil.admission_no }}/promote"><i class="bi bi-arrow-up-circle"></i> Promote</a>
+        <a class="btn btn-outline-warning" href="/pupils/{{ pupil.admission_no }}/transfer"><i class="bi bi-arrow-left-right"></i> Transfer</a>
+        <form method="post" action="/pupils/{{ pupil.admission_no }}/deactivate" onsubmit="return confirm('Deactivate this student?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger" type="submit"><i class="bi bi-person-dash"></i> Deactivate</button>
+        </form>
+        {% elif pupil.status == "Transferred" %}
+        <a class="btn btn-outline-success" href="/pupils/{{ pupil.admission_no }}/transfer-letter/pdf"><i class="bi bi-file-earmark-pdf"></i> Transfer Letter</a>
+        {% endif %}
+        <form method="post" action="/pupils/{{ pupil.admission_no }}/delete" onsubmit="return confirm('Permanently delete this student record?')">
+            {% csrf_token %}
+            <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

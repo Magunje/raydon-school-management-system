@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Student Portal - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Student Portal</h1>
+        <p class="text-secondary mb-0">{{ pupil.first_name }} {{ pupil.surname }} | {{ pupil.admission_no }} | {{ class_label }}</p>
+    </div>
+    <a class="btn btn-outline-danger" href="{% url 'portal_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_profile' %}">
+            <span>Class</span>
+            <strong>{{ class_label|default:"-" }}</strong>
+            <small>{{ class_size }} active learner{{ class_size|pluralize }}</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_attendance' %}">
+            <span>Attendance</span>
+            <strong>{{ attendance.percentage|floatformat:1 }}%</strong>
+            <small>{{ attendance.present_days }} present, {{ attendance.late_days }} late</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_statement' %}">
+            <span>Current Balance</span>
+            <strong>USD {{ summary.amount_due|default:0|floatformat:2 }}</strong>
+            <small>{{ pending_payments|length }} pending portal payment{{ pending_payments|length|pluralize }}</small>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_results' %}">
+            <span>Published Results</span>
+            <strong>{{ results|length }}</strong>
+            <small>{% if results %}Latest {{ results.0.term }} {{ results.0.year }}{% else %}No published reports{% endif %}</small>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <section class="panel h-100">
+            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">Today</h2>
+                    <p class="text-secondary mb-0">Live academic work and class movement.</p>
+                </div>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_timetable' %}"><i class="bi bi-calendar3"></i> Timetable</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr><th>Period</th><th>Subject</th><th>Teacher</th><th>Room</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for row in timetable_today %}
+                        <tr>
+                            <td>{{ row.period_no }}<br><small class="text-secondary">{{ row.start_time }} - {{ row.end_time }}</small></td>
+                            <td><strong>{{ row.subject_name }}</strong></td>
+                            <td>{{ row.teacher_name|default:"-" }}</td>
+                            <td>{{ row.room_name|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="4" class="text-secondary">No timetable entries found for today.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-4">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Quick Actions</h2>
+            <div class="d-grid gap-2">
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_e_learning' %}"><i class="bi bi-cloud-arrow-down"></i> Assignments due: {{ assignments_due|length }}</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_pay_fees' %}"><i class="bi bi-bank"></i> Submit payment reference</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_statement_pdf' %}"><i class="bi bi-file-earmark-pdf"></i> Download statement</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_textbooks' %}"><i class="bi bi-book-half"></i> Textbooks overdue: {{ overdue_textbooks }}</a>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Latest Results</h2>
+            {% if latest_result_entries %}
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                    {% for entry in latest_result_entries %}
+                        <tr><td>{{ entry.subject_name }}</td><td class="text-end"><strong>{{ entry.mark|floatformat:1 }}</strong> <span class="text-secondary">{{ entry.grade }}</span></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-secondary mb-0">No published subject results yet.</p>
+            {% endif %}
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel h-100">
+            <h2 class="h5 mb-3">Recent Payments</h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                    {% for row in payments %}
+                        <tr>
+                            <td>{{ row.receipt_no|default:row.reference_no }}</td>
+                            <td>{{ row.payment_date }}</td>
+                            <td class="text-end">USD {{ row.amount_paid|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td class="text-secondary">No payments found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load school_extras %}
+
+{% block title %}Results Centre - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Results Centre</h1>
+        <p class="text-secondary mb-0">Manage subject marks, results publishing, setup, and predictions.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/results/export/pdf?{% if selected_class_id %}class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" class="btn btn-outline-danger"><i class="bi bi-file-pdf"></i> Export to PDF</a>
+        {% if current_role == "Teacher" %}
+        <a href="/results/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Result Sheet</a>
+        {% endif %}
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    {% for tab in tabs %}
+    <li class="nav-item">
+        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Filter Panel -->
+<div class="panel mb-4 filter-panel">
+    <form method="get" action="" class="row g-3 align-items-end">
+        <input type="hidden" name="tab" value="sheets">
+        
+        <div class="col-md-3">
+            <label for="class_id" class="form-label">Class Stream</label>
+            <select name="class_id" id="class_id" class="form-select" data-selected-value="{{ selected_class_id }}">
+                <option value="">-- All Classes --</option>
+                {% for c in classes %}
+                <option value="{{ c.class_id }}" data-year="{{ c.academic_year }}" {% if c.class_id|stringformat:"s" == selected_class_id|stringformat:"s" %}selected{% endif %}>
+                    {{ c|class_label }} ({{ c.academic_year }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="term" class="form-label">Term</label>
+            <select name="term" id="term" class="form-select">
+                <option value="">-- All Terms --</option>
+                <option value="Term 1" {% if selected_term == "Term 1" %}selected{% endif %}>Term 1</option>
+                <option value="Term 2" {% if selected_term == "Term 2" %}selected{% endif %}>Term 2</option>
+                <option value="Term 3" {% if selected_term == "Term 3" %}selected{% endif %}>Term 3</option>
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label for="year" class="form-label">Year</label>
+            <select name="year" id="year" class="form-select">
+                <option value="">-- All Years --</option>
+                {% for y in years %}
+                <option value="{{ y }}" {% if y|stringformat:"s" == selected_year|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label for="q" class="form-label">Search Student</label>
+            <input type="text" name="q" id="q" value="{{ q|default:'' }}" class="form-control" placeholder="Name or admission number...">
+        </div>
+        
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter"></i> Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Results Sheets List -->
+<div class="panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Admission No</th>
+                    <th>Student Name</th>
+                    <th>Gender</th>
+                    <th>Form / Stream</th>
+                    <th>Term / Year</th>
+                    <th>Total Marks</th>
+                    <th>Average Mark</th>
+                    <th><a href="?tab=sheets&order_by=class_position{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="text-dark text-decoration-none">Class Position <i class="bi bi-sort-numeric-down"></i></a></th>
+                    <th><a href="?tab=sheets&order_by=grade_position{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="text-dark text-decoration-none">Form Position <i class="bi bi-sort-numeric-down"></i></a></th>
+                    <th>Status</th>
+                    <th class="text-end" style="width: 220px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in page_obj %}
+                <tr>
+                    <td class="text-secondary small">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                    <td><strong>{{ r.admission_no }}</strong></td>
+                    <td>{{ r.first_name }} {{ r.surname }}</td>
+                    <td>{{ r.gender }}</td>
+                    <td>{{ r|class_label }}</td>
+                    <td>{{ r.term }} {{ r.year }}</td>
+                    <td>{{ r.total_marks|floatformat:0 }}</td>
+                    <td><strong class="text-teal">{{ r.average_mark|floatformat:1 }}%</strong></td>
+                    <td><span class="badge bg-secondary">{{ r.class_position|default:"-" }}</span></td>
+                    <td><span class="badge bg-secondary">{{ r.grade_position|default:"-" }}</span></td>
+                    <td>
+                        <span class="badge {% if r.status == 'Published' %}bg-success{% else %}bg-warning{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="/results/{{ r.result_id }}" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i> View</a>
+                            <a href="/results/{{ r.result_id }}/pdf" class="btn btn-sm btn-outline-info" title="PDF"><i class="bi bi-file-pdf"></i> PDF</a>
+                            {% if current_role == "Teacher" %}
+                            <a href="/results/{{ r.result_id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i> Edit</a>
+                            {% endif %}
+                            
+                            {% if can_publish and r.status == 'Draft' %}
+                            <form method="post" action="/results/{{ r.result_id }}/publish" style="display:inline;" onsubmit="return confirm('Publish this results sheet?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Publish"><i class="bi bi-send-check"></i></button>
+                            </form>
+                            <form method="post" action="/results/{{ r.result_id }}/delete" style="display:inline;" onsubmit="return confirm('Delete this results sheet?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center py-5 text-muted">
+                        <i class="bi bi-folder2-open display-4 d-block mb-3 text-secondary"></i>
+                        <h5>No Results Sheets Found</h5>
+                        <p class="text-secondary mb-0">No results slips have been recorded for the selected search and filter criteria.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-secondary small">
+            Showing Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} (Total: {{ page_obj.paginator.count }} records)
+        </span>
+        <div class="btn-group">
+            {% if page_obj.has_previous %}
+            <a href="?tab=sheets&page=1{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">First</a>
+            <a href="?tab=sheets&page={{ page_obj.previous_page_number }}{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">Previous</a>
+            {% endif %}
+            
+            {% if page_obj.has_next %}
+            <a href="?tab=sheets&page={{ page_obj.next_page_number }}{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">Next</a>
+            <a href="?tab=sheets&page={{ page_obj.paginator.num_pages }}{% if selected_class_id %}&class_id={{ selected_class_id }}{% endif %}{% if selected_term %}&term={{ selected_term }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if order_by %}&order_by={{ order_by }}{% endif %}" class="btn btn-outline-secondary btn-sm">Last</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const yearSelect = document.getElementById('year');
+    const classSelect = document.getElementById('class_id');
+    if (yearSelect && classSelect) {
+        const classOptions = Array.from(classSelect.options);
+        
+        function filterClasses() {
+            const selectedYear = yearSelect.value;
+            classSelect.innerHTML = '';
+            
+            // Add the default option
+            const defaultOpt = classOptions.find(opt => opt.value === '');
+            if (defaultOpt) classSelect.appendChild(defaultOpt);
+            
+            classOptions.forEach(opt => {
+                if (opt.value !== '' && opt.getAttribute('data-year') === selectedYear) {
+                    classSelect.appendChild(opt);
+                }
+            });
+        }
+        
+        yearSelect.addEventListener('change', function() {
+            filterClasses();
+            classSelect.value = '';
+        });
+        
+        filterClasses();
+        const selectedValue = classSelect.getAttribute('data-selected-value');
+        if (selectedValue) {
+            classSelect.value = selectedValue;
+        }
+    }
+});
+</script>
+{% endblock %}

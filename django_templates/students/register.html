@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}Register Student - {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div>
+        <h1 class="h3 mb-1">Register Student</h1>
+        <p class="text-secondary mb-0">Admission number is generated automatically when saved.</p>
+    </div>
+    <button class="btn btn-outline-secondary" type="button" onclick="history.back()"><i class="bi bi-arrow-left"></i> Back</button>
+</div>
+
+<!-- Progress Indicator -->
+<div class="card mb-4 shadow-sm border-0 bg-white">
+    <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-center position-relative" style="max-width: 800px; margin: 0 auto;">
+            <!-- Background Line -->
+            <div class="position-absolute start-0 end-0 top-50 translate-y-50 bg-light" style="height: 4px; z-index: 1;">
+                <div id="progressBar" class="bg-primary h-100" style="width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+            
+            <!-- Steps -->
+            <div class="step-indicator active" data-step="1" style="z-index: 2; position: relative;">
+                <span class="step-num bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">1</span>
+                <span class="step-label d-none d-md-block text-center mt-2 small text-muted active-label">Student</span>
+            </div>
+            <div class="step-indicator" data-step="2" style="z-index: 2; position: relative;">
+                <span class="step-num bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">2</span>
+                <span class="step-label d-none d-md-block text-center mt-2 small text-muted">Guardian</span>
+            </div>
+            <div class="step-indicator" data-step="3" style="z-index: 2; position: relative;">
+                <span class="step-num bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">3</span>
+                <span class="step-label d-none d-md-block text-center mt-2 small text-muted">Academics</span>
+            </div>
+            <div class="step-indicator" data-step="4" style="z-index: 2; position: relative;">
+                <span class="step-num bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">4</span>
+                <span class="step-label d-none d-md-block text-center mt-2 small text-muted">Medical</span>
+            </div>
+            <div class="step-indicator" data-step="5" style="z-index: 2; position: relative;">
+                <span class="step-num bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">5</span>
+                <span class="step-label d-none d-md-block text-center mt-2 small text-muted">Review</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-step Form -->
+<form id="registrationForm" method="post" action="{% url 'register_pupil' %}">
+    {% csrf_token %}
+    
+    <!-- Step 1: Student Information -->
+    <div class="form-step active-step" data-step="1">
+        <section class="panel mb-4 shadow-sm border-0">
+            <h2 class="h5 border-bottom pb-3 mb-4 text-primary"><i class="bi bi-person-fill"></i> Student Information</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="first_name" class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="e.g. Tendai" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="surname" class="form-label fw-semibold">Surname <span class="text-danger">*</span></label>
+                    <input type="text" id="surname" name="surname" class="form-control" placeholder="e.g. Moyo" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="gender" class="form-label fw-semibold">Gender <span class="text-danger">*</span></label>
+                    <select id="gender" name="gender" class="form-select" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="date_of_birth" class="form-label fw-semibold">Date of Birth <span class="text-danger">*</span></label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" required>
+                </div>
+                <div class="col-md-12">
+                    <label for="national_id" class="form-label fw-semibold">National ID Number <span class="text-secondary">(Optional)</span></label>
+                    <input type="text" id="national_id" name="national_id" class="form-control" placeholder="e.g. 63-123456A78">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Step 2: Parent/Guardian Information -->
+    <div class="form-step d-none" data-step="2">
+        <section class="panel mb-4 shadow-sm border-0">
+            <h2 class="h5 border-bottom pb-3 mb-4 text-primary"><i class="bi bi-people-fill"></i> Parent / Guardian Information</h2>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="guardian_name" class="form-label fw-semibold">Guardian Name <span class="text-danger">*</span></label>
+                    <input type="text" id="guardian_name" name="guardian_name" class="form-control" placeholder="e.g. John Moyo" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="guardian_phone" class="form-label fw-semibold">Guardian Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" id="guardian_phone" name="guardian_phone" class="form-control" placeholder="e.g. +263 77 123 4567" required>
+                </div>
+                <div class="col-md-12">
+                    <label for="address" class="form-label fw-semibold">Residential Address <span class="text-danger">*</span></label>
+                    <textarea id="address" name="address" class="form-control" rows="3" placeholder="e.g. 1234 Borrowdale Road, Harare" required></textarea>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Step 3: Academic & Subject Registration -->
+    <div class="form-step d-none" data-step="3">
+        <section class="panel mb-4 shadow-sm border-0">
+            <h2 class="h5 border-bottom pb-3 mb-4 text-primary"><i class="bi bi-mortarboard-fill"></i> Academic Information</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label for="grade" class="form-label fw-semibold">Form <span class="text-danger">*</span></label>
+                    <select id="grade" name="grade" class="form-select" required>
+                        <option value="">-- Select Form --</option>
+                        <option value="Form 1">Form 1 (O Level)</option>
+                        <option value="Form 2">Form 2 (O Level)</option>
+                        <option value="Form 3">Form 3 (O Level)</option>
+                        <option value="Form 4">Form 4 (O Level)</option>
+                        <option value="Form 5">Form 5 (A Level)</option>
+                        <option value="Form 6">Form 6 (A Level)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="class_stream" class="form-label fw-semibold">Stream <span class="text-danger">*</span></label>
+                    <select id="class_stream" name="class_stream" class="form-select" required>
+                        <option value="">-- Select Form First --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <h2 class="h5 border-bottom pb-3 mb-3 text-primary"><i class="bi bi-book-fill"></i> Subject Registration <span class="text-danger">*</span></h2>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted mb-0 small">Select the subjects this student will register for.</p>
+                <span id="subjectCounter" class="badge bg-secondary p-2">Selected: 0 / 10</span>
+            </div>
+            
+            <!-- Master Subjects Grid -->
+            <div class="row g-2" id="subjectsContainer">
+                {% for sub in master_subjects %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border p-2 h-100 subject-card" style="transition: border 0.2s ease;">
+                        <div class="form-check d-flex align-items-center mb-0">
+                            <input class="form-check-input me-2 subject-checkbox" type="checkbox" name="subjects" value="{{ sub.subject_id }}" id="sub_{{ sub.subject_id }}" data-code="{{ sub.subject_code }}" data-name="{{ sub.subject_name }}" style="width: 18px; height: 18px;">
+                            <label class="form-check-label w-100 cursor-pointer" for="sub_{{ sub.subject_id }}">
+                                <strong>{{ sub.subject_name }}</strong> <br>
+                                <span class="text-secondary small">{{ sub.subject_code }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Step 4: Medical & Previous School -->
+    <div class="form-step d-none" data-step="4">
+        <section class="panel mb-4 shadow-sm border-0">
+            <h2 class="h5 border-bottom pb-3 mb-4 text-primary"><i class="bi bi-heart-pulse-fill"></i> Medical & Previous School Information</h2>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label for="medical_notes" class="form-label fw-semibold">Medical Conditions or Allergies <span class="text-secondary">(Optional)</span></label>
+                    <textarea id="medical_notes" name="medical_notes" class="form-control" rows="3" placeholder="e.g. Asthma, Penicillin allergy. If none, write 'None'."></textarea>
+                </div>
+                <div class="col-md-12">
+                    <label for="remarks" class="form-label fw-semibold">Previous School Information & Remarks <span class="text-secondary">(Optional)</span></label>
+                    <textarea id="remarks" name="remarks" class="form-control" rows="3" placeholder="e.g. Transferred from Harare High School. Academic record is excellent."></textarea>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Step 5: Review & Save -->
+    <div class="form-step d-none" data-step="5">
+        <section class="panel mb-4 shadow-sm border-0">
+            <h2 class="h5 border-bottom pb-3 mb-4 text-primary"><i class="bi bi-check-circle-fill"></i> Review & Save</h2>
+            <p class="text-secondary">Please review all information carefully before saving the record.</p>
+            
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h3 class="h6 text-primary border-bottom pb-2">Student Information</h3>
+                    <dl class="row small mb-0">
+                        <dt class="col-5">Full Name:</dt><dd class="col-7" id="rev_name">-</dd>
+                        <dt class="col-5">Gender:</dt><dd class="col-7" id="rev_gender">-</dd>
+                        <dt class="col-5">Date of Birth:</dt><dd class="col-7" id="rev_dob">-</dd>
+                        <dt class="col-5">National ID:</dt><dd class="col-7" id="rev_national_id">-</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h3 class="h6 text-primary border-bottom pb-2">Guardian Information</h3>
+                    <dl class="row small mb-0">
+                        <dt class="col-5">Guardian Name:</dt><dd class="col-7" id="rev_guardian">-</dd>
+                        <dt class="col-5">Phone Number:</dt><dd class="col-7" id="rev_phone">-</dd>
+                        <dt class="col-5">Address:</dt><dd class="col-7" id="rev_address">-</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h3 class="h6 text-primary border-bottom pb-2">Academic Placement</h3>
+                    <dl class="row small mb-0">
+                        <dt class="col-5">Form & Stream:</dt><dd class="col-7" id="rev_placement">-</dd>
+                        <dt class="col-5">Fee Structure:</dt><dd class="col-7" id="rev_fee_structure">-</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h3 class="h6 text-primary border-bottom pb-2">Medical & Remarks</h3>
+                    <dl class="row small mb-0">
+                        <dt class="col-5">Medical Notes:</dt><dd class="col-7" id="rev_medical">-</dd>
+                        <dt class="col-5">Remarks / Previous:</dt><dd class="col-7" id="rev_remarks">-</dd>
+                    </dl>
+                </div>
+                <div class="col-md-12">
+                    <h3 class="h6 text-primary border-bottom pb-2">Registered Subjects</h3>
+                    <div id="rev_subjects" class="d-flex flex-wrap gap-2 py-1">
+                        <span class="text-danger small">No subjects selected.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="d-flex justify-content-between align-items-center mt-3 p-3 bg-white rounded shadow-sm border">
+        <button type="button" id="prevBtn" class="btn btn-outline-secondary px-4 py-2" style="display: none;"><i class="bi bi-chevron-left"></i> Previous</button>
+        <div class="ms-auto">
+            <button type="button" id="nextBtn" class="btn btn-primary px-4 py-2">Next <i class="bi bi-chevron-right"></i></button>
+            <button type="submit" id="submitBtn" class="btn btn-success px-4 py-2" style="display: none;"><i class="bi bi-save"></i> Save Student</button>
+        </div>
+    </div>
+</form>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .subject-card:hover { border-color: #0d6efd !important; background-color: #f8f9fa; }
+    .subject-card.selected-card { border-color: #0d6efd !important; background-color: #eff6ff; }
+    .step-indicator { transition: all 0.3s ease; }
+    .active-label { font-weight: bold; color: #0d6efd !important; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    let currentStep = 1;
+    const totalSteps = 5;
+    
+    const form = document.getElementById("registrationForm");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const submitBtn = document.getElementById("submitBtn");
+    const progressBar = document.getElementById("progressBar");
+    
+    // Academic fields
+    const formSelect = document.getElementById("grade");
+    const streamSelect = document.getElementById("class_stream");
+    const subjectCounter = document.getElementById("subjectCounter");
+    const subjectCheckboxes = document.querySelectorAll(".subject-checkbox");
+    
+    // Dynamic Stream configurations
+    const streamOptions = {
+        olevel: ["A", "B", "C"],
+        alevel: ["Arts", "Commercials", "Sciences"]
+    };
+    
+    // 1. Dynamic stream loading
+    formSelect.addEventListener("change", function() {
+        const selectedForm = formSelect.value;
+        streamSelect.innerHTML = "";
+        
+        if (!selectedForm) {
+            streamSelect.innerHTML = '<option value="">-- Select Form First --</option>';
+            updateSubjectLimits();
+            return;
+        }
+        
+        let streams = [];
+        let limit = 10;
+        let isALevel = selectedForm === "Form 5" || selectedForm === "Form 6";
+        
+        if (isALevel) {
+            streams = streamOptions.alevel;
+            limit = 5;
+        } else {
+            streams = streamOptions.olevel;
+            limit = 10;
+        }
+        
+        // Add options
+        streamSelect.innerHTML = '<option value="">-- Select Stream --</option>';
+        streams.forEach(st => {
+            const opt = document.createElement("option");
+            opt.value = st;
+            opt.textContent = st;
+            streamSelect.appendChild(opt);
+        });
+        
+        updateSubjectLimits();
+    });
+    
+    // 2. Subject limit enforcement (Client side)
+    function getLimit() {
+        const selectedForm = formSelect.value;
+        return (selectedForm === "Form 5" || selectedForm === "Form 6") ? 5 : 10;
+    }
+    
+    function updateSubjectLimits() {
+        const limit = getLimit();
+        const checkedCount = document.querySelectorAll(".subject-checkbox:checked").length;
+        
+        subjectCounter.textContent = `Selected: ${checkedCount} / ${limit}`;
+        if (checkedCount >= limit) {
+            subjectCounter.className = "badge bg-danger p-2";
+        } else if (checkedCount > 0) {
+            subjectCounter.className = "badge bg-primary p-2";
+        } else {
+            subjectCounter.className = "badge bg-secondary p-2";
+        }
+        
+        // Disable remaining checkboxes if limit reached
+        subjectCheckboxes.forEach(cb => {
+            if (!cb.checked) {
+                cb.disabled = checkedCount >= limit;
+            } else {
+                cb.disabled = false;
+            }
+        });
+    }
+    
+    subjectCheckboxes.forEach(cb => {
+        cb.addEventListener("change", function() {
+            // Style card
+            const card = cb.closest(".subject-card");
+            if (cb.checked) {
+                card.classList.add("selected-card");
+            } else {
+                card.classList.remove("selected-card");
+            }
+            updateSubjectLimits();
+        });
+    });
+    
+    // Initialize limits
+    updateSubjectLimits();
+    
+    // 3. Navigation controller
+    function showStep(step) {
+        // Toggle steps visibility
+        document.querySelectorAll(".form-step").forEach(el => {
+            el.classList.add("d-none");
+            el.classList.remove("active-step");
+        });
+        const targetStep = document.querySelector(`.form-step[data-step="${step}"]`);
+        targetStep.classList.remove("d-none");
+        targetStep.classList.add("active-step");
+        
+        // Update indicator styles
+        document.querySelectorAll(".step-indicator").forEach(indicator => {
+            const indStep = parseInt(indicator.dataset.step);
+            const num = indicator.querySelector(".step-num");
+            const label = indicator.querySelector(".step-label");
+            
+            if (indStep < step) {
+                num.className = "step-num bg-success text-white rounded-circle d-flex align-items-center justify-content-center fw-bold";
+                num.innerHTML = '<i class="bi bi-check-lg"></i>';
+                label.classList.add("text-success");
+                label.classList.remove("active-label", "text-muted");
+            } else if (indStep === step) {
+                num.className = "step-num bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold";
+                num.textContent = step;
+                label.classList.add("active-label");
+                label.classList.remove("text-success", "text-muted");
+            } else {
+                num.className = "step-num bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold";
+                num.textContent = indStep;
+                label.classList.remove("active-label", "text-success");
+                label.classList.add("text-muted");
+            }
+        });
+        
+        // Progress bar percentage
+        const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
+        progressBar.style.width = `${progressPercent}%`;
+        
+        // Show/hide buttons
+        prevBtn.style.display = step === 1 ? "none" : "block";
+        if (step === totalSteps) {
+            nextBtn.style.display = "none";
+            submitBtn.style.display = "block";
+            hydrateReview();
+        } else {
+            nextBtn.style.display = "block";
+            submitBtn.style.display = "none";
+        }
+        
+        window.scrollTo(0, 0);
+    }
+    
+    function validateStep(step) {
+        const stepContainer = document.querySelector(`.form-step[data-step="${step}"]`);
+        const inputs = stepContainer.querySelectorAll("[required]");
+        let valid = true;
+        
+        inputs.forEach(input => {
+            if (!input.checkValidity()) {
+                input.reportValidity();
+                valid = false;
+            }
+        });
+        
+        if (step === 3) {
+            // Verify Form and Stream are selected
+            if (!formSelect.value || !streamSelect.value) {
+                alert("Please select both Form and Stream.");
+                return false;
+            }
+            
+            // Verify at least one subject is checked
+            const checkedCount = document.querySelectorAll(".subject-checkbox:checked").length;
+            if (checkedCount === 0) {
+                alert("Please select at least 1 subject for registration.");
+                return false;
+            }
+            
+            const limit = getLimit();
+            if (checkedCount > limit) {
+                alert(`Subject registration limit exceeded. Max is ${limit} subjects.`);
+                return false;
+            }
+        }
+        
+        return valid;
+    }
+    
+    nextBtn.addEventListener("click", function() {
+        if (validateStep(currentStep)) {
+            currentStep++;
+            showStep(currentStep);
+        }
+    });
+    
+    prevBtn.addEventListener("click", function() {
+        currentStep--;
+        showStep(currentStep);
+    });
+    
+    // 4. Review values hydration
+    function hydrateReview() {
+        const fName = document.getElementById("first_name").value;
+        const sName = document.getElementById("surname").value;
+        document.getElementById("rev_name").textContent = `${fName} ${sName}`;
+        
+        const gSelect = document.getElementById("gender");
+        document.getElementById("rev_gender").textContent = gSelect.options[gSelect.selectedIndex].text;
+        
+        document.getElementById("rev_dob").textContent = document.getElementById("date_of_birth").value || "-";
+        document.getElementById("rev_national_id").textContent = document.getElementById("national_id").value || "None";
+        
+        document.getElementById("rev_guardian").textContent = document.getElementById("guardian_name").value;
+        document.getElementById("rev_phone").textContent = document.getElementById("guardian_phone").value;
+        document.getElementById("rev_address").textContent = document.getElementById("address").value;
+        
+        const formVal = formSelect.value;
+        const streamVal = streamSelect.value;
+        document.getElementById("rev_placement").textContent = `${formVal} - Stream ${streamVal}`;
+        
+        const isALevel = formVal === "Form 5" || formVal === "Form 6";
+        document.getElementById("rev_fee_structure").textContent = isALevel ? "A Level (USD 150 per term)" : "O Level (USD 100 per term)";
+        
+        document.getElementById("rev_medical").textContent = document.getElementById("medical_notes").value || "None";
+        document.getElementById("rev_remarks").textContent = document.getElementById("remarks").value || "None";
+        
+        // Hydrate checked subjects
+        const checkedList = document.getElementById("rev_subjects");
+        checkedList.innerHTML = "";
+        const checkedChecked = document.querySelectorAll(".subject-checkbox:checked");
+        checkedChecked.forEach(cb => {
+            const badge = document.createElement("span");
+            badge.className = "badge bg-light text-dark border p-2";
+            badge.innerHTML = `<i class="bi bi-book text-primary me-1"></i> ${cb.dataset.name} (${cb.dataset.code})`;
+            checkedList.appendChild(badge);
+        });
+    }
+    
+    // Enforce final checks on submit
+    form.addEventListener("submit", function(e) {
+        // Enforce validations
+        const checkedCount = document.querySelectorAll(".subject-checkbox:checked").length;
+        const limit = getLimit();
+        
+        if (checkedCount === 0) {
+            e.preventDefault();
+            alert("Subject registration is mandatory. Please select at least 1 subject.");
+            return;
+        }
+        
+        if (checkedCount > limit) {
+            e.preventDefault();
+            alert(`Subject registration limit exceeded. Max is ${limit} subjects.`);
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}
