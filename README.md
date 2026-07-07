@@ -115,3 +115,22 @@ The production WSGI application is:
 ```text
 school_project.wsgi:application
 ```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection URL (e.g. `postgresql://user:pass@host:port/dbname`) | None (required if `SQLITE_NAME` not set) |
+| `SQLITE_NAME` | SQLite database file name (for fallback/local dev) | None |
+| `SECRET_KEY` | Django unique secret key | Local fallback key |
+| `DEBUG` | Django debug flag | `True` |
+| `ALLOWED_HOSTS` | Allowed HTTP Host headers | `127.0.0.1,localhost,.localhost,testserver` |
+
+## License
+
+This software is commercial proprietary and remains the private intellectual property of the author.
+
+## Contact
+
+For support, inquiries, or contributions:
+* Email: [raidonmagunje@gmail.com](mailto:raidonmagunje@gmail.com)
