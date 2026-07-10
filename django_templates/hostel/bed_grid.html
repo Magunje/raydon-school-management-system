@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <a href="{% url 'room_list' room.hostel.hostel_id %}" class="btn btn-outline-secondary btn-sm rounded-3 mb-3"><i class="bi bi-arrow-left me-1"></i> Back to Rooms</a>
+        <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        <p class="text-muted mb-0">Building: {{ room.hostel.hostel_name }} | Floor: {{ room.floor }} | Capacity: {{ room.capacity }} beds</p>
+    </div>
+
+    <!-- Bed Grid layout -->
+    <div class="row g-4">
+        {% for bed in beds %}
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100 position-relative {% if bed.status == 'Available' %}bg-white border-start border-success border-4{% elif bed.status == 'Occupied' %}bg-white border-start border-danger border-4{% else %}bg-light{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">Bed {{ bed.bed_number }}</h5>
+                    <i class="bi bi-person-workspace fs-3 {% if bed.status == 'Available' %}text-success{% elif bed.status == 'Occupied' %}text-danger{% else %}text-muted{% endif %}"></i>
+                </div>
+                
+                <div class="mb-3">
+                    {% if bed.status == 'Available' %}
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Vacant / Available</span>
+                    <p class="text-muted small mt-2">Ready for allocation to boarding pupils.</p>
+                    {% elif bed.status == 'Occupied' %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Occupied</span>
+                    
+                    <div class="mt-3">
+                        <div class="fw-bold text-dark">{{ bed.current_occupant.first_name }} {{ bed.current_occupant.surname }}</div>
+                        <div class="small text-muted">Adm No: {{ bed.current_occupant.admission_no }}</div>
+                        {% if bed.current_occupant.allergies %}
+                        <div class="small text-danger mt-1"><i class="bi bi-heart-pulse-fill me-1"></i>Allergies logged!</div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="badge bg-secondary text-white rounded-pill px-2">{{ bed.status }}</span>
+                    {% endif %}
+                </div>
+                
+                {% if bed.status == 'Available' %}
+                <div class="mt-auto pt-3 border-top d-print-none">
+                    <a href="{% url 'allocation_new' %}?bed_id={{ bed.bed_id }}&hostel_id={{ room.hostel.hostel_id }}&room_id={{ room.room_id }}" class="btn btn-primary btn-sm rounded-3 w-100"><i class="bi bi-person-plus me-1"></i> Allocate Bed</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

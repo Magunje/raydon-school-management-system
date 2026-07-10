@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}SaaS Tenant Management - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold"><i class="bi bi-building-gear me-2 text-primary"></i>SaaS Tenant Management</h1>
+            <p class="text-muted mb-0">Monitor school tenants, subscriptions, database configurations, and portal routing rules.</p>
+        </div>
+    </div>
+
+    <!-- Telemetry Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary-subtle text-primary rounded-3 p-3 me-3">
+                        <i class="bi bi-building-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Total Tenants</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_tenants }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success-subtle text-success rounded-3 p-3 me-3">
+                        <i class="bi bi-building-check fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Active Tenants</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ active_tenants }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning-subtle text-warning rounded-3 p-3 me-3">
+                        <i class="bi bi-award-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Premium/Enterprise</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ premium_tenants }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info-subtle text-info rounded-3 p-3 me-3">
+                        <i class="bi bi-rocket-takeoff-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Starter Plans</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ starter_tenants }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenant Registry Section -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h5 class="fw-bold text-dark mb-3"><i class="bi bi-list-stars me-2 text-primary"></i>Active School Tenants</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>School Logo</th>
+                        <th>School Name</th>
+                        <th>School Code</th>
+                        <th>Testing Port</th>
+                        <th>Production Domain</th>
+                        <th>Plan Tier</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tenants %}
+                    <tr>
+                        <td>
+                            {% if t.logo %}
+                            <img src="{{ t.logo.url }}" alt="Logo" class="rounded" style="max-height: 40px; max-width: 60px;">
+                            {% else %}
+                            <div class="bg-light border text-muted d-flex align-items-center justify-content-center rounded" style="height: 40px; width: 60px;">
+                                <i class="bi bi-image small"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark">{{ t.name }}</h6>
+                                <small class="text-muted">{{ t.telephone }} | {{ t.address }}</small>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-secondary-subtle text-secondary">{{ t.school_code|default:"-" }}</span></td>
+                        <td>
+                            {% if t.local_testing_port %}
+                            <code>:{{ t.local_testing_port }}</code>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.production_domain|default:"-" }}</td>
+                        <td><span class="badge bg-warning-subtle text-warning">{{ t.get_subscription_plan_display }}</span></td>
+                        <td>
+                            {% if t.active %}
+                            <span class="status-pill approved">Active</span>
+                            {% else %}
+                            <span class="status-pill text-muted">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No school tenants registered on this host.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class SystemAdministrationConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "system_administration"
+    verbose_name = "System Administration and Security"

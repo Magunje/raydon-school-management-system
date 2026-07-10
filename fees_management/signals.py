@@ -10,6 +10,7 @@ from fees_management.models import (
     InvoiceItem,
     FeeCategory,
     ReceiptControl,
+    FinanceAuditLog,
 )
 from decimal import Decimal
 import datetime
@@ -105,4 +106,16 @@ def auto_create_fee_account_and_bill(sender, instance, created, **kwargs):
         # Create Invoice Item
         InvoiceItem.objects.create(
             invoice=invoice, category=tuition_cat, amount=fee_struct.amount
+        )
+
+        FinanceAuditLog.objects.create(
+            action="Invoice creation",
+            transaction_number=invoice.invoice_number,
+            new_value={
+                "student": instance.admission_no,
+                "level": level,
+                "amount": str(fee_struct.amount),
+                "academic_year": year.year,
+                "term": term.term_number,
+            },
         )

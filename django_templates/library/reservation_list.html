@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        <p class="text-muted mb-0">Track student reservations and waitlist queues for checked-out book titles.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small border-bottom">
+                        <th>Book Title</th>
+                        <th>Member Details</th>
+                        <th>Identifier / Card</th>
+                        <th>Reservation Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for res in reservations %}
+                    <tr>
+                        <td><strong>{{ res.title }}</strong></td>
+                        <td>
+                            {% if res.student_name %}
+                            <div class="fw-bold text-dark">{{ res.student_name }}</div>
+                            <span class="small text-muted">Student</span>
+                            {% else %}
+                            <div class="fw-bold text-dark">{{ res.staff_name }}</div>
+                            <span class="small text-muted">Staff / Teacher</span>
+                            {% endif %}
+                        </td>
+                        <td class="font-monospace small">
+                            {{ res.admission_no|default:res.employee_number }}
+                        </td>
+                        <td>{{ res.reserve_date }}</td>
+                        <td>
+                            {% if res.status == 'Pending' %}
+                            <span class="badge bg-warning text-dark rounded-pill px-2">Waitlisted (Pending)</span>
+                            {% elif res.status == 'Available' %}
+                            <span class="badge bg-success text-white rounded-pill px-2">Ready for Collection</span>
+                            {% elif res.status == 'Collected' %}
+                            <span class="badge bg-secondary text-white rounded-pill px-2">Issued (Collected)</span>
+                            {% else %}
+                            <span class="badge bg-light text-muted rounded-pill px-2">{{ res.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if res.status == 'Available' %}
+                            <div class="d-inline-flex gap-2">
+                                <a href="{% url 'library_reservation_action' res.reservation_id 'collect' %}" class="btn btn-sm btn-primary rounded-3"><i class="bi bi-journal-check me-1"></i> Issue Book</a>
+                                <a href="{% url 'library_reservation_action' res.reservation_id 'cancel' %}" class="btn btn-sm btn-outline-danger rounded-3" onclick="return confirm('Cancel this book reservation?');"><i class="bi bi-x-circle"></i> Cancel</a>
+                            </div>
+                            {% elif res.status == 'Pending' %}
+                            <a href="{% url 'library_reservation_action' res.reservation_id 'cancel' %}" class="btn btn-sm btn-outline-danger rounded-3" onclick="return confirm('Cancel this book reservation?');"><i class="bi bi-x-circle me-1"></i> Cancel</a>
+                            {% else %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-bookmark-check fs-1 d-block mb-3"></i>
+                            No book reservations or waitlists active at this time.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

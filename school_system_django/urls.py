@@ -44,6 +44,18 @@ from exam_coordinator import views as exam_coordinator_views
 from fees_management import views as fees_management_views
 from accounting_erp import views as accounting_erp_views
 from subject_management import views as subject_management_views
+from library import views as library_views
+from hostel import views as hostel_views
+from transport import views as transport_views
+from assets import views as assets_views
+from discipline import views as discipline_views
+from counselling import views as counselling_views
+from human_resources import views as human_resources_views
+from medical import views as medical_views
+from business_intelligence import views as business_intelligence_views
+from system_administration import views as system_administration_views
+from saas_tenant_management import views as saas_tenant_management_views
+
 
 
 urlpatterns = [
@@ -223,11 +235,12 @@ urlpatterns = [
     path('reports/pdf', report_views.reports, name='reports_pdf'),
     path('reports/statement', report_views.statement, name='statement'),
     path('reports/statement/pdf', report_views.statement, name='statement_pdf'),
-    path('library', academic_views.library, name='library'),
-    path('library/new', academic_views.library_new, name='new_library_book'),
-    path('library/<int:book_id>/edit', academic_views.library_edit, name='edit_library_book'),
-    path('library/<int:book_id>/delete', academic_views.library_delete, name='delete_library_book'),
-    path('library/<int:issue_id>/return', academic_views.return_library_book, name='return_library_book'),
+    path('library/', include('library.urls')),
+    path('hostels/', include('hostel.urls')),
+    path('transport/', include('transport.urls')),
+    path('assets/', include('assets.urls')),
+    path('discipline/', include('discipline.urls')),
+    path('counselling/', include('counselling.urls')),
     path('inventory', finance_views.inventory, name='inventory'),
     path('inventory/new', finance_views.inventory_new, name='new_inventory_item'),
     path('inventory/<int:item_id>', finance_views.inventory_detail, name='inventory_item_detail'),
@@ -258,6 +271,13 @@ urlpatterns = [
     path('student-portal/e-learning/submit/<int:assignment_id>', portal_views.student_submit_assignment, name='portal_submit_assignment'),
     path('student-portal/results', portal_views.student_results, name='portal_results'),
     path('student-portal/results/pdf', portal_views.student_results, name='portal_results_pdf'),
+    path('student-portal/library', library_views.student_portal_library, name='student_portal_library'),
+    path('student-portal/library/reserve/<int:book_id>', library_views.student_portal_reserve_book, name='student_portal_reserve_book'),
+    path('student-portal/hostel', hostel_views.student_portal_hostel, name='student_portal_hostel'),
+    path('student-portal/transport', transport_views.student_portal_transport, name='student_portal_transport'),
+    path('student-portal/assets', assets_views.student_portal_assets, name='student_portal_assets'),
+    path('student-portal/discipline', discipline_views.student_portal_discipline, name='student_portal_discipline'),
+    path('student-portal/counselling', counselling_views.student_portal_counselling, name='student_portal_counselling'),
     path('student-portal/api/updates', portal_views.student_updates, name='portal_update_events'),
     path('student-portal/api/<str:module>', portal_views.student_api, name='portal_module_api'),
     path('student-portal/receipt/<str:receipt_no>', portal_views.student_receipt, name='portal_receipt_by_number'),
@@ -288,6 +308,15 @@ urlpatterns = [
     path('django/website/', include('website.urls')),
     path('django/notifications/', include(('notifications.urls', 'notifications'), namespace='django_notifications')),
     path('django/', include('accounts.urls')),
+    
+    # Custom Frontend Admin Portals
+    path('human-resources/', human_resources_views.employee_list, name='human_resources_list'),
+    path('human-resources/employees/<int:employee_id>/', human_resources_views.employee_profile, name='human_resources_employee_profile'),
+    path('medical-clinic/', medical_views.medical_list, name='medical_list'),
+    path('business-intelligence/', business_intelligence_views.bi_dashboard_list, name='bi_dashboard_list'),
+    path('security-admin/', system_administration_views.security_list, name='security_list'),
+    path('saas-tenants/', saas_tenant_management_views.tenant_list, name='saas_tenant_list'),
+    
     path('admin/', admin.site.urls),
 ]
 

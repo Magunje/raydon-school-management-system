@@ -6,9 +6,96 @@ from accounting_erp.models import (
     JournalLine,
     AccountPortal,
     FinancialYear,
+    GeneralLedgerEntry,
+    AccountingAuditLog,
+    NumberSequence,
 )
 from decimal import Decimal
 import datetime
+
+
+def log_accounting_action(
+    action,
+    transaction_number=None,
+    user=None,
+    previous_value=None,
+    new_value=None,
+    reason=None,
+):
+    return AccountingAuditLog.objects.create(
+        action=action,
+        transaction_number=transaction_number,
+        user=user,
+        previous_value=previous_value,
+        new_value=new_value,
+        reason=reason,
+    )
+
+
+def next_sequence(name, prefix):
+    sequence, _ = NumberSequence.objects.get_or_create(
+        name=name, defaults={"prefix": prefix}
+    )
+    return sequence.next_number()
+
+
+def post_journal_entry(journal_entry, user=None):
+    """Posts an approved journal into the general ledger exactly once."""
+    if journal_entry.approval_status not in ["APPROVED", "POSTED"]:
+        raise ValidationError("Only approved journal entries can be posted.")
+    if journal_entry.posted_at:
+        return journal_entry
+
+    lines = list(journal_entry.lines.select_related("account"))
+    total_debits = sum(line.debit_amount for line in lines)
+    total_credits = sum(line.credit_amount for line in lines)
+    if total_debits != total_credits:
+        raise ValidationError("Total debits must equal total credits before posting.")
+
+    with transaction.atomic():
+        for line in lines:
+            GeneralLedgerEntry.objects.get_or_create(
+                journal_line=line,
+                defaults={
+                    "transaction_date": journal_entry.entry_date,
+                    "posting_date": datetime.date.today(),
+                    "account": line.account,
+                    "debit_amount": line.debit_amount,
+                    "credit_amount": line.credit_amount,
+                    "currency": line.currency,
+                    "exchange_rate": line.exchange_rate,
+                    "source_module": journal_entry.source_module,
+                    "reference_number": journal_entry.reference_number
+                    or journal_entry.journal_number,
+                    "description": line.description or journal_entry.description,
+                    "created_by": journal_entry.prepared_by,
+                    "approved_by": journal_entry.approved_by or user,
+                },
+            )
+
+            account = line.account
+            if account.account_type in ["ASSET", "EXPENSE"]:
+                account.current_balance += line.debit_amount - line.credit_amount
+            else:
+                account.current_balance += line.credit_amount - line.debit_amount
+            account.save(update_fields=["current_balance"])
+
+        journal_entry.approval_status = "POSTED"
+        journal_entry.posted_at = datetime.datetime.now(datetime.timezone.utc)
+        journal_entry.save(update_fields=["approval_status", "posted_at"])
+
+        log_accounting_action(
+            "Journal posting",
+            transaction_number=journal_entry.journal_number,
+            user=user or journal_entry.approved_by,
+            new_value={
+                "total_debits": str(total_debits),
+                "total_credits": str(total_credits),
+                "source_module": journal_entry.source_module,
+            },
+        )
+
+    return journal_entry
 
 
 def depreciate_fixed_assets(financial_year, user=None):
@@ -92,17 +179,11 @@ def depreciate_fixed_assets(financial_year, user=None):
                 credit_amount=depr_amount,
             )
 
-            # Approve Journal
+            # Approve and post Journal
             entry.approval_status = "APPROVED"
             entry.approved_by = user
             entry.save()
-
-            # Update account balances
-            depr_expense.current_balance += depr_amount
-            depr_expense.save()
-
-            accum_depr.current_balance -= depr_amount  # Contra asset reduces balance
-            accum_depr.save()
+            post_journal_entry(entry, user=user)
 
             posted_entries += 1
 
@@ -176,3 +257,42 @@ def generate_income_statement(financial_year):
         "total_expenses": expense_total,
         "net_surplus": net_surplus,
     }
+
+
+def generate_balance_sheet():
+    assets = AccountPortal.objects.filter(account_type="ASSET")
+    liabilities = AccountPortal.objects.filter(account_type="LIABILITY")
+    equity = AccountPortal.objects.filter(account_type="EQUITY")
+    return {
+        "assets": [{"name": acc.name, "balance": acc.current_balance} for acc in assets],
+        "liabilities": [
+            {"name": acc.name, "balance": acc.current_balance}
+            for acc in liabilities
+        ],
+        "equity": [{"name": acc.name, "balance": acc.current_balance} for acc in equity],
+        "total_assets": sum(acc.current_balance for acc in assets),
+        "total_liabilities": sum(acc.current_balance for acc in liabilities),
+        "total_equity": sum(acc.current_balance for acc in equity),
+    }
+
+
+def generate_cash_flow_statement(financial_year):
+    ledger_entries = GeneralLedgerEntry.objects.filter(
+        transaction_date__gte=financial_year.start_date,
+        transaction_date__lte=financial_year.end_date,
+        account__account_type="ASSET",
+    )
+    cash_movements = []
+    net_cash = Decimal("0.00")
+    for entry in ledger_entries:
+        movement = entry.debit_amount - entry.credit_amount
+        cash_movements.append(
+            {
+                "date": entry.transaction_date,
+                "account": entry.account.name,
+                "reference": entry.reference_number,
+                "movement": movement,
+            }
+        )
+        net_cash += movement
+    return {"cash_movements": cash_movements, "net_cash_movement": net_cash}

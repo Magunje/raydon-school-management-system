@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import TeacherAttendanceRecord, TeacherProfile
+from .models import TeacherAttendanceRecord, TeacherEmployeeProfile, TeacherProfile
 
 
 class ReadOnlyLegacyAdmin(admin.ModelAdmin):
@@ -16,5 +16,6 @@ class ReadOnlyLegacyAdmin(admin.ModelAdmin):
 
 admin.site.register(TeacherProfile, ReadOnlyLegacyAdmin)
 admin.site.register(TeacherAttendanceRecord, ReadOnlyLegacyAdmin)
+admin.site.register(TeacherEmployeeProfile)
 
 # Register your models here.

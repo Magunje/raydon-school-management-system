@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+    <div class="mb-4">
+        <a href="{% url 'hostel_list' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Hostels</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Provide structural details to configure the hostel block.</p>
+
+        <form method="post" class="mt-4 form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Hostel Code / Identifier <span class="text-danger">*</span></label>
+                    <input type="text" name="hostel_code" class="form-control" placeholder="e.g. HST-BOYS-A" value="{{ hostel.hostel_code }}" {% if hostel %}readonly{% endif %} required>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Hostel Name <span class="text-danger">*</span></label>
+                    <input type="text" name="hostel_name" class="form-control" placeholder="e.g. Mount Pleasant A" value="{{ hostel.hostel_name }}" required>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Residency Gender Mode</label>
+                    <select name="hostel_type" class="form-select bg-light">
+                        <option value="BOYS" {% if hostel.hostel_type == 'BOYS' %}selected{% endif %}>Boys Hostel</option>
+                        <option value="GIRLS" {% if hostel.hostel_type == 'GIRLS' %}selected{% endif %}>Girls Hostel</option>
+                        <option value="MIXED" {% if hostel.hostel_type == 'MIXED' %}selected{% endif %}>Mixed Block</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Assigned Warden (Employee)</label>
+                    <select name="warden_id" class="form-select bg-light">
+                        <option value="">-- No Warden Assigned --</option>
+                        {% for warden in wardens %}
+                        <option value="{{ warden.pk }}" {% if hostel.warden_id == warden.pk %}selected{% endif %}>{{ warden.first_name }} {{ warden.surname }} ({{ warden.employee_number }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'hostel_list' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Save Hostel Block</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

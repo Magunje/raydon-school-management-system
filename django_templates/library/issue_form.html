@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <div class="mb-4">
+        <a href="{% url 'library_issues' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Lendings</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Fill in the fields to record the check-out of a library copy.</p>
+
+        <form method="post" class="mt-4 form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <!-- Borrower type selection -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Select Borrower Type</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="borrower_type" id="type-student" value="Student" checked onclick="toggleBorrowerLists('Student')">
+                            <label class="form-check-label fw-semibold" for="type-student">Student (Learner)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="borrower_type" id="type-staff" value="Staff" onclick="toggleBorrowerLists('Staff')">
+                            <label class="form-check-label fw-semibold" for="type-staff">Teacher / Staff member</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Dropdown -->
+                <div class="col-12" id="student-select-block">
+                    <label class="form-label">Select Student <span class="text-danger">*</span></label>
+                    <select name="borrower_id" id="student_id" class="form-select bg-light">
+                        <option value="">-- Choose Student --</option>
+                        {% for s in students %}
+                        <option value="{{ s.pk }}">{{ s.first_name }} {{ s.surname }} ({{ s.admission_no }}) - Class: {{ s.academic_class.class_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Staff Dropdown -->
+                <div class="col-12 d-none" id="staff-select-block">
+                    <label class="form-label">Select Employee <span class="text-danger">*</span></label>
+                    <select name="borrower_id" id="staff_id" class="form-select bg-light" disabled>
+                        <option value="">-- Choose Employee --</option>
+                        {% for st in staff %}
+                        <option value="{{ st.pk }}">{{ st.first_name }} {{ st.surname }} ({{ st.employee_number }}) - Role: {{ st.role }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Book select -->
+                <div class="col-12">
+                    <label class="form-label">Select Book <span class="text-danger">*</span></label>
+                    <select name="book_id" class="form-select bg-light" required>
+                        <option value="">-- Choose Book --</option>
+                        {% for b in books %}
+                        <option value="{{ b.book_id }}">{{ b.title }} (by {{ b.author }}) - [{{ b.available_copies }} copies left]</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Custom Due date -->
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Custom Return Deadline (Optional)</label>
+                    <input type="date" name="due_date" class="form-control bg-light" min="{{ today }}">
+                    <span class="text-muted small">Defaults to standard check-out period configured in system library settings.</span>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'library_issues' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Confirm Check-out</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleBorrowerLists(type) {
+        const studentBlock = document.getElementById('student-select-block');
+        const staffBlock = document.getElementById('staff-select-block');
+        
+        const studentInput = document.getElementById('student_id');
+        const staffInput = document.getElementById('staff_id');
+        
+        if (type === 'Student') {
+            studentBlock.classList.remove('d-none');
+            staffBlock.classList.add('d-none');
+            
+            studentInput.disabled = false;
+            studentInput.required = true;
+            
+            staffInput.disabled = true;
+            staffInput.required = false;
+        } else {
+            studentBlock.classList.add('d-none');
+            staffBlock.classList.remove('d-none');
+            
+            studentInput.disabled = true;
+            studentInput.required = false;
+            
+            staffInput.disabled = false;
+            staffInput.required = true;
+        }
+    }
+    // init
+    toggleBorrowerLists('Student');
+</script>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        <a href="{% url 'vehicle_new' %}" class="btn btn-primary rounded-3"><i class="bi bi-plus-lg me-2"></i>Register Vehicle</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Registration No</th>
+                        <th>Vehicle Name</th>
+                        <th>Type</th>
+                        <th>Capacity</th>
+                        <th>Current Mileage</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in vehicles %}
+                    <tr>
+                        <td><span class="fw-bold">{{ vehicle.registration_number }}</span></td>
+                        <td>{{ vehicle.vehicle_name }}</td>
+                        <td>{{ vehicle.vehicle_type|default:"-" }}</td>
+                        <td>{{ vehicle.capacity }} seats</td>
+                        <td>{{ vehicle.current_mileage }} KM</td>
+                        <td>
+                            {% if vehicle.status == "Active" %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Active</span>
+                            {% elif vehicle.status == "Under Maintenance" %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">Under Maintenance</span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">{{ vehicle.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'vehicle_edit' vehicle.pk %}" class="btn btn-outline-primary btn-sm rounded-3">Edit Details</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">No vehicles registered in the system.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

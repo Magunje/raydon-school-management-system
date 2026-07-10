@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 650px;">
+    <div class="mb-4">
+        <a href="{% url 'library_issues' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Lendings</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Inspect copy, record condition, and handle penalties.</p>
+
+        <div class="p-3 bg-light rounded-4 mb-4 small text-dark">
+            <h6 class="fw-bold text-muted mb-2">BORROWING INFORMATION</h6>
+            <div class="row mb-1">
+                <span class="col-4 fw-semibold text-muted">Book:</span>
+                <span class="col-8 fw-bold">{{ issue.title }}</span>
+            </div>
+            <div class="row mb-1">
+                <span class="col-4 fw-semibold text-muted">Borrower:</span>
+                <span class="col-8 fw-semibold">{{ issue.student_name|default:issue.staff_name }}</span>
+            </div>
+            <div class="row mb-1">
+                <span class="col-4 fw-semibold text-muted">Issue Date:</span>
+                <span class="col-8 font-monospace">{{ issue.issue_date }}</span>
+            </div>
+            <div class="row">
+                <span class="col-4 fw-semibold text-muted">Due Date:</span>
+                <span class="col-8 font-monospace fw-bold {% if overdue_days > 0 %}text-danger{% endif %}">{{ issue.due_date }}</span>
+            </div>
+        </div>
+
+        <form method="post" class="form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <!-- Return condition -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Returned Book Condition</label>
+                    <select name="condition" id="return_condition" class="form-select bg-light" onchange="recalculateFine()">
+                        <option value="Good">Good (Normal Wear & Tear)</option>
+                        <option value="Damaged">Damaged (Requires Repair / Re-binding)</option>
+                        <option value="Lost">Lost (Sticker/Book completely missing)</option>
+                    </select>
+                </div>
+
+                <!-- Live Penality calculation widget -->
+                <div class="col-12">
+                    <div class="card border-0 bg-light rounded-4 p-3 border-start border-primary border-4">
+                        <h6 class="fw-bold text-primary mb-2"><i class="bi bi-calculator me-1"></i>Penalty & Fee Calculation Summary</h6>
+                        <div class="d-flex justify-content-between mb-1 text-dark small">
+                            <span>Overdue Fine ({{ overdue_days }} days late):</span>
+                            <span class="fw-bold" id="overdue_label">${{ overdue_fine }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-dark small border-bottom pb-2">
+                            <span>Condition Penalty Fee:</span>
+                            <span class="fw-bold" id="condition_penalty_label">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-dark fw-bold">
+                            <span>Total Penalties Due:</span>
+                            <span class="text-danger fs-5" id="total_penalties_label">${{ overdue_fine }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Fine overrides -->
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Adjust Fine Amount (USD)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">$</span>
+                        <input type="number" step="0.01" name="fine_amount" id="fine_amount_input" class="form-control" value="{{ overdue_fine }}">
+                    </div>
+                </div>
+
+                <!-- Action selector -->
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Billing / Payment Action</label>
+                    <select name="fine_action" class="form-select bg-light">
+                        <option value="Posted">Post Invoice to Student Account</option>
+                        <option value="Paid">Mark Paid in Cash/POS directly</option>
+                        <option value="Ignore">Waive/Ignore Fine Penalties</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'library_issues' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-success rounded-3 px-4">Complete Return</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const overdueFine = parseFloat("{{ overdue_fine }}");
+    const damagedPenalty = parseFloat("{{ damaged_penalty }}");
+    const lostPenalty = parseFloat("{{ lost_penalty }}");
+
+    function recalculateFine() {
+        const cond = document.getElementById('return_condition').value;
+        const overdueLabel = document.getElementById('overdue_label');
+        const conditionLabel = document.getElementById('condition_penalty_label');
+        const totalLabel = document.getElementById('total_penalties_label');
+        const inputField = document.getElementById('fine_amount_input');
+        
+        let conditionFee = 0.00;
+        if (cond === 'Damaged') {
+            conditionFee = damagedPenalty;
+        } else if (cond === 'Lost') {
+            conditionFee = lostPenalty;
+        }
+        
+        const total = overdueFine + conditionFee;
+        
+        conditionLabel.innerText = "$" + conditionFee.toFixed(2);
+        totalLabel.innerText = "$" + total.toFixed(2);
+        inputField.value = total.toFixed(2);
+    }
+</script>
+{% endblock %}

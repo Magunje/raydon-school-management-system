@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Telemetry Cards -->
+    <div class="row g-4 mb-4">
+        {% for label, val in stats %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">{{ label }}</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ val }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                        {% if "Boarders" in label %}
+                        <i class="bi bi-people fs-3"></i>
+                        {% elif "Hostels" in label %}
+                        <i class="bi bi-buildings fs-3"></i>
+                        {% elif "Vacant" in label %}
+                        <i class="bi bi-door-open fs-3"></i>
+                        {% elif "Rate" in label %}
+                        <i class="bi bi-percent fs-3 text-success"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Alert / Widget Block -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cash-coin me-2 text-primary"></i>Finance & Logistics</h5>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="text-muted">Unpaid Residency Fees:</span>
+                    <h3 class="mb-0 fw-bold text-danger">${{ unpaid_fees }}</h3>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="text-muted">Visitors Checked-in Today:</span>
+                    <h5 class="mb-0 fw-semibold text-dark">{{ visitors_today }} visits</h5>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="text-muted">Unresolved Maintenance:</span>
+                    <h5 class="mb-0 fw-semibold text-warning">{{ pending_maintenance }} tickets</h5>
+                </div>
+                <div class="mt-4 pt-2 border-top">
+                    <a href="{% url 'hostel_maintenance' %}" class="btn btn-outline-primary btn-sm w-100 rounded-3">Review Maintenance Tickets</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-4"><i class="bi bi-house-gear me-2 text-primary"></i>Warden Shortcuts</h5>
+                <div class="row g-3">
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'hostel_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-buildings text-primary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Hostels Map</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'allocation_new' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-person-plus text-success fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Allocate Bed</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'allocation_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-people-fill text-info fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Roster List</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'hostel_attendance' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-calendar-check text-warning fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Roll Call</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'hostel_discipline_new' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-exclamation-octagon text-danger fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Incident Log</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'hostel_visitor_new' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-person-rolodex text-secondary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Log Visitor</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notices & Incident Logs Grid -->
+    <div class="row g-4">
+        <!-- Announcements / Notices -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-megaphone me-2 text-primary"></i>Hostel Notice Board</h5>
+                <div class="list-group list-group-flush">
+                    {% for notice in notices %}
+                    <div class="list-group-item px-0 py-3 border-0 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex justify-content-between mb-1">
+                            <h6 class="fw-bold text-dark mb-0">{{ notice.title }}</h6>
+                            <span class="text-muted small font-monospace">{{ notice.published_date }}</span>
+                        </div>
+                        <p class="text-muted small mb-0">{{ notice.content|truncatechars:100 }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-muted">No hostel notices active at present.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Discipline incidents -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Recent Incident Logs</h5>
+                    <a href="{% url 'hostel_discipline' %}" class="small text-decoration-none">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small border-bottom">
+                                <th>Student</th>
+                                <th>Date</th>
+                                <th>Incident</th>
+                                <th>Action Taken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in recent_discipline %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ record.pupil.first_name }} {{ record.pupil.surname }}</div>
+                                    <div class="small text-muted">{{ record.pupil.admission_no }}</div>
+                                </td>
+                                <td class="small text-muted">{{ record.incident_date }}</td>
+                                <td class="small text-dark">{{ record.incident_description|truncatechars:45 }}</td>
+                                <td><span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">{{ record.action_taken|default:"Logged" }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No hostel discipline logs registered yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-shadow:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        transform: translateY(-2px);
+        transition: all 0.25s ease-in-out;
+    }
+</style>
+{% endblock %}

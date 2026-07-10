@@ -1,0 +1,71 @@
+{% extends "portals/student_base.html" %}
+{% block portal_content %}
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-heart-pulse me-2 text-primary"></i>Guidance & Counselling Center</h4>
+    <p class="text-muted small">Schedule details and support appointments.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Scheduled appointments -->
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-4"><i class="bi bi-calendar-event me-2 text-primary"></i>My Appointments</h5>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Counsellor</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in appointments %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ app.date }}</div>
+                                <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ app.time|time:"H:i" }}</div>
+                            </td>
+                            <td>{{ app.counsellor.full_name }}</td>
+                            <td>
+                                {% if app.status == 'Scheduled' %}
+                                <span class="badge bg-primary rounded-pill">Scheduled</span>
+                                {% elif app.status == 'Attended' %}
+                                <span class="badge bg-success rounded-pill">Attended</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill">{{ app.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">No scheduled counseling sessions.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Career Guidance Section -->
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-4"><i class="bi bi-mortarboard me-2 text-dark"></i>Career Advisory Notes</h5>
+            <div class="d-flex align-items-center mb-3">
+                <div class="p-3 bg-light rounded-4 me-3">
+                    <i class="bi bi-book-half fs-3 text-secondary"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1 text-dark">Academic & University Guidance</h6>
+                    <p class="text-muted small mb-0">Consult your Guidance Counsellor for subject combinations, Advanced level paths, and university application timelines.</p>
+                </div>
+            </div>
+            <div class="border-top pt-3 mt-3">
+                <span class="text-muted small d-block">Privacy Notice:</span>
+                <p class="text-secondary small mb-0"><i class="bi bi-shield-lock-fill text-success me-1"></i>All session notes and clinical assessments are strictly confidential and will never appear on general portals.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

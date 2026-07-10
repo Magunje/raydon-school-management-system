@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Security Administration - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold"><i class="bi bi-shield-lock-fill me-2 text-primary"></i>Security Administration</h1>
+            <p class="text-muted mb-0">Manage custom authorization roles, permission parameters, and user security profiles.</p>
+        </div>
+    </div>
+
+    <!-- Telemetry Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary-subtle text-primary rounded-3 p-3 me-3">
+                        <i class="bi bi-shield-lock fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Security Profiles</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_profiles }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success-subtle text-success rounded-3 p-3 me-3">
+                        <i class="bi bi-people fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Active Roles</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ active_roles }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info-subtle text-info rounded-3 p-3 me-3">
+                        <i class="bi bi-ui-checks fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Assigned Perms</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ assigned_permissions }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger-subtle text-danger rounded-3 p-3 me-3">
+                        <i class="bi bi-lock fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Locked Accounts</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ locked_accounts }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-3 gap-2" id="securityTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 fw-semibold" id="profiles-tab" data-bs-toggle="tab" data-bs-target="#profiles" type="button" role="tab" aria-controls="profiles" aria-selected="true"><i class="bi bi-person-lock me-1"></i>User Security Profiles</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab" aria-controls="roles" aria-selected="false"><i class="bi bi-person-badge-fill me-1"></i>Authorization Roles</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="permissions-tab" data-bs-toggle="tab" data-bs-target="#permissions" type="button" role="tab" aria-controls="permissions" aria-selected="false"><i class="bi bi-key-fill me-1"></i>System Permissions</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="securityTabsContent">
+        <!-- User Security Profiles Tab -->
+        <div class="tab-pane fade show active" id="profiles" role="tabpanel" aria-labelledby="profiles-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Primary Email</th>
+                                <th>MFA Enabled</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in profiles %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ p.user.username }}</td>
+                                <td>{{ p.user.email|default:"-" }}</td>
+                                <td>
+                                    {% if p.mfa_enabled %}
+                                    <span class="badge bg-success-subtle text-success">Enabled</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">Disabled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.status == 'ACTIVE' %}
+                                    <span class="status-pill approved">Active</span>
+                                    {% elif p.status == 'LOCKED' %}
+                                    <span class="status-pill text-danger">Locked</span>
+                                    {% else %}
+                                    <span class="status-pill text-muted">{{ p.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.user.last_login|date:"Y-m-d H:i"|default:"Never" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No security profiles registered.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authorization Roles Tab -->
+        <div class="tab-pane fade" id="roles" role="tabpanel" aria-labelledby="roles-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Role Code</th>
+                                <th>Role Name</th>
+                                <th>Scope</th>
+                                <th>System Role</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in roles %}
+                            <tr>
+                                <td class="fw-bold text-dark"><code>{{ r.code }}</code></td>
+                                <td class="fw-bold text-dark">{{ r.name }}</td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ r.get_scope_display }}</span></td>
+                                <td>
+                                    {% if r.is_system_role %}
+                                    <span class="badge bg-info-subtle text-info">System</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">Custom</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.is_active %}
+                                    <span class="status-pill approved">Active</span>
+                                    {% else %}
+                                    <span class="status-pill text-muted">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No custom roles mapped.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Permissions Tab -->
+        <div class="tab-pane fade" id="permissions" role="tabpanel" aria-labelledby="permissions-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Permission Code</th>
+                                <th>Name</th>
+                                <th>Module</th>
+                                <th>Level</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for perm in permissions %}
+                            <tr>
+                                <td class="fw-bold text-dark"><code>{{ perm.code }}</code></td>
+                                <td class="fw-bold">{{ perm.name }}</td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ perm.module_code }}</span></td>
+                                <td>{{ perm.level }}</td>
+                                <td><span class="badge bg-light text-dark">{{ perm.action }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No permissions parameter definitions defined.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

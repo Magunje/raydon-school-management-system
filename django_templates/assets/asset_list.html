@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        <a href="{% url 'asset_new' %}" class="btn btn-primary rounded-3"><i class="bi bi-plus-lg me-2"></i>Register Fixed Asset</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Asset Code</th>
+                        <th>Asset Name</th>
+                        <th>Category</th>
+                        <th>Purchase Cost</th>
+                        <th>Current Value</th>
+                        <th>Location</th>
+                        <th>Custodian</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in assets %}
+                    <tr>
+                        <td><span class="fw-bold text-dark">{{ asset.asset_code }}</span></td>
+                        <td>{{ asset.asset_name }}</td>
+                        <td>{{ asset.category.name }}</td>
+                        <td>${{ asset.purchase_price }}</td>
+                        <td class="fw-bold">${{ asset.current_value }}</td>
+                        <td>{{ asset.location_name|default:"-" }}</td>
+                        <td>{{ asset.custodian.full_name|default:"Unassigned" }}</td>
+                        <td>
+                            {% if asset.status == "Active" or asset.status == "In Use" %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ asset.status }}</span>
+                            {% elif asset.status == "Under Maintenance" or asset.status == "In Storage" %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ asset.status }}</span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">{{ asset.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'asset_transfer_new' asset.pk %}" class="btn btn-outline-secondary btn-sm rounded-start-3" title="Transfer Location">Transfer</a>
+                                <a href="{% url 'asset_disposal_new' asset.pk %}" class="btn btn-outline-danger btn-sm" title="Dispose Asset">Dispose</a>
+                                <a href="{% url 'asset_edit' asset.pk %}" class="btn btn-outline-primary btn-sm rounded-end-3" title="Edit details">Edit</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">No assets registered in the system database.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

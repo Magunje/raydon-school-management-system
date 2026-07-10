@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - Student Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Allocation & Room Details -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <span class="text-uppercase text-muted fw-bold small tracking-wider mb-2">My Boarding Residency</span>
+                {% if alloc %}
+                <div class="py-3">
+                    <i class="bi bi-building text-primary bg-light p-3 rounded-4 fs-1 d-inline-block mb-3"></i>
+                    <h4 class="fw-bold text-dark mb-1">{{ alloc.hostel.hostel_name }}</h4>
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1 mb-3">Active Resident</span>
+                    
+                    <div class="text-start mt-3 small border-top pt-3">
+                        <div class="row mb-1">
+                            <span class="col-5 text-muted fw-semibold">Room Number:</span>
+                            <span class="col-7 text-dark fw-bold">Room {{ alloc.room.room_number }}</span>
+                        </div>
+                        <div class="row mb-1">
+                            <span class="col-5 text-muted fw-semibold">Bed Space:</span>
+                            <span class="col-7 text-dark fw-bold text-primary">Bed {{ alloc.bed.bed_number }}</span>
+                        </div>
+                        <div class="row mb-1">
+                            <span class="col-5 text-muted fw-semibold">Boarded date:</span>
+                            <span class="col-7 text-dark">{{ alloc.boarding_date }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="py-5 text-center text-muted">
+                    <i class="bi bi-house-x fs-1 d-block mb-2 text-secondary"></i>
+                    You have no active hostel bed allocations.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notices Board -->
+        <div class="col-12 col-md-6 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-megaphone-fill me-2 text-primary"></i>Hostel Announcements</h5>
+                <div class="list-group list-group-flush">
+                    {% for notice in notices %}
+                    <div class="list-group-item px-0 py-3 border-0 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex justify-content-between mb-1">
+                            <h6 class="fw-bold text-dark mb-0">{{ notice.title }}</h6>
+                            <span class="text-muted small font-monospace">{{ notice.published_date }}</span>
+                        </div>
+                        <p class="text-muted small mb-0">{{ notice.content }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted">No notices posted for residents.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Reporting System -->
+    <div class="row g-4">
+        <!-- New Ticket Form -->
+        {% if alloc %}
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-tools me-2 text-primary"></i>Report Room Defect</h5>
+                <form method="post" class="form-panel mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="report_maintenance" value="1">
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-semibold">Describe the Issue / Damage <span class="text-danger">*</span></label>
+                        <textarea name="issue_description" rows="4" class="form-control" placeholder="e.g. Bunk bed ladder loose / ceiling light flickering..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-check-circle me-1"></i> Submit Ticket</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tickets list -->
+        <div class="col-12 {% if alloc %}col-lg-7{% else %}col-12{% endif %}">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>My Maintenance Tickets</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small border-bottom">
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td class="small text-muted font-monospace">{{ ticket.reported_date }}</td>
+                                <td class="text-dark">{{ ticket.issue_description }}</td>
+                                <td class="text-end">
+                                    {% if ticket.status == 'Pending' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Pending</span>
+                                    {% elif ticket.status == 'In Progress' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">In Progress</span>
+                                    {% else %}
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Resolved</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">You have reported no maintenance tickets.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

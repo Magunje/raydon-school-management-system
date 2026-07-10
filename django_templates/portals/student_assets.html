@@ -1,0 +1,46 @@
+{% extends "portals/student_base.html" %}
+{% block portal_content %}
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-tag me-2 text-primary"></i>My Assigned School Devices & Assets</h4>
+    <p class="text-muted small">Verify serial numbers and custody checks for school-issued assets.</p>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Asset Code</th>
+                    <th>Asset Name</th>
+                    <th>Category</th>
+                    <th>Serial Number</th>
+                    <th>Acquisition Date</th>
+                    <th>Condition Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td><span class="fw-bold text-dark">{{ asset.asset_code }}</span></td>
+                    <td>{{ asset.asset_name }}</td>
+                    <td>{{ asset.category.name }}</td>
+                    <td>{{ asset.serial_number|default:"-" }}</td>
+                    <td>{{ asset.acquisition_date }}</td>
+                    <td>
+                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ asset.status }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="bi bi-laptop text-muted display-4 mb-3 d-block"></i>
+                        <h6>No school devices or assets are registered to your custody profile.</h6>
+                        <p class="small text-muted mb-0">Assets like school laptops, lockers, or instruments will appear here when issued.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

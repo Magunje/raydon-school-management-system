@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     'website',
     'notifications',
     'payroll',
+    'human_resources',
     'timetable',
     'academic_structure',
     'student_registry',
@@ -103,7 +104,18 @@ INSTALLED_APPS = [
     'enterprise_communications',
     'fees_management',
     'accounting_erp',
+    'procurement',
+    'inventory_management',
+    'medical',
     'saas_tenant_management',
+    'library',
+    'hostel',
+    'transport',
+    'assets',
+    'discipline',
+    'counselling',
+    'system_administration',
+    'business_intelligence',
 ]
 
 MIDDLEWARE = [
@@ -234,6 +246,10 @@ TEST_RUNNER = 'school_system_django.test_runner.ManagedModelTestRunner'
 
 import sys
 if 'test' in sys.argv or 'test_coverage' in sys.argv:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    STORAGES["staticfiles"]["BACKEND"] = "django.contrib.staticfiles.storage.StaticFilesStorage"
     class DisableMigrations:
         def __contains__(self, item): return True
         def __getitem__(self, item): return None

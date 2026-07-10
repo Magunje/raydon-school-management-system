@@ -3,14 +3,19 @@ from django.core.exceptions import ValidationError
 from fees_management.models import (
     StudentFeeAccount,
     Payment,
+    PaymentAllocation,
+    Receipt,
     ReceiptControl,
     FinanceSetting,
     Sponsorship,
     Discount,
     ReconciliationRecord,
+    ReconciliationItem,
+    FinanceAuditLog,
 )
 from decimal import Decimal
 import datetime
+from django.utils import timezone
 
 
 def get_active_exchange_rate():
@@ -18,6 +23,103 @@ def get_active_exchange_rate():
     if not setting:
         return Decimal("1.0000"), "USD"
     return setting.zig_exchange_rate, setting.operating_currency
+
+
+def log_finance_action(
+    action,
+    transaction_number=None,
+    user=None,
+    previous_value=None,
+    new_value=None,
+    reason=None,
+):
+    return FinanceAuditLog.objects.create(
+        action=action,
+        transaction_number=transaction_number,
+        user=user,
+        previous_value=previous_value,
+        new_value=new_value,
+        reason=reason,
+    )
+
+
+def build_receipt_payload(payment):
+    account = payment.student_account
+    student = account.student
+    return {
+        "receipt_number": payment.receipt_number,
+        "student": student.admission_no,
+        "amount": str(payment.amount),
+        "currency": payment.currency,
+        "operating_amount": str(payment.amount_in_operating),
+        "method": payment.payment_method,
+        "payment_date": payment.payment_date.isoformat(),
+        "outstanding_balance": str(account.outstanding_balance),
+    }
+
+
+def issue_receipt(payment, reprinted_by=None):
+    setting = FinanceSetting.objects.first()
+    latest = (
+        Receipt.objects.filter(receipt_number=payment.receipt_number)
+        .order_by("-version")
+        .first()
+    )
+    version = 1 if latest is None else latest.version + 1
+    payload = build_receipt_payload(payment)
+    receipt = Receipt.objects.create(
+        payment=payment,
+        receipt_number=payment.receipt_number,
+        version=version,
+        reprinted_at=timezone.now() if latest else None,
+        reprinted_by=reprinted_by if latest else None,
+        qr_code_payload=str(payload),
+        electronic_stamp=(
+            setting.receipt_stamp_label if setting else "Electronic School Stamp"
+        ),
+    )
+    log_finance_action(
+        "Receipt reprint" if latest else "Receipt generation",
+        transaction_number=payment.receipt_number,
+        user=reprinted_by or payment.received_by,
+        new_value=payload,
+    )
+    return receipt
+
+
+def allocate_payment(payment):
+    account = payment.student_account
+    remaining = payment.amount_in_operating
+    setting = FinanceSetting.objects.first()
+    policy = (
+        setting.payment_allocation_policy
+        if setting
+        else "OLDEST_ARREARS_FIRST"
+    )
+
+    if policy == "OLDEST_ARREARS_FIRST" and account.arrears > Decimal("0.00"):
+        arrears_allocation = min(account.arrears, remaining)
+        if arrears_allocation > Decimal("0.00"):
+            PaymentAllocation.objects.create(
+                payment=payment,
+                student_account=account,
+                allocation_type="ARREARS",
+                amount=arrears_allocation,
+            )
+            remaining -= arrears_allocation
+
+    if remaining > Decimal("0.00"):
+        allocation_type = (
+            "CREDIT"
+            if remaining > max(account.total_charges - account.amount_paid, Decimal("0.00"))
+            else "CURRENT_CHARGES"
+        )
+        PaymentAllocation.objects.create(
+            payment=payment,
+            student_account=account,
+            allocation_type=allocation_type,
+            amount=remaining,
+        )
 
 
 def record_payment(
@@ -83,6 +185,57 @@ def record_payment(
         student_account.amount_paid += amount_in_operating
         student_account.save()  # Auto-recalculates outstanding balance
 
+        allocate_payment(payment)
+        issue_receipt(payment)
+
+        log_finance_action(
+            "Payment receipt generation",
+            transaction_number=receipt_num,
+            user=cashier,
+            new_value={
+                "amount": str(amount),
+                "currency": currency,
+                "amount_in_operating": str(amount_in_operating),
+                "method": payment_method,
+                "reference": transaction_reference,
+            },
+        )
+
+    return payment
+
+
+def reverse_payment(payment, user, reason):
+    if payment.is_reversed:
+        raise ValidationError("This payment has already been reversed.")
+    if not reason:
+        raise ValidationError("A reversal reason is required.")
+
+    with transaction.atomic():
+        previous_value = {
+            "amount_in_operating": str(payment.amount_in_operating),
+            "receipt_number": payment.receipt_number,
+        }
+        payment.is_reversed = True
+        payment.reversed_by = user
+        payment.reversed_at = timezone.now()
+        payment.reversal_reason = reason
+        payment.save()
+
+        account = payment.student_account
+        account.amount_paid -= payment.amount_in_operating
+        if account.amount_paid < Decimal("0.00"):
+            account.amount_paid = Decimal("0.00")
+        account.save()
+
+        log_finance_action(
+            "Payment reversal",
+            transaction_number=payment.receipt_number,
+            user=user,
+            previous_value=previous_value,
+            new_value={"is_reversed": True},
+            reason=reason,
+        )
+
     return payment
 
 
@@ -110,6 +263,7 @@ def apply_sponsorship(
             coverage_amount=coverage_amount,
             start_date=start_date,
             end_date=end_date,
+            approved_at=timezone.now(),
         )
 
         # Calculate discount amount
@@ -125,6 +279,16 @@ def apply_sponsorship(
         # Apply to student account
         student_account.amount_paid += deduction
         student_account.save()
+
+        log_finance_action(
+            "Sponsorship approval",
+            transaction_number=student_account.student.admission_no,
+            new_value={
+                "sponsor": sponsor_name,
+                "type": sponsorship_type,
+                "deduction": str(deduction),
+            },
+        )
 
     return sponsorship
 
@@ -149,6 +313,7 @@ def apply_discount(
             percentage=percentage,
             reason=reason,
             approved_by=approved_by,
+            original_fee_amount=student_account.total_charges,
         )
 
         deduction = Decimal("0.00")
@@ -162,6 +327,17 @@ def apply_discount(
         # Apply immediately
         student_account.amount_paid += deduction
         student_account.save()
+
+        log_finance_action(
+            "Discount approval",
+            transaction_number=student_account.student.admission_no,
+            user=approved_by,
+            new_value={
+                "type": discount_type,
+                "deduction": str(deduction),
+            },
+            reason=reason,
+        )
 
     return discount
 
@@ -194,6 +370,33 @@ def reconcile_payments(
                 if status == "RECONCILED"
                 else "Discrepancy identified"
             ),
+            "matched_transactions": payments.count() if status == "RECONCILED" else 0,
+            "unmatched_transactions": 0 if status == "RECONCILED" else payments.count(),
+            "overpayments": discrepancy if discrepancy > Decimal("0.00") else Decimal("0.00"),
+            "underpayments": abs(discrepancy) if discrepancy < Decimal("0.00") else Decimal("0.00"),
+        },
+    )
+
+    record.items.all().delete()
+    for payment in payments:
+        ReconciliationItem.objects.create(
+            reconciliation=record,
+            payment=payment,
+            transaction_reference=payment.transaction_reference,
+            expected_amount=payment.amount,
+            actual_amount=payment.amount if status == "RECONCILED" else Decimal("0.00"),
+            status="MATCHED" if status == "RECONCILED" else "UNMATCHED",
+        )
+
+    log_finance_action(
+        "Reconciliation activity",
+        transaction_number=f"{payment_method}-{reconciliation_date}",
+        user=resolved_by,
+        new_value={
+            "system_total": str(system_total),
+            "actual_total": str(actual_total),
+            "discrepancy": str(discrepancy),
+            "status": status,
         },
     )
 

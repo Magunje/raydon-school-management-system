@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <div class="mb-4">
+        <a href="{% url 'allocation_list' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Roster</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Record room/bed transition logic for {{ alloc.pupil.full_name }}.</p>
+
+        <div class="p-3 bg-light rounded-4 mb-4 small text-dark">
+            <h6 class="fw-bold text-muted mb-2">CURRENT ASSIGNMENT</h6>
+            <div class="row">
+                <span class="col-4 fw-semibold text-muted">Hostel Block:</span>
+                <span class="col-8 fw-semibold">{{ alloc.hostel.hostel_name }}</span>
+            </div>
+            <div class="row">
+                <span class="col-4 fw-semibold text-muted">Room & Bed:</span>
+                <span class="col-8 fw-bold">Room {{ alloc.room.room_number }}, Bed {{ alloc.bed.bed_number }}</span>
+            </div>
+        </div>
+
+        <form method="post" class="form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <!-- Target Block -->
+                <div class="col-12">
+                    <label class="form-label">Target Hostel Block <span class="text-danger">*</span></label>
+                    <select name="hostel_id" id="hostel_id" class="form-select bg-light" required onchange="filterRooms()">
+                        <option value="">-- Choose Target Block --</option>
+                        {% for h in hostels %}
+                        <option value="{{ h.hostel_id }}" data-type="{{ h.hostel_type }}">{{ h.hostel_name }} [{{ h.get_hostel_type_display }}]</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Target Room -->
+                <div class="col-12 col-sm-6" id="room_select_block">
+                    <label class="form-label">Target Room <span class="text-danger">*</span></label>
+                    <select name="room_id" id="room_id" class="form-select bg-light" required onchange="filterBeds()">
+                        <option value="">-- Choose Room --</option>
+                    </select>
+                </div>
+
+                <!-- Target Bed -->
+                <div class="col-12 col-sm-6" id="bed_select_block">
+                    <label class="form-label">Target Bed <span class="text-danger">*</span></label>
+                    <select name="bed_id" id="bed_id" class="form-select bg-light" required>
+                        <option value="">-- Choose Bed --</option>
+                    </select>
+                </div>
+
+                <!-- Reason -->
+                <div class="col-12">
+                    <label class="form-label">Reason for Room Transfer</label>
+                    <textarea name="reason" rows="3" class="form-control" placeholder="Provide reason for transfer..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'allocation_list' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Approve Transfer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Fetch and populate available rooms and beds dynamically via fetch API or templates
+    // To keep it fully local and static, we can render all rooms/beds as data fields or make simple JSON endpoints.
+    // Let's render room lists as a JS array!
+    const roomsData = [
+        {% for h in hostels %}
+            {% for r in h.rooms.all %}
+                {% if r.status == 'Available' %}
+                    { id: "{{ r.room_id }}", number: "{{ r.room_number }}", hostelId: "{{ h.hostel_id }}" },
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    ];
+
+    const bedsData = [
+        {% for h in hostels %}
+            {% for r in h.rooms.all %}
+                {% for b in r.beds.all %}
+                    {% if b.status == 'Available' %}
+                        { id: "{{ b.bed_id }}", number: "{{ b.bed_number }}", roomId: "{{ r.room_id }}" },
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+    ];
+
+    function filterRooms() {
+        const hostelId = document.getElementById('hostel_id').value;
+        const roomSel = document.getElementById('room_id');
+        const bedSel = document.getElementById('bed_id');
+        
+        roomSel.innerHTML = '<option value="">-- Choose Room --</option>';
+        bedSel.innerHTML = '<option value="">-- Choose Bed --</option>';
+        
+        const filtered = roomsData.filter(r => r.hostelId === hostelId);
+        filtered.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = "Room " + r.number;
+            roomSel.appendChild(opt);
+        });
+    }
+
+    function filterBeds() {
+        const roomId = document.getElementById('room_id').value;
+        const bedSel = document.getElementById('bed_id');
+        
+        bedSel.innerHTML = '<option value="">-- Choose Bed --</option>';
+        
+        const filtered = bedsData.filter(b => b.roomId === roomId);
+        filtered.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = "Bed " + b.number;
+            bedSel.appendChild(opt);
+        });
+    }
+</script>
+{% endblock %}

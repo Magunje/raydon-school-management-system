@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Discipline Dashboard - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Summary Widget -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Total Incidents</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ total_incidents }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-danger bg-opacity-10 text-danger rounded-4">
+                        <i class="bi bi-shield-slash fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Active Cases</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ active_cases }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-warning bg-opacity-10 text-warning rounded-4">
+                        <i class="bi bi-shield-exclamation fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Active Suspensions</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ suspensions }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-dark bg-opacity-10 text-dark rounded-4">
+                        <i class="bi bi-exclamation-triangle fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Repeat Offenders</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ repeat_offenders }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                        <i class="bi bi-people fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions & Reports Links -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-lightning-charge me-2 text-primary"></i>Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'discipline:incident_new' %}" class="btn btn-outline-danger rounded-3 py-2 text-start"><i class="bi bi-plus-circle me-2"></i>Log Incident Report</a>
+                    <a href="{% url 'discipline:parent_meeting_new' %}" class="btn btn-outline-primary rounded-3 py-2 text-start"><i class="bi bi-people me-2"></i>Record Parent Meeting</a>
+                    <a href="{% url 'discipline:behaviour_plan_new' %}" class="btn btn-outline-success rounded-3 py-2 text-start"><i class="bi bi-clipboard2-check me-2"></i>Set Behaviour Plan</a>
+                    <a href="{% url 'discipline:reports' %}" class="btn btn-outline-secondary rounded-3 py-2 text-start"><i class="bi bi-file-earmark-text me-2"></i>Discipline Reports</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Disciplinary Incidents</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Incident ID</th>
+                                <th>Student</th>
+                                <th>Category</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inc in recent_incidents %}
+                            <tr>
+                                <td><span class="fw-bold text-secondary">{{ inc.incident_no }}</span></td>
+                                <td>{{ inc.student.full_name }}</td>
+                                <td>{{ inc.category.name }}</td>
+                                <td>
+                                    {% if inc.severity == 'Major' %}
+                                    <span class="badge bg-danger rounded-pill">Major</span>
+                                    {% elif inc.severity == 'Moderate' %}
+                                    <span class="badge bg-warning text-dark rounded-pill">Moderate</span>
+                                    {% else %}
+                                    <span class="badge bg-info text-dark rounded-pill">Minor</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-secondary rounded-pill">{{ inc.status }}</span></td>
+                                <td>
+                                    <a href="{% url 'discipline:sanction_new' inc.pk %}" class="btn btn-sm btn-outline-dark rounded-pill"><i class="bi bi-slash-circle me-1"></i>Sanction</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No recent disciplinary incidents logged.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4 text-center" style="max-width: 500px;">
+    <div class="mb-4 text-start">
+        <a href="{% url 'library_books' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Catalogue</a>
+    </div>
+
+    <!-- Sticker card -->
+    <div class="card border-1 shadow-sm rounded-4 bg-white p-4 mx-auto" style="border: 2px dashed #cbd5e1 !important;">
+        <span class="text-uppercase text-muted fw-bold small tracking-wider">{{ school_name }}</span>
+        <h5 class="fw-bold text-dark mt-1">LIBRARY ACCESSION LABEL</h5>
+        <hr class="my-3">
+        
+        <div class="py-3">
+            <img src="{{ qr_url }}" alt="Book QR Code" class="img-fluid bg-light p-2 border rounded-3 mb-3" style="width: 220px; height: 220px;">
+            <h4 class="fw-mono text-dark letter-spacing-1 mt-2"><code>{{ qr_data }}</code></h4>
+        </div>
+        
+        <hr class="my-3">
+        <div class="text-start small">
+            <div class="row mb-1">
+                <span class="col-4 text-muted fw-semibold">Title:</span>
+                <span class="col-8 text-dark fw-bold">{{ book.title }}</span>
+            </div>
+            <div class="row mb-1">
+                <span class="col-4 text-muted fw-semibold">Author:</span>
+                <span class="col-8 text-dark">{{ book.author|default:"-" }}</span>
+            </div>
+            <div class="row mb-1">
+                <span class="col-4 text-muted fw-semibold">Shelf coordinate:</span>
+                <span class="col-8 text-primary fw-bold"><i class="bi bi-geo-alt me-1"></i>{{ book.shelf_location|default:"-" }}</span>
+            </div>
+            <div class="row">
+                <span class="col-4 text-muted fw-semibold">ISBN:</span>
+                <span class="col-8 text-dark font-monospace">{{ book.isbn|default:"-" }}</span>
+            </div>
+        </div>
+        
+        <div class="mt-4 pt-3 border-top d-print-none">
+            <button class="btn btn-primary rounded-3 w-100" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print Label</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .card, .card * {
+            visibility: visible;
+        }
+        .card {
+            position: absolute;
+            left: 50%;
+            top: 20%;
+            transform: translate(-50%, -20%);
+            box-shadow: none !important;
+            border: none !important;
+        }
+        .d-print-none {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}

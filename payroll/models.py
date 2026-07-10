@@ -43,6 +43,10 @@ class PayrollAuditAction(models.TextChoices):
     STATUS_CHANGED = "status_changed", "Status changed"
     EXPORTED = "exported", "Exported"
     PAYSLIP_GENERATED = "payslip_generated", "Payslip generated"
+    LOAN_CREATED = "loan_created", "Loan created"
+    LOAN_DEDUCTED = "loan_deducted", "Loan deducted"
+    PAYROLL_POSTED = "payroll_posted", "Payroll posted"
+    BANK_FILE_GENERATED = "bank_file_generated", "Bank file generated"
 
 
 def money_field(default=MONEY_DEFAULT):
@@ -50,6 +54,13 @@ def money_field(default=MONEY_DEFAULT):
 
 
 class EmployeePayrollProfile(models.Model):
+    hr_employee = models.OneToOneField(
+        "human_resources.EmployeeProfile",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="payroll_profile",
+    )
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
     full_name = models.CharField(max_length=180)
     employee_number = models.CharField(max_length=50, unique=True)
@@ -59,6 +70,12 @@ class EmployeePayrollProfile(models.Model):
     account_number = models.CharField(max_length=80, blank=True)
     bank_name = models.CharField(max_length=120, blank=True)
     branch_name = models.CharField(max_length=120, blank=True)
+    account_name = models.CharField(max_length=180, blank=True)
+    mobile_money_number = models.CharField(max_length=50, blank=True)
+    salary_grade = models.CharField(max_length=80, blank=True)
+    tax_status = models.CharField(max_length=80, default="Taxable")
+    pension_scheme = models.CharField(max_length=120, blank=True)
+    medical_aid_scheme = models.CharField(max_length=120, blank=True)
     payment_method = models.CharField(max_length=30, choices=PaymentMethod.choices, default=PaymentMethod.BANK_TRANSFER)
     employment_status = models.CharField(max_length=30, choices=EmploymentStatus.choices, default=EmploymentStatus.ACTIVE)
     notes = models.TextField(blank=True)
@@ -78,8 +95,18 @@ class EmployeePayrollProfile(models.Model):
 
 
 class PayrollPeriod(models.Model):
+    FREQUENCY_CHOICES = [
+        ("MONTHLY", "Monthly"),
+        ("WEEKLY", "Weekly"),
+        ("FORTNIGHT", "Fortnight"),
+    ]
+
     month = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     year = models.PositiveIntegerField(validators=[MinValueValidator(2000)])
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default="MONTHLY")
+    approval_status = models.CharField(max_length=30, default="Pending")
     status = models.CharField(max_length=20, choices=PayrollStatus.choices, default=PayrollStatus.DRAFT)
     locked = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
@@ -122,6 +149,8 @@ class PayrollRun(models.Model):
     account_number = models.CharField(max_length=80, blank=True)
     bank_name = models.CharField(max_length=120, blank=True)
     branch_name = models.CharField(max_length=120, blank=True)
+    account_name = models.CharField(max_length=180, blank=True)
+    mobile_money_number = models.CharField(max_length=50, blank=True)
 
     basic_salary = money_field()
     housing_allowance = money_field()
@@ -136,6 +165,10 @@ class PayrollRun(models.Model):
     loan = money_field()
     advance = money_field()
     unpaid_leave = money_field()
+    medical_aid = money_field()
+    union_subscription = money_field()
+    insurance = money_field()
+    savings_scheme = money_field()
     other_deductions = money_field()
 
     gross_salary = money_field()
@@ -166,7 +199,19 @@ class PayrollRun(models.Model):
             + self.overtime
             + self.other_allowance
         )
-        deductions = self.tax + self.nssa + self.pension + self.loan + self.advance + self.unpaid_leave + self.other_deductions
+        deductions = (
+            self.tax
+            + self.nssa
+            + self.pension
+            + self.loan
+            + self.advance
+            + self.unpaid_leave
+            + self.medical_aid
+            + self.union_subscription
+            + self.insurance
+            + self.savings_scheme
+            + self.other_deductions
+        )
 
         if include_adjustments and self.pk:
             adjustment_totals = self.adjustments.values("adjustment_type").annotate(total=models.Sum("amount"))
@@ -256,6 +301,8 @@ class PayrollExportLog(models.Model):
 class Payslip(models.Model):
     run = models.OneToOneField(PayrollRun, on_delete=models.CASCADE, related_name="payslip")
     slip_number = models.CharField(max_length=80, unique=True)
+    qr_code_payload = models.TextField(blank=True)
+    electronic_stamp = models.CharField(max_length=120, default="Electronic School Stamp")
     generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
     generated_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
@@ -265,6 +312,134 @@ class Payslip(models.Model):
 
     def __str__(self):
         return self.slip_number
+
+
+class SalaryStructure(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    basic_salary = money_field()
+    housing_allowance = money_field()
+    transport_allowance = money_field()
+    responsibility_allowance = money_field()
+    other_allowances = money_field()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class PayrollComponentDefinition(models.Model):
+    COMPONENT_CHOICES = [
+        ("ALLOWANCE", "Allowance"),
+        ("DEDUCTION", "Deduction"),
+        ("STATUTORY", "Statutory Deduction"),
+    ]
+
+    code = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=120)
+    component_type = models.CharField(max_length=20, choices=COMPONENT_CHOICES)
+    taxable = models.BooleanField(default=True)
+    fixed_amount = money_field()
+    percentage_rate = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal("0.0000"))
+    formula = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["component_type", "code"]
+
+
+class PayrollFormula(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    description = models.TextField()
+    expression = models.TextField()
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["code"]
+
+
+class OvertimeRecord(models.Model):
+    OVERTIME_CHOICES = [
+        ("HOURLY", "Hourly Overtime"),
+        ("DAILY", "Daily Overtime"),
+        ("WEEKEND", "Weekend Overtime"),
+        ("PUBLIC_HOLIDAY", "Public Holiday Overtime"),
+    ]
+
+    employee_profile = models.ForeignKey(EmployeePayrollProfile, on_delete=models.PROTECT, related_name="overtime_records")
+    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name="overtime_records")
+    overtime_type = models.CharField(max_length=30, choices=OVERTIME_CHOICES)
+    hours = models.DecimalField(max_digits=7, decimal_places=2, default=Decimal("0.00"))
+    hourly_rate = money_field()
+    amount = money_field()
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ["period", "employee_profile"]
+
+    def save(self, *args, **kwargs):
+        self.amount = (self.hours * self.hourly_rate).quantize(Decimal("0.01"))
+        super().save(*args, **kwargs)
+
+
+class StaffLoan(models.Model):
+    LOAN_CHOICES = [
+        ("STAFF_LOAN", "Staff Loan"),
+        ("SALARY_ADVANCE", "Salary Advance"),
+        ("EMERGENCY_LOAN", "Emergency Loan"),
+    ]
+
+    loan_number = models.CharField(max_length=50, unique=True)
+    employee_profile = models.ForeignKey(EmployeePayrollProfile, on_delete=models.PROTECT, related_name="loans")
+    loan_type = models.CharField(max_length=30, choices=LOAN_CHOICES)
+    loan_amount = money_field()
+    interest_rate = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal("0.0000"))
+    repayment_period = models.PositiveIntegerField()
+    monthly_deduction = money_field()
+    outstanding_balance = money_field()
+    status = models.CharField(max_length=30, default="ACTIVE")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PayrollAccountingPosting(models.Model):
+    period = models.OneToOneField(PayrollPeriod, on_delete=models.CASCADE, related_name="accounting_posting")
+    journal_number = models.CharField(max_length=80, unique=True)
+    posted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    posted_at = models.DateTimeField(auto_now_add=True)
+    total_gross = money_field()
+    total_deductions = money_field()
+    total_net = money_field()
+
+    class Meta:
+        ordering = ["-posted_at"]
+
+
+class BankTransferFile(models.Model):
+    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name="bank_transfer_files")
+    file_name = models.CharField(max_length=180)
+    file_format = models.CharField(max_length=30, default="Excel")
+    total_records = models.PositiveIntegerField(default=0)
+    total_amount = money_field()
+    generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-generated_at"]
+
+
+class BankTransferLine(models.Model):
+    bank_file = models.ForeignKey(BankTransferFile, on_delete=models.CASCADE, related_name="lines")
+    employee_name = models.CharField(max_length=180)
+    employee_number = models.CharField(max_length=50)
+    bank_name = models.CharField(max_length=120, blank=True)
+    account_number = models.CharField(max_length=80, blank=True)
+    amount = money_field()
 
 
 class PayrollAuditLog(models.Model):

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row g-4">
+        <!-- New Maintenance Log form -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-4">Record Service Log</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Vehicle *</label>
+                        <select name="vehicle_id" class="form-select rounded-3" required>
+                            <option value="">-- Choose Vehicle --</option>
+                            {% for v in vehicles %}
+                            <option value="{{ v.pk }}">{{ v.vehicle_name }} ({{ v.registration_number }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Maintenance Type *</label>
+                        <select name="maintenance_type" class="form-select rounded-3" required>
+                            <option value="Preventive">Preventive</option>
+                            <option value="Repair">Repair</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="Licence">Licence</option>
+                            <option value="Tyre">Tyre</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Service Date *</label>
+                            <input type="date" name="service_date" class="form-control rounded-3" value="{{ today }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Cost (USD) *</label>
+                            <input type="number" step="0.01" name="cost" class="form-control rounded-3" value="0.00" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description *</label>
+                        <textarea name="description" rows="3" class="form-control rounded-3" required placeholder="e.g. Engine oil change and fuel filter swap"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Next Service Due Date</label>
+                        <input type="date" name="next_service_date" class="form-control rounded-3">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">Record Service Entry</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Roster lists -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-4">{{ title }}</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Type</th>
+                                <th>Service Date</th>
+                                <th>Cost</th>
+                                <th>Details</th>
+                                <th>Next Service</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in requests %}
+                            <tr>
+                                <td><span class="fw-bold">{{ req.vehicle.vehicle_name }}</span></td>
+                                <td><span class="badge bg-light text-dark">{{ req.maintenance_type }}</span></td>
+                                <td>{{ req.service_date }}</td>
+                                <td>${{ req.cost }}</td>
+                                <td class="small">{{ req.description }}</td>
+                                <td>{{ req.next_service_date|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No vehicle maintenance logs entered.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

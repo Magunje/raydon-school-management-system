@@ -1,0 +1,50 @@
+<header class="app-topbar">
+    <div class="topbar-title-group">
+        <button class="shell-icon-button shell-toggle" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <i class="bi bi-list"></i>
+        </button>
+        <div>
+            <nav class="breadcrumb-line" aria-label="Breadcrumb">
+                <span>{% if is_saas_portal %}Platform Management{% else %}School Operations{% endif %}</span>
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                <span>{{ app_title }}</span>
+            </nav>
+            <strong>{{ page_title|default:app_title }}</strong>
+            <small>Term {{ current_term|default:"-" }} · {{ current_year|default:"-" }}</small>
+        </div>
+    </div>
+
+    {% if request.user.is_authenticated %}
+    <form class="global-search" method="get" action="{% if is_saas_portal %}/saas-tenants/{% else %}/pupils{% endif %}" role="search">
+        <label class="visually-hidden" for="global-search-input">Global search</label>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="global-search-input" name="q" value="{{ request.GET.q }}" placeholder="{% if is_saas_portal %}Search tenant, domain, port{% else %}Search admission number, student, guardian, phone{% endif %}">
+    </form>
+    {% endif %}
+
+    <div class="topbar-user-area">
+        <a class="shell-icon-button" href="/notifications/" aria-label="Notifications">
+            <i class="bi bi-bell"></i>
+        </a>
+        <div class="user-chip">
+            <span class="user-avatar-mini">{{ current_user_name|default:request.user.username|default:"S"|slice:":1" }}</span>
+            <span>
+                <strong>{% if request.user.is_authenticated %}{{ current_user_name|default:request.user.username }}{% else %}Student Portal{% endif %}</strong>
+                <small>{{ current_role|default:"Signed in" }}</small>
+            </span>
+        </div>
+        {% if request.user.is_authenticated %}
+        <div class="dropdown">
+            <button class="shell-icon-button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open user menu">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'accounts:change_password' %}"><i class="bi bi-key me-2"></i>Change password</a></li>
+                <li><a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+        </div>
+        {% else %}
+        <a class="btn btn-outline-danger btn-sm" href="{% url 'portal_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        {% endif %}
+    </div>
+</header>

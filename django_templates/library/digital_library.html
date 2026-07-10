@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+            <p class="text-muted mb-0">Publish digital resources, past papers, eBooks, and media materials.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upload Form -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Upload New Material</h5>
+                <form method="post" enctype="multipart/form-data" class="form-panel mt-3">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Resource Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. O-Level Math Past Paper 2025" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Resource Category</label>
+                        <select name="category" class="form-select bg-light">
+                            <option value="eBook">eBook / Textbook (Digital)</option>
+                            <option value="PDF Document">PDF Document / Reference</option>
+                            <option value="Past Exam Paper">Past Exam Paper</option>
+                            <option value="Video lecture">Video lecture</option>
+                            <option value="Audio Guide">Audio Guide</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Allowed Portals <span class="text-danger">*</span></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="allowed_roles" value="Student" checked id="role-stud">
+                            <label class="form-check-label fw-semibold text-dark" for="role-stud">Student Portal</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="allowed_roles" value="Teacher" checked id="role-teach">
+                            <label class="form-check-label fw-semibold text-dark" for="role-teach">Teacher Staff Portal</label>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-semibold">Upload File <span class="text-danger">*</span></label>
+                        <input type="file" name="file" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-check-circle me-1"></i> Upload Resource</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Files List -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-folder2-open me-2 text-primary"></i>Published Material Repository</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small border-bottom">
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>File Name</th>
+                                <th>Uploaded At</th>
+                                <th>Access Rights</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for res in resources %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>{{ res.title }}</div>
+                                </td>
+                                <td><span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">{{ res.category }}</span></td>
+                                <td class="text-muted small font-monospace">{{ res.original_filename|truncatechars:20 }}</td>
+                                <td class="small text-muted">{{ res.uploaded_at }}</td>
+                                <td class="small">
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2">{{ res.allowed_roles|default:"Teacher,Student" }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'download_digital_resource' res.resource_id %}" class="btn btn-outline-primary btn-sm rounded-3"><i class="bi bi-download me-1"></i> Download</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-folder-x fs-1 d-block mb-3"></i>
+                                    No digital resource documents uploaded yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

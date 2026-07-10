@@ -1,8 +1,68 @@
 document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add("js-ready");
 
+    const showToast = (message, type = "info") => {
+        const stack = document.querySelector("[data-toast-stack]");
+        if (!stack) {
+            return;
+        }
+        const toast = document.createElement("div");
+        toast.className = `ui-alert ui-alert-${type}`;
+        toast.innerHTML = `<i class="bi bi-info-circle" aria-hidden="true"></i><span></span>`;
+        toast.querySelector("span").textContent = message;
+        stack.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 5200);
+    };
+
     document.querySelectorAll("[data-print]").forEach((button) => {
         button.addEventListener("click", () => window.print());
+    });
+
+    let pendingConfirmForm = null;
+    const ensureConfirmModal = () => {
+        let modal = document.getElementById("ui-confirm-modal");
+        if (modal) {
+            return modal;
+        }
+        modal = document.createElement("div");
+        modal.className = "modal fade";
+        modal.id = "ui-confirm-modal";
+        modal.tabIndex = -1;
+        modal.setAttribute("aria-labelledby", "ui-confirm-title");
+        modal.setAttribute("aria-hidden", "true");
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="ui-confirm-title">Confirm action</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" data-confirm-body>Continue?</div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" data-confirm-submit>Confirm</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.querySelector("[data-confirm-submit]").addEventListener("click", () => {
+            const form = pendingConfirmForm;
+            pendingConfirmForm = null;
+            bootstrap.Modal.getOrCreateInstance(modal).hide();
+            form?.submit();
+        });
+        return modal;
+    };
+
+    document.querySelectorAll("form[data-confirm-form]").forEach((form) => {
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            pendingConfirmForm = form;
+            const trigger = event.submitter || form.querySelector("[data-confirm-message]");
+            const modal = ensureConfirmModal();
+            modal.querySelector("[data-confirm-body]").textContent = trigger?.dataset.confirmMessage || "Continue?";
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
     });
 
     const sidebar = document.querySelector("[data-sidebar]");
@@ -11,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lastSidebarTrigger = event?.currentTarget || null;
         document.body.classList.add("sidebar-open");
         window.requestAnimationFrame(() => {
-            const focusTarget = sidebar?.querySelector("[data-sidebar-close], .nav-link, .logout-link");
+            const focusTarget = sidebar?.querySelector("[data-sidebar-close], .sidebar-link, .nav-link, .logout-link");
             focusTarget?.focus({ preventScroll: true });
         });
     };
@@ -31,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", closeSidebar);
     });
 
-    document.querySelectorAll(".sidebar .nav-link, .sidebar .logout-link, .sidebar .brand").forEach((link) => {
+    document.querySelectorAll(".app-sidebar .sidebar-link, .sidebar .nav-link, .sidebar .logout-link, .sidebar .brand, .sidebar-brand").forEach((link) => {
         link.addEventListener("click", closeSidebar);
     });
 
@@ -606,7 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
             body: new URLSearchParams(formData).toString(),
             createdAt: new Date().toISOString(),
         });
-        window.alert("Saved offline. It will sync automatically when this device is back online.");
+        showToast("Saved offline. It will sync automatically when this device is back online.", "success");
         form.reset();
         return true;
     };

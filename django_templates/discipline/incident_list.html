@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Incident Register - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-0">Disciplinary Incident Register</h4>
+                <p class="text-muted small mb-0">Record and track disciplinary infractions throughout the student lifecycle</p>
+            </div>
+            <a href="{% url 'discipline:incident_new' %}" class="btn btn-danger rounded-3 py-2"><i class="bi bi-plus-circle me-2"></i>Record New Incident</a>
+        </div>
+
+        <!-- Filter Search Bar -->
+        <form method="get" class="row g-3 mb-4">
+            <div class="col-12 col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control bg-light border-0" placeholder="Search by student name, admission number, or incident ID...">
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-dark w-100 py-2"><i class="bi bi-funnel me-2"></i>Filter Register</button>
+            </div>
+        </form>
+
+        <!-- Incidents Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Incident ID</th>
+                        <th>Date</th>
+                        <th>Student</th>
+                        <th>Offence Category</th>
+                        <th>Severity</th>
+                        <th>Reported By</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inc in incidents %}
+                    <tr>
+                        <td><span class="fw-bold text-secondary">{{ inc.incident_no }}</span></td>
+                        <td>{{ inc.incident_date }}</td>
+                        <td>
+                            <div class="fw-bold">{{ inc.student.full_name }}</div>
+                            <div class="text-muted small">Adm No: {{ inc.student.admission_no }}</div>
+                        </td>
+                        <td>
+                            {{ inc.category.name }}
+                            {% if inc.hostel_incident %}
+                            <span class="badge bg-info text-dark rounded-pill ms-1"><i class="bi bi-building me-1"></i>Hostel</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if inc.severity == 'Major' %}
+                            <span class="badge bg-danger rounded-pill">Major</span>
+                            {% elif inc.severity == 'Moderate' %}
+                            <span class="badge bg-warning text-dark rounded-pill">Moderate</span>
+                            {% else %}
+                            <span class="badge bg-info text-dark rounded-pill">Minor</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ inc.reported_by.full_name|default:"System Log" }}</td>
+                        <td>
+                            <span class="badge bg-secondary rounded-pill">{{ inc.status }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'discipline:sanction_new' inc.pk %}" class="btn btn-sm btn-outline-dark rounded-pill"><i class="bi bi-slash-circle me-1"></i>Sanction</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No disciplinary incidents found matching criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

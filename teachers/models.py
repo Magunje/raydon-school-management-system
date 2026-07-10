@@ -30,4 +30,28 @@ class TeacherAttendanceRecord(models.Model):
         managed = False
         db_table = "teacher_attendance_records"
 
-# Create your models here.
+
+class TeacherEmployeeProfile(models.Model):
+    employee = models.OneToOneField(
+        "human_resources.EmployeeProfile",
+        on_delete=models.CASCADE,
+        related_name="teacher_extension",
+    )
+    legacy_profile_id = models.PositiveIntegerField(unique=True, null=True, blank=True)
+    teaching_subjects = models.TextField(blank=True, null=True)
+    assigned_forms = models.TextField(blank=True, null=True)
+    assigned_classes = models.TextField(blank=True, null=True)
+    workload_notes = models.TextField(blank=True, null=True)
+    professional_registration = models.CharField(max_length=120, blank=True, null=True)
+    teaching_experience_years = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    class_teacher_assignment = models.CharField(max_length=120, blank=True, null=True)
+    head_of_department_assignment = models.CharField(max_length=120, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "teacher_employee_profiles"
+        ordering = ["employee__surname", "employee__first_name"]
+
+    def __str__(self):
+        return f"Teacher extension for {self.employee.full_name}"

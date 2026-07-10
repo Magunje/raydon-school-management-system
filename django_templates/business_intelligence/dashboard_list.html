@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Business Intelligence - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold"><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Business Intelligence & Analytics</h1>
+            <p class="text-muted mb-0">Monitor school dashboards, design reports, and analyze key performance metrics.</p>
+        </div>
+    </div>
+
+    <!-- Telemetry Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary-subtle text-primary rounded-3 p-3 me-3">
+                        <i class="bi bi-bar-chart-line fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Total Dashboards</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_dashboards }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success-subtle text-success rounded-3 p-3 me-3">
+                        <i class="bi bi-grid-3x3-gap fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Active Widgets</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ active_widgets }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info-subtle text-info rounded-3 p-3 me-3">
+                        <i class="bi bi-file-earmark-bar-graph fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Report Templates</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ system_templates }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning-subtle text-warning rounded-3 p-3 me-3">
+                        <i class="bi bi-bookmark-check fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Saved Sheets</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_saved }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-3 gap-2" id="biTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 fw-semibold" id="definitions-tab" data-bs-toggle="tab" data-bs-target="#definitions" type="button" role="tab" aria-controls="definitions" aria-selected="true"><i class="bi bi-bar-chart-steps me-1"></i>Dashboard Definitions</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab" aria-controls="templates" aria-selected="false"><i class="bi bi-file-earmark-ruled me-1"></i>Report Templates</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="saved-tab" data-bs-toggle="tab" data-bs-target="#saved" type="button" role="tab" aria-controls="saved" aria-selected="false"><i class="bi bi-bookmarks me-1"></i>Saved BI Sheets</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="biTabsContent">
+        <!-- Dashboard Definitions Tab -->
+        <div class="tab-pane fade show active" id="definitions" role="tabpanel" aria-labelledby="definitions-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Dashboard Name</th>
+                                <th>Category</th>
+                                <th>Permission Required</th>
+                                <th>Refresh Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in dashboards %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ d.name }}</td>
+                                <td><span class="badge bg-primary-subtle text-primary">{{ d.get_category_display }}</span></td>
+                                <td><code>{{ d.permission_code }}</code></td>
+                                <td>{{ d.refresh_interval_minutes }} mins</td>
+                                <td>
+                                    {% if d.is_active %}
+                                    <span class="status-pill approved">Active</span>
+                                    {% else %}
+                                    <span class="status-pill text-muted">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No dashboards registered.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Templates Tab -->
+        <div class="tab-pane fade" id="templates" role="tabpanel" aria-labelledby="templates-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Template Name</th>
+                                <th>Module Code</th>
+                                <th>Format</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in templates %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ t.name }}</td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ t.module_code }}</span></td>
+                                <td><code>{{ t.default_format }}</code></td>
+                                <td><span class="small text-muted">{{ t.description|default:"" }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No report templates defined.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved BI Sheets Tab -->
+        <div class="tab-pane fade" id="saved" role="tabpanel" aria-labelledby="saved-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Report Sheet Name</th>
+                                <th>Base Template</th>
+                                <th>Owner</th>
+                                <th>Output Format</th>
+                                <th>Shared</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in saved_reports %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ r.name }}</td>
+                                <td>{{ r.template.name }}</td>
+                                <td>{{ r.owner.username }}</td>
+                                <td><code>{{ r.output_format }}</code></td>
+                                <td>
+                                    {% if r.is_shared %}
+                                    <span class="badge bg-success-subtle text-success">Shared</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">Private</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No custom BI reports saved.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

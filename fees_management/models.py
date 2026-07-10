@@ -8,6 +8,7 @@ import datetime
 class FeeCategory(models.Model):
     name = models.CharField(max_length=120, unique=True)
     is_active = models.BooleanField(default=True)
+    ledger_account_code = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
         db_table = "fees_mgt_categories"
@@ -84,6 +85,8 @@ class StudentFeeAccount(models.Model):
     credit_balance = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "fees_mgt_student_accounts"
@@ -122,6 +125,17 @@ class FinanceSetting(models.Model):
         choices=[("USD", "USD"), ("ZIG", "ZiG")],
         default="USD",
     )
+    payment_allocation_policy = models.CharField(
+        max_length=40,
+        choices=[
+            ("OLDEST_ARREARS_FIRST", "Oldest arrears first"),
+            ("CURRENT_CHARGES_FIRST", "Current charges first"),
+        ],
+        default="OLDEST_ARREARS_FIRST",
+    )
+    receipt_stamp_label = models.CharField(
+        max_length=120, default="Electronic School Stamp"
+    )
 
     class Meta:
         db_table = "fees_mgt_finance_settings"
@@ -131,6 +145,14 @@ class FinanceSetting(models.Model):
 
 
 class Invoice(models.Model):
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("ISSUED", "Issued"),
+        ("PART_PAID", "Part Paid"),
+        ("PAID", "Paid"),
+        ("VOID", "Void"),
+    ]
+
     invoice_number = models.CharField(max_length=50, unique=True)
     student_account = models.ForeignKey(
         StudentFeeAccount, on_delete=models.CASCADE, related_name="invoices"
@@ -151,6 +173,14 @@ class Invoice(models.Model):
     )
     total_amount_due = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ISSUED")
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fee_invoices_generated",
     )
 
     class Meta:
@@ -203,6 +233,8 @@ class Payment(models.Model):
         ("BANK_TRANSFER", "Bank Transfer"),
         ("POS", "POS"),
         ("MOBILE_MONEY", "Mobile Money"),
+        ("ONLINE", "Online Payment"),
+        ("OTHER", "Other"),
     ]
 
     receipt_number = models.CharField(max_length=50, unique=True)
@@ -232,6 +264,16 @@ class Payment(models.Model):
         related_name="payments_received",
     )
     is_reversed = models.BooleanField(default=False)
+    reversed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fee_payments_reversed",
+    )
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversal_reason = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "fees_mgt_payments"
@@ -239,6 +281,64 @@ class Payment(models.Model):
 
     def __str__(self):
         return self.receipt_number
+
+
+class PaymentAllocation(models.Model):
+    payment = models.ForeignKey(
+        Payment, on_delete=models.CASCADE, related_name="allocations"
+    )
+    student_account = models.ForeignKey(
+        StudentFeeAccount, on_delete=models.CASCADE, related_name="payment_allocations"
+    )
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment_allocations",
+    )
+    allocation_type = models.CharField(
+        max_length=30,
+        choices=[
+            ("ARREARS", "Arrears"),
+            ("CURRENT_CHARGES", "Current Charges"),
+            ("CREDIT", "Credit Balance"),
+        ],
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    allocated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "fees_mgt_payment_allocations"
+
+    def __str__(self):
+        return f"{self.payment.receipt_number} -> {self.allocation_type} {self.amount}"
+
+
+class Receipt(models.Model):
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name="receipts")
+    receipt_number = models.CharField(max_length=50)
+    version = models.PositiveIntegerField(default=1)
+    issued_at = models.DateTimeField(auto_now_add=True)
+    reprinted_at = models.DateTimeField(null=True, blank=True)
+    reprinted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fee_receipts_reprinted",
+    )
+    qr_code_payload = models.TextField()
+    electronic_stamp = models.CharField(max_length=120, default="Electronic School Stamp")
+    pdf_file = models.FileField(upload_to="finance/receipts/", null=True, blank=True)
+
+    class Meta:
+        db_table = "fees_mgt_receipts"
+        unique_together = ("receipt_number", "version")
+        ordering = ["-issued_at"]
+
+    def __str__(self):
+        return f"{self.receipt_number} v{self.version}"
 
 
 class PaymentPlan(models.Model):
@@ -259,6 +359,21 @@ class PaymentPlan(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="ACTIVE"
     )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment_plans_created",
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment_plans_approved",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "fees_mgt_payment_plans"
@@ -293,6 +408,18 @@ class Sponsorship(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     conditions = models.TextField(blank=True, null=True)
+    supporting_document = models.FileField(
+        upload_to="finance/sponsorships/", null=True, blank=True
+    )
+    is_approved = models.BooleanField(default=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sponsorships_approved",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "fees_mgt_sponsorships"
@@ -319,6 +446,10 @@ class Discount(models.Model):
         max_digits=5, decimal_places=2, null=True, blank=True
     )
     reason = models.TextField()
+    original_fee_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
+    is_approved = models.BooleanField(default=True)
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -347,6 +478,7 @@ class ReconciliationRecord(models.Model):
     STATUS_CHOICES = [
         ("RECONCILED", "Reconciled"),
         ("DISCREPANCY", "Discrepancy"),
+        ("CLOSED", "Closed"),
     ]
 
     reconciliation_date = models.DateField()
@@ -365,6 +497,11 @@ class ReconciliationRecord(models.Model):
         related_name="reconciliations_resolved",
     )
     resolution_notes = models.TextField(blank=True, null=True)
+    matched_transactions = models.PositiveIntegerField(default=0)
+    unmatched_transactions = models.PositiveIntegerField(default=0)
+    overpayments = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    underpayments = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    closed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "fees_mgt_reconciliations"
@@ -372,3 +509,67 @@ class ReconciliationRecord(models.Model):
 
     def __str__(self):
         return f"Reconciled {self.payment_method} on {self.reconciliation_date}"
+
+
+class ReconciliationItem(models.Model):
+    MATCH_STATUS_CHOICES = [
+        ("MATCHED", "Matched"),
+        ("UNMATCHED", "Unmatched"),
+        ("OVERPAYMENT", "Overpayment"),
+        ("UNDERPAYMENT", "Underpayment"),
+        ("REVERSAL", "Reversal"),
+    ]
+
+    reconciliation = models.ForeignKey(
+        ReconciliationRecord, on_delete=models.CASCADE, related_name="items"
+    )
+    payment = models.ForeignKey(
+        Payment, on_delete=models.SET_NULL, null=True, blank=True, related_name="reconciliation_items"
+    )
+    transaction_reference = models.CharField(max_length=150, blank=True, null=True)
+    expected_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    actual_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    status = models.CharField(max_length=30, choices=MATCH_STATUS_CHOICES)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "fees_mgt_reconciliation_items"
+
+
+class FinanceAuditLog(models.Model):
+    module = models.CharField(max_length=80, default="Fees Management")
+    action = models.CharField(max_length=120)
+    transaction_number = models.CharField(max_length=120, blank=True, null=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    school_tenant = models.CharField(max_length=255, blank=True, null=True)
+    previous_value = models.JSONField(null=True, blank=True)
+    new_value = models.JSONField(null=True, blank=True)
+    reason = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "fees_mgt_audit_logs"
+        ordering = ["-created_at"]
+
+
+class OfflineFinanceQueue(models.Model):
+    STATUS_CHOICES = [
+        ("QUEUED", "Queued"),
+        ("SYNCED", "Synced"),
+        ("CONFLICT", "Conflict"),
+        ("FAILED", "Failed"),
+    ]
+
+    operation = models.CharField(max_length=80)
+    payload = models.JSONField()
+    device_identifier = models.CharField(max_length=120, blank=True, null=True)
+    local_timestamp = models.DateTimeField()
+    server_timestamp = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="QUEUED")
+    conflict_reason = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "fees_mgt_offline_queue"
+        ordering = ["server_timestamp"]

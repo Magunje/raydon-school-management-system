@@ -8,14 +8,19 @@ from fees_management.models import (
     FeeStructure,
     Invoice,
     Payment,
+    PaymentAllocation,
     PaymentPlan,
+    Receipt,
     Sponsorship,
     Discount,
     FinanceSetting,
     ReconciliationRecord,
+    FinanceAuditLog,
 )
 from fees_management.services import (
     record_payment,
+    issue_receipt,
+    reverse_payment,
     apply_sponsorship,
     apply_discount,
     reconcile_payments,
@@ -126,11 +131,35 @@ class FeesManagementTestCase(TestCase):
 
         self.assertIsNotNone(payment)
         self.assertEqual(payment.amount_in_operating, Decimal("20.00"))
+        self.assertTrue(Receipt.objects.filter(payment=payment, version=1).exists())
+        self.assertTrue(PaymentAllocation.objects.filter(payment=payment).exists())
+        self.assertTrue(
+            FinanceAuditLog.objects.filter(
+                action="Payment receipt generation",
+                transaction_number=payment.receipt_number,
+            ).exists()
+        )
 
         # Check balance updates immediately
         account.refresh_from_db()
         self.assertEqual(account.amount_paid, Decimal("20.00"))
         self.assertEqual(account.outstanding_balance, Decimal("80.00"))
+
+        reprint = issue_receipt(payment, reprinted_by=self.admin)
+        self.assertEqual(reprint.version, 2)
+        self.assertTrue(
+            FinanceAuditLog.objects.filter(
+                action="Receipt reprint",
+                transaction_number=payment.receipt_number,
+            ).exists()
+        )
+
+        reverse_payment(payment, user=self.admin, reason="Duplicate transaction")
+        payment.refresh_from_db()
+        account.refresh_from_db()
+        self.assertTrue(payment.is_reversed)
+        self.assertEqual(account.amount_paid, Decimal("0.00"))
+        self.assertEqual(account.outstanding_balance, Decimal("100.00"))
 
     def test_sponsorships_and_discounts(self):
         student = Student.objects.create(

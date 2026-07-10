@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-4">{{ title }}</h4>
+                <div class="alert alert-warning rounded-3 mb-4">
+                    <div class="small text-muted">Asset to Dispose:</div>
+                    <div class="fw-bold text-dark mb-1">{{ asset.asset_code }} - {{ asset.asset_name }}</div>
+                    <div class="small text-muted">Current Registry Value:</div>
+                    <div class="fw-semibold text-danger">${{ asset.current_value }}</div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Disposal Date *</label>
+                        <input type="date" name="disposal_date" class="form-control rounded-3" value="{{ today }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Disposal Method *</label>
+                        <select name="method" class="form-select rounded-3" required>
+                            <option value="Sale">Sale</option>
+                            <option value="Donation">Donation</option>
+                            <option value="Write-Off">Write-Off</option>
+                            <option value="Scrap">Scrap</option>
+                            <option value="Loss">Loss</option>
+                            <option value="Theft">Theft</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Disposal Value / proceeds ($) *</label>
+                        <input type="number" step="0.01" name="value" class="form-control rounded-3" value="0.00" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Authorized By *</label>
+                        <select name="approved_by_id" class="form-select rounded-3" required>
+                            <option value="">-- Choose Approver --</option>
+                            {% for app in approvers %}
+                            <option value="{{ app.pk }}">{{ app.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Reason for Disposal *</label>
+                        <textarea name="reason" rows="3" class="form-control rounded-3" required placeholder="Describe condition details, scrap dealer, or donation details..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-danger flex-grow-1 rounded-3">Execute Disposal</button>
+                        <a href="{% url 'asset_list' %}" class="btn btn-light rounded-3">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

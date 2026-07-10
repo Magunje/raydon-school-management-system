@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <div class="mb-4">
+        <a href="{% url 'library_books' %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Catalogue</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Provide inventory item details to register or update the library resource.</p>
+
+        <form method="post" class="mt-4 form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Book Title <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" placeholder="Enter book title" value="{{ book.title }}" required>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Author Name</label>
+                    <input type="text" name="author" class="form-control" placeholder="Enter author name" value="{{ book.author }}">
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">ISBN / Code</label>
+                    <input type="text" name="isbn" class="form-control" placeholder="ISBN-10 or ISBN-13" value="{{ book.isbn }}">
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Category</label>
+                    <input type="text" name="category" list="categories-list" class="form-control" placeholder="e.g. Science, Fiction, Reference" value="{{ book.category }}">
+                    <datalist id="categories-list">
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Subject Domain</label>
+                    <input type="text" name="subject" class="form-control" placeholder="e.g. Physics, Chemistry, O-Level English" value="{{ book.subject }}">
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Publisher</label>
+                    <input type="text" name="publisher" class="form-control" placeholder="Publisher name" value="{{ book.publisher }}">
+                </div>
+                <div class="col-6 col-sm-3">
+                    <label class="form-label">Publication Year</label>
+                    <input type="number" name="publication_year" class="form-control" placeholder="Year" value="{{ book.publication_year }}">
+                </div>
+                <div class="col-6 col-sm-3">
+                    <label class="form-label">Edition</label>
+                    <input type="text" name="edition" class="form-control" placeholder="e.g. 3rd Ed." value="{{ book.edition }}">
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Shelf Location <span class="text-danger">*</span></label>
+                    <input type="text" name="shelf_location" class="form-control" placeholder="e.g. Shelf A-4, Rack 2" value="{{ book.shelf_location }}" required>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <label class="form-label">Total Copies <span class="text-danger">*</span></label>
+                    <input type="number" name="total_copies" class="form-control" min="1" value="{{ book.total_copies|default:1 }}" required>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <label class="form-label">Overdue Fine (per day) <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">$</span>
+                        <input type="number" step="0.01" name="fine_per_day" class="form-control" value="{{ book.fine_per_day|default:'0.50' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'library_books' %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Save Resource</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Block -->
+    <div class="mb-4">
+        <a href="{% url 'hostel_list' %}" class="btn btn-outline-secondary btn-sm rounded-3 mb-3"><i class="bi bi-arrow-left me-1"></i> Back to Hostels</a>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+                <p class="text-muted mb-0">Manage floors, rooms, and bed setups for {{ hostel.hostel_name }}.</p>
+            </div>
+            <a href="{% url 'room_new' hostel.hostel_id %}" class="btn btn-primary rounded-3 px-3"><i class="bi bi-plus-lg me-1"></i> Add Room setup</a>
+        </div>
+    </div>
+
+    <!-- Rooms Table -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small border-bottom">
+                        <th>Room Number</th>
+                        <th>Floor Level</th>
+                        <th>Designated Capacity</th>
+                        <th>Current Occupancy</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                    <tr>
+                        <td><strong class="text-dark fs-5">Room {{ room.room_number }}</strong></td>
+                        <td class="text-muted fw-semibold">Floor {{ room.floor }}</td>
+                        <td class="text-dark fw-bold">{{ room.capacity }} beds</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress rounded-pill flex-grow-1" style="max-width: 100px; height: 6px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: {% widthratio room.current_occupancy room.capacity 100 %}%"></div>
+                                </div>
+                                <span class="fw-bold text-dark">{{ room.current_occupancy }} / {{ room.capacity }} occupied</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if room.status == 'Available' %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Vacant / Available</span>
+                            {% elif room.status == 'Full' %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Fully Booked</span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">{{ room.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'bed_map_grid' room.room_id %}" class="btn btn-sm btn-outline-primary rounded-3"><i class="bi bi-grid-3x3-gap me-1"></i> Bed Layout Grid</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-door-closed fs-1 d-block mb-3"></i>
+                            No rooms configured in this hostel building yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

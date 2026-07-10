@@ -1,0 +1,21 @@
+<div class="ui-page-header">
+    <div>
+        <nav class="breadcrumb-line" aria-label="Breadcrumb">
+            <span>{{ breadcrumb_parent|default:"Raydon SMS" }}</span>
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            <span>{{ title }}</span>
+        </nav>
+        <h1>{{ title }}</h1>
+        {% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+    </div>
+    {% if actions %}
+    <div class="page-actions">
+        {% for action in actions %}
+        <a class="btn {{ action.class|default:'btn-outline-primary' }}" href="{{ action.href }}">
+            <i class="bi {{ action.icon|default:'bi-arrow-right' }}" aria-hidden="true"></i>
+            <span>{{ action.label }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

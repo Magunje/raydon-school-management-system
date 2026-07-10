@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Profiles - {{ school_name }}{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with breadcrumb_parent="Human Resources" title="Teacher Profiles" subtitle="Teacher records are managed as employee profiles with teacher-specific assignments and workload information." %}
+
+<div class="ui-stat-grid">
+    {% include "components/stat_card.html" with label="Teaching Staff" value=teachers.count icon="bi-person-video3" %}
+    {% include "components/stat_card.html" with label="Legacy Profiles Linked" value=legacy_count icon="bi-link-45deg" %}
+</div>
+
+<section class="ui-card filter-panel">
+    <form class="row g-3" method="get">
+        <div class="col-md-8 ui-field">
+            <label for="teacher-q">Search</label>
+            <input id="teacher-q" name="q" value="{{ q }}" placeholder="Teacher name or employee number">
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+            <a class="btn btn-outline-secondary" href="/teachers"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="ui-card">
+    <div class="table-wrap">
+        <table class="table table-hover align-middle ui-table">
+            <thead>
+                <tr>
+                    <th>Employee Number</th>
+                    <th>Teacher Name</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Teaching Subjects</th>
+                    <th>Assigned Classes</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for teacher in teachers %}
+                <tr>
+                    <td><strong>{{ teacher.employee_number }}</strong></td>
+                    <td>
+                        <a class="record-link" href="{% url 'human_resources_employee_profile' teacher.id %}">{{ teacher.full_name }}</a>
+                        <small class="d-block text-secondary">{{ teacher.email|default:"-" }}</small>
+                    </td>
+                    <td>{{ teacher.department }}</td>
+                    <td>{{ teacher.position }}</td>
+                    <td>{{ teacher.teacher_extension.teaching_subjects|default:teacher.teaching_subjects|default:"-" }}</td>
+                    <td>{{ teacher.teacher_extension.assigned_classes|default:teacher.assigned_classes|default:"-" }}</td>
+                    <td>{% include "components/status_badge.html" with status=teacher.status label=teacher.get_status_display %}</td>
+                    <td>
+                        <div class="table-action-group">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'human_resources_employee_profile' teacher.id %}"><i class="bi bi-eye"></i> View</a>
+                            <a class="btn btn-sm btn-outline-secondary" href="/timetables?teacher_name={{ teacher.full_name|urlencode }}"><i class="bi bi-calendar3"></i> Timetable</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">{% include "components/empty_state.html" with title="No teacher employee profiles found" message="Create teaching staff in Human Resources to populate this page." %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

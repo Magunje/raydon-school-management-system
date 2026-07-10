@@ -8,7 +8,10 @@ from django.db.models import Count, Sum
 from django.utils import timezone
 
 from .models import (
+    BankTransferFile,
+    BankTransferLine,
     EmployeePayrollProfile,
+    OvertimeRecord,
     PayrollAdjustment,
     PayrollApproval,
     PayrollAuditAction,
@@ -19,7 +22,9 @@ from .models import (
     PayrollPeriod,
     PayrollRun,
     PayrollStatus,
+    PayrollAccountingPosting,
     Payslip,
+    StaffLoan,
 )
 
 
@@ -39,6 +44,10 @@ DEDUCTION_FIELDS = [
     ("loan", "Loan", "run"),
     ("advance", "Advance", "run"),
     ("unpaid_leave", "Unpaid leave", "run"),
+    ("medical_aid", "Medical aid", "run"),
+    ("union_subscription", "Union subscription", "run"),
+    ("insurance", "Insurance", "run"),
+    ("savings_scheme", "Savings scheme", "run"),
     ("other_deductions", "Other deductions", "run"),
 ]
 
@@ -99,6 +108,8 @@ def run_defaults_from_profile(profile, period, user, previous_run=None, copy_pre
         "account_number": profile.account_number,
         "bank_name": profile.bank_name,
         "branch_name": profile.branch_name,
+        "account_name": profile.account_name,
+        "mobile_money_number": profile.mobile_money_number,
         "basic_salary": profile.basic_salary,
         "created_by": user,
         "updated_by": user,
@@ -108,6 +119,44 @@ def run_defaults_from_profile(profile, period, user, previous_run=None, copy_pre
         for field_name in COPY_ADJUSTMENT_FIELDS:
             defaults[field_name] = getattr(previous_run, field_name)
     return defaults
+
+
+def apply_overtime_and_loans(run, user=None):
+    overtime_total = sum(
+        (record.amount for record in OvertimeRecord.objects.filter(period=run.period, employee_profile=run.employee_profile)),
+        Decimal("0.00"),
+    )
+    if overtime_total:
+        run.overtime += overtime_total
+
+    active_loans = StaffLoan.objects.select_for_update().filter(
+        employee_profile=run.employee_profile,
+        status="ACTIVE",
+        outstanding_balance__gt=Decimal("0.00"),
+    )
+    loan_total = Decimal("0.00")
+    advance_total = Decimal("0.00")
+    for loan in active_loans:
+        deduction = min(loan.monthly_deduction, loan.outstanding_balance)
+        if loan.loan_type == "SALARY_ADVANCE":
+            advance_total += deduction
+        else:
+            loan_total += deduction
+        loan.outstanding_balance -= deduction
+        if loan.outstanding_balance <= Decimal("0.00"):
+            loan.outstanding_balance = Decimal("0.00")
+            loan.status = "PAID"
+        loan.save(update_fields=["outstanding_balance", "status"])
+        create_audit(
+            PayrollAuditAction.LOAN_DEDUCTED,
+            actor=user,
+            period=run.period,
+            run=run,
+            details=f"{loan.loan_number} deducted {deduction}.",
+        )
+
+    run.loan += loan_total
+    run.advance += advance_total
 
 
 def rebuild_payroll_items(run):
@@ -206,6 +255,7 @@ def process_period(*, year, month, user, copy_previous=False):
         )
         if created:
             created_count += 1
+            apply_overtime_and_loans(run, user=user)
             run.calculate_totals(include_adjustments=False)
             run.save()
             if copy_previous and previous_run:
@@ -337,11 +387,7 @@ def build_bank_export(period, *, user):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Bank Payment"
-    headers = [
-        "Full Name",
-        "Account Number",
-        "Bank Name",
-    ]
+    headers = ["Full Name", "Account Number", "Bank Name", "Amount"]
     sheet.append(headers)
 
     for run in runs:
@@ -350,6 +396,7 @@ def build_bank_export(period, *, user):
                 run.employee_name,
                 run.account_number,
                 run.bank_name,
+                run.net_salary,
             ]
         )
 
@@ -362,6 +409,27 @@ def build_bank_export(period, *, user):
     buffer.seek(0)
     total_net = sum((run.net_salary for run in runs), Decimal("0.00"))
     file_name = f"bank-payroll-{period.period_code}.xlsx"
+    bank_file = BankTransferFile.objects.create(
+        period=period,
+        file_name=file_name,
+        file_format="Excel",
+        total_records=len(runs),
+        total_amount=total_net,
+        generated_by=user,
+    )
+    BankTransferLine.objects.bulk_create(
+        [
+            BankTransferLine(
+                bank_file=bank_file,
+                employee_name=run.employee_name,
+                employee_number=run.employee_number,
+                bank_name=run.bank_name,
+                account_number=run.account_number,
+                amount=run.net_salary,
+            )
+            for run in runs
+        ]
+    )
     PayrollExportLog.objects.create(
         period=period,
         file_name=file_name,
@@ -369,7 +437,7 @@ def build_bank_export(period, *, user):
         total_net=total_net,
         exported_by=user,
     )
-    create_audit(PayrollAuditAction.EXPORTED, actor=user, period=period, details=f"{file_name} exported.")
+    create_audit(PayrollAuditAction.BANK_FILE_GENERATED, actor=user, period=period, details=f"{file_name} exported.")
     return file_name, buffer
 
 
@@ -387,6 +455,11 @@ def get_or_create_payslip(run, *, user):
         run=run,
         defaults={"slip_number": slip_number, "generated_by": user},
     )
+    payload = payslip_auth_payload(run, payslip)
+    if not payslip.qr_code_payload:
+        payslip.qr_code_payload = payload
+        payslip.electronic_stamp = "Electronic School Stamp"
+        payslip.save(update_fields=["qr_code_payload", "electronic_stamp"])
     create_audit(
         PayrollAuditAction.PAYSLIP_GENERATED,
         actor=user,
@@ -395,6 +468,115 @@ def get_or_create_payslip(run, *, user):
         details=f"Payslip {payslip.slip_number} opened.",
     )
     return payslip
+
+
+def create_staff_loan(employee_profile, loan_type, loan_amount, repayment_period, created_by=None, interest_rate=Decimal("0.0000")):
+    if repayment_period <= 0:
+        raise ValidationError("Repayment period must be greater than zero.")
+    total_due = (loan_amount + (loan_amount * interest_rate / Decimal("100.00"))).quantize(Decimal("0.01"))
+    loan = StaffLoan.objects.create(
+        loan_number=f"LN-{StaffLoan.objects.count() + 1:05d}",
+        employee_profile=employee_profile,
+        loan_type=loan_type,
+        loan_amount=loan_amount,
+        interest_rate=interest_rate,
+        repayment_period=repayment_period,
+        monthly_deduction=(total_due / Decimal(repayment_period)).quantize(Decimal("0.01")),
+        outstanding_balance=total_due,
+        created_by=created_by,
+    )
+    create_audit(
+        PayrollAuditAction.LOAN_CREATED,
+        actor=created_by,
+        details=f"Loan {loan.loan_number} created for {employee_profile.employee_number}.",
+    )
+    return loan
+
+
+def record_overtime(employee_profile, period, overtime_type, hours, hourly_rate, approved_by=None):
+    record = OvertimeRecord.objects.create(
+        employee_profile=employee_profile,
+        period=period,
+        overtime_type=overtime_type,
+        hours=hours,
+        hourly_rate=hourly_rate,
+        approved_by=approved_by,
+    )
+    return record
+
+
+def post_payroll_to_accounting(period, user=None):
+    if period.status not in {PayrollStatus.APPROVED, PayrollStatus.PAID}:
+        raise ValidationError("Payroll must be approved before posting to accounting.")
+    if hasattr(period, "accounting_posting"):
+        return period.accounting_posting
+
+    from accounting_erp.models import AccountPortal, FinancialYear, JournalEntry, JournalLine
+    from accounting_erp.services import post_journal_entry
+
+    summary = payroll_summary(period)
+    gross = summary["gross"] or Decimal("0.00")
+    deductions = summary["deductions"] or Decimal("0.00")
+    net = summary["net"] or Decimal("0.00")
+    pay_date = timezone.localdate().replace(year=period.year, month=period.month, day=1)
+
+    fy = FinancialYear.objects.filter(start_date__lte=pay_date, end_date__gte=pay_date, is_closed=False).exclude(status__in=["CLOSED", "LOCKED"]).first()
+    if not fy:
+        fy = FinancialYear.objects.create(
+            name=f"FY {pay_date.year}",
+            start_date=pay_date.replace(month=1, day=1),
+            end_date=pay_date.replace(month=12, day=31),
+            status="OPEN",
+        )
+
+    salary_expense, _ = AccountPortal.objects.get_or_create(code="5100", defaults={"name": "Salaries Expense", "account_type": "EXPENSE"})
+    salaries_payable, _ = AccountPortal.objects.get_or_create(code="2200", defaults={"name": "Salaries Payable", "account_type": "LIABILITY"})
+    paye_payable, _ = AccountPortal.objects.get_or_create(code="2210", defaults={"name": "PAYE Payable", "account_type": "LIABILITY"})
+    nssa_payable, _ = AccountPortal.objects.get_or_create(code="2220", defaults={"name": "NSSA Payable", "account_type": "LIABILITY"})
+    pension_payable, _ = AccountPortal.objects.get_or_create(code="2230", defaults={"name": "Pension Payable", "account_type": "LIABILITY"})
+
+    journal_number = f"JV-PAYROLL-{period.period_code}"
+    entry = JournalEntry.objects.create(
+        journal_number=journal_number,
+        entry_date=pay_date,
+        description=f"Payroll posting for {period.period_code}",
+        financial_year=fy,
+        approval_status="DRAFT",
+        source_module="Payroll",
+        reference_number=period.period_code,
+        prepared_by=user,
+    )
+    JournalLine.objects.create(journal_entry=entry, account=salary_expense, debit_amount=gross, credit_amount=Decimal("0.00"))
+    JournalLine.objects.create(journal_entry=entry, account=salaries_payable, debit_amount=Decimal("0.00"), credit_amount=net)
+
+    tax_total = sum((run.tax for run in period.runs.all()), Decimal("0.00"))
+    nssa_total = sum((run.nssa for run in period.runs.all()), Decimal("0.00"))
+    pension_total = sum((run.pension for run in period.runs.all()), Decimal("0.00"))
+    other_deductions = deductions - tax_total - nssa_total - pension_total
+    if tax_total:
+        JournalLine.objects.create(journal_entry=entry, account=paye_payable, debit_amount=Decimal("0.00"), credit_amount=tax_total)
+    if nssa_total:
+        JournalLine.objects.create(journal_entry=entry, account=nssa_payable, debit_amount=Decimal("0.00"), credit_amount=nssa_total)
+    if pension_total:
+        JournalLine.objects.create(journal_entry=entry, account=pension_payable, debit_amount=Decimal("0.00"), credit_amount=pension_total)
+    if other_deductions:
+        JournalLine.objects.create(journal_entry=entry, account=salaries_payable, debit_amount=Decimal("0.00"), credit_amount=other_deductions)
+
+    entry.approval_status = "APPROVED"
+    entry.approved_by = user
+    entry.save()
+    post_journal_entry(entry, user=user)
+
+    posting = PayrollAccountingPosting.objects.create(
+        period=period,
+        journal_number=journal_number,
+        posted_by=user,
+        total_gross=gross,
+        total_deductions=deductions,
+        total_net=net,
+    )
+    create_audit(PayrollAuditAction.PAYROLL_POSTED, actor=user, period=period, details=f"{journal_number} posted.")
+    return posting
 
 
 def payslip_auth_payload(run, payslip):

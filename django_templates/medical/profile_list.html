@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Medical Clinic Portal - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold"><i class="bi bi-heart-pulse-fill me-2 text-danger"></i>Medical Clinic Portal</h1>
+            <p class="text-muted mb-0">Record clinic visits, track medication inventory, and manage student/staff medical profiles.</p>
+        </div>
+    </div>
+
+    <!-- Telemetry Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary-subtle text-primary rounded-3 p-3 me-3">
+                        <i class="bi bi-person-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Total Patients</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_patients }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger-subtle text-danger rounded-3 p-3 me-3">
+                        <i class="bi bi-activity fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Clinic Visits Logged</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ total_visits }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success-subtle text-success rounded-3 p-3 me-3">
+                        <i class="bi bi-capsule fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Registered Meds</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ active_meds }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning-subtle text-warning rounded-3 p-3 me-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small uppercase mb-1">Low Stock Meds</h6>
+                        <h3 class="fw-bold mb-0 text-dark">{{ low_stock }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-3 gap-2" id="medicalTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 fw-semibold" id="profiles-tab" data-bs-toggle="tab" data-bs-target="#profiles" type="button" role="tab" aria-controls="profiles" aria-selected="true"><i class="bi bi-person-heart me-1"></i>Patient Profiles</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="visits-tab" data-bs-toggle="tab" data-bs-target="#visits" type="button" role="tab" aria-controls="visits" aria-selected="false"><i class="bi bi-clipboard-pulse me-1"></i>Clinic Visit Register</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 fw-semibold" id="medications-tab" data-bs-toggle="tab" data-bs-target="#medications" type="button" role="tab" aria-controls="medications" aria-selected="false"><i class="bi bi-capsule-pill me-1"></i>Pharmacy & Meds</button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="medicalTabsContent">
+        <!-- Patient Profiles Tab -->
+        <div class="tab-pane fade show active" id="profiles" role="tabpanel" aria-labelledby="profiles-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ref. ID</th>
+                                <th>Name</th>
+                                <th>Blood Group</th>
+                                <th>Allergies & Chronic Conditions</th>
+                                <th>Emergency Contact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in profiles %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ p.patient_reference }}</td>
+                                <td class="fw-bold">{{ p.patient_name }}</td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ p.blood_group }}</span></td>
+                                <td>
+                                    <div>
+                                        {% if p.allergies %}
+                                        <div class="mb-1"><strong class="small text-danger">Allergies:</strong> <span class="small">{{ p.allergies }}</span></div>
+                                        {% endif %}
+                                        {% if p.chronic_conditions %}
+                                        <div><strong class="small text-warning">Chronic:</strong> <span class="small">{{ p.chronic_conditions }}</span></div>
+                                        {% endif %}
+                                        {% if not p.allergies and not p.chronic_conditions %}
+                                        <span class="text-muted small">None recorded</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="fw-semibold text-dark">{{ p.emergency_contact_name }}</span><br>
+                                        <small class="text-muted">{{ p.emergency_contact_phone }}</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No patient medical profiles found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinic Visit Register Tab -->
+        <div class="tab-pane fade" id="visits" role="tabpanel" aria-labelledby="visits-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Visit No.</th>
+                                <th>Patient</th>
+                                <th>Date/Time</th>
+                                <th>Symptoms</th>
+                                <th>Diagnosis</th>
+                                <th>Treatment</th>
+                                <th>Outcome</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in visits %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ v.visit_number }}</td>
+                                <td class="fw-bold">{{ v.patient.patient_name }}</td>
+                                <td>{{ v.visit_date|date:"Y-m-d" }} {{ v.visit_time|time:"H:i" }}</td>
+                                <td><span class="text-muted small">{{ v.symptoms|truncatechars:50 }}</span></td>
+                                <td>{{ v.diagnosis|default:"-" }}</td>
+                                <td>{{ v.treatment|default:"-" }}</td>
+                                <td>
+                                    {% if v.outcome == 'TREATED' %}
+                                    <span class="status-pill approved">Treated</span>
+                                    {% elif v.outcome == 'SICK_BAY' %}
+                                    <span class="status-pill draft">Sick Bay</span>
+                                    {% else %}
+                                    <span class="status-pill text-muted">{{ v.get_outcome_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No clinic visits recorded.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pharmacy & Meds Tab -->
+        <div class="tab-pane fade" id="medications" role="tabpanel" aria-labelledby="medications-tab">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Medicine Code</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Quantity Available</th>
+                                <th>Reorder Level</th>
+                                <th>Expiry Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in medications %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ m.medicine_code }}</td>
+                                <td class="fw-bold text-dark">{{ m.medicine_name }}</td>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ m.category|default:"General" }}</span></td>
+                                <td>
+                                    <span class="fw-bold {% if m.quantity_available <= m.reorder_level %}text-danger{% else %}text-success{% endif %}">
+                                        {{ m.quantity_available }}
+                                    </span>
+                                </td>
+                                <td>{{ m.reorder_level }}</td>
+                                <td>
+                                    <span class="small">{{ m.expiry_date|date:"Y-m-d" }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No pharmacy medication catalogued.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Log Counselling Session - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-3"><i class="bi bi-journal-check me-2 text-success"></i>Log Counselling Session Notes</h4>
+                <div class="alert alert-light border rounded-3 p-3 mb-4">
+                    <h6 class="fw-bold mb-1 text-dark">Case Reference: {{ case.case_no }}</h6>
+                    <div class="text-muted small">
+                        <strong>Student:</strong> {{ case.student.full_name }} | <strong>Category:</strong> {{ case.category }}<br>
+                        <strong>Counsellor:</strong> {{ case.assigned_counsellor.full_name|default:"Unassigned" }}
+                    </div>
+                </div>
+                <hr class="mb-4">
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Session Date</label>
+                            <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Session Time</label>
+                            <input type="time" name="time" class="form-control rounded-3">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Confidential Session Notes <span class="text-danger">*</span></label>
+                            <div class="text-muted small mb-2"><i class="bi bi-lock-fill text-danger me-1"></i>These notes are highly confidential and restricted to authorized counselling roles only.</div>
+                            <textarea name="session_notes" rows="6" class="form-control rounded-3" placeholder="Provide complete clinical session details, emotional states, issues addressed..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Recommendations & Actions Plan</label>
+                            <textarea name="recommendations" rows="3" class="form-control rounded-3" placeholder="Immediate directives or plans agreed during session..."></textarea>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Next Follow-Up Date</label>
+                            <input type="date" name="follow_up_date" class="form-control rounded-3">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Update Case Status</label>
+                            <select name="case_status" class="form-select rounded-3">
+                                <option value="" selected>Keep current ({{ case.status }})</option>
+                                <option value="Open">Open</option>
+                                <option value="Under Review">Under Review</option>
+                                <option value="Follow-Up Required">Follow-Up Required</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'counselling:case_detail' case.pk %}" class="btn btn-light rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-success rounded-3 px-4">Save Session Notes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

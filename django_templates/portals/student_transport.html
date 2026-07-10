@@ -1,0 +1,89 @@
+{% extends "portals/student_base.html" %}
+{% block portal_content %}
+<div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-bus-front me-2 text-primary"></i>My School Commute</h4>
+    <p class="text-muted small">Real-time schedule details and route status.</p>
+</div>
+
+<div class="row g-4">
+    <!-- Route Details Card -->
+    <div class="col-12 col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-4">Assigned Transit Space</h5>
+            {% if alloc %}
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <span class="text-muted small text-uppercase fw-semibold d-block">Route Name</span>
+                    <span class="fw-semibold text-dark">{{ alloc.route.route_name }}</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small text-uppercase fw-semibold d-block">Route Code</span>
+                    <span class="fw-semibold text-dark">{{ alloc.route.route_code }}</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <span class="text-muted small text-uppercase fw-semibold d-block">Commute Stop</span>
+                    <span class="fw-semibold text-primary">{{ alloc.pickup_point.location_name }}</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small text-uppercase fw-semibold d-block">Pickup Time</span>
+                    <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ alloc.pickup_point.pickup_time|time:"H:i" }}</span>
+                </div>
+            </div>
+
+            <hr>
+
+            <h6 class="fw-bold text-dark mb-3">Vehicle & Driver Contact</h6>
+            <div class="d-flex align-items-center mb-3">
+                <div class="p-3 bg-light rounded-4 me-3">
+                    <i class="bi bi-bus-front-fill fs-3 text-primary"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-dark">{{ alloc.route.assigned_vehicle.vehicle_name|default:"Shuttle Bus" }}</div>
+                    <div class="small text-muted">Reg No: {{ alloc.route.assigned_vehicle.registration_number|default:"-" }}</div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <div class="p-3 bg-light rounded-4 me-3">
+                    <i class="bi bi-person-badge fs-3 text-success"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-dark">{{ alloc.route.assigned_driver.employee.full_name|default:"Driver Profile" }}</div>
+                    <div class="small text-muted">Contact: {{ alloc.route.assigned_driver.employee.phone|default:"-" }}</div>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-bus-front text-muted display-4 mb-3 d-block"></i>
+                <h6 class="text-muted">You are not registered for school transport services.</h6>
+                <p class="small text-muted">Please visit the Administration Desk if you require transport allocation.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alert Notices Card -->
+    <div class="col-12 col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-4">Logistics Announcements</h5>
+            <div class="d-flex flex-column gap-3">
+                {% for notice in notices %}
+                <div class="p-3 bg-light rounded-4 border-start border-3 {% if 'delay' in notice.description|lower %}border-warning{% else %}border-primary{% endif %}">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-semibold small text-dark">Route Update</span>
+                        <span class="text-muted small fs-7">{{ notice.incident_date }}</span>
+                    </div>
+                    <p class="small text-muted mb-0">{{ notice.description }}</p>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted small">No announcements or delay updates posted.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

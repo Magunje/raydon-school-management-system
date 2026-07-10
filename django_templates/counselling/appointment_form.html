@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Schedule Appointment - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-3"><i class="bi bi-calendar-plus me-2 text-primary"></i>Schedule Counselling Appointment</h4>
+                <hr class="mb-4">
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Select Student <span class="text-danger">*</span></label>
+                            <select name="student_id" class="form-select rounded-3" required>
+                                <option value="" disabled selected>Choose student...</option>
+                                {% for stud in students %}
+                                <option value="{{ stud.pk }}">{{ stud.full_name }} ({{ stud.admission_no }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Assigned Counsellor <span class="text-danger">*</span></label>
+                            <select name="counsellor_id" class="form-select rounded-3" required>
+                                <option value="" disabled selected>Choose counsellor...</option>
+                                {% for member in staff %}
+                                <option value="{{ member.pk }}">{{ member.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="date" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Time <span class="text-danger">*</span></label>
+                            <input type="time" name="time" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes & Agenda</label>
+                            <textarea name="notes" rows="3" class="form-control rounded-3" placeholder="Define target objectives, prep notes, or details for the upcoming meeting..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'counselling:dashboard' %}" class="btn btn-light rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4">Schedule Appointment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

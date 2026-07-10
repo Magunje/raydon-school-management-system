@@ -11,6 +11,7 @@ from accounting_erp.models import (
     JournalEntry,
     JournalLine,
     FixedAssetRegister,
+    GeneralLedgerEntry,
 )
 from accounting_erp.services import (
     depreciate_fixed_assets,
@@ -160,10 +161,16 @@ class AccountingErpTestCase(TestCase):
 
         # Verify journal entry was generated and approved automatically
         jv_exists = JournalEntry.objects.filter(
-            approval_status="APPROVED",
+            approval_status="POSTED",
             description__icontains="Auto-post fee collection receipt",
         ).exists()
         self.assertTrue(jv_exists)
+        self.assertTrue(
+            GeneralLedgerEntry.objects.filter(
+                source_module="Fees Management",
+                reference_number__startswith="REC-",
+            ).exists()
+        )
 
         # Verify Chart of Accounts balances updated automatically
         self.cash_acct.refresh_from_db()

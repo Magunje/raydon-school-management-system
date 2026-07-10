@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        <a href="{% url 'asset_dashboard' %}" class="btn btn-light rounded-3">Back to Hub</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Adjustment Date</th>
+                        <th>Asset Code</th>
+                        <th>Asset Name</th>
+                        <th>Method</th>
+                        <th>Depreciation Adjusted</th>
+                        <th>Adjusted Book Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.depreciation_date }}</td>
+                        <td><span class="fw-bold">{{ log.asset.asset_code }}</span></td>
+                        <td>{{ log.asset.asset_name }}</td>
+                        <td><span class="badge bg-light text-dark">{{ log.asset.depreciation_method }}</span></td>
+                        <td class="text-danger">-${{ log.amount }}</td>
+                        <td class="fw-bold text-success">${{ log.book_value }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No asset depreciation adjustments run yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

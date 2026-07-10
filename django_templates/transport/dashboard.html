@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Telemetry Cards -->
+    <div class="row g-4 mb-4">
+        {% for label, val in stats %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">{{ label }}</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ val }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                        {% if "Vehicles" in label %}
+                        <i class="bi bi-bus-front fs-3"></i>
+                        {% elif "Routes" in label %}
+                        <i class="bi bi-map fs-3"></i>
+                        {% elif "Boarders" in label %}
+                        <i class="bi bi-people fs-3"></i>
+                        {% elif "Utilisation" in label %}
+                        <i class="bi bi-percent fs-3 text-success"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Alert / Widget Block -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cash-coin me-2 text-primary"></i>Finance & Maintenance</h5>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="text-muted">Transport Fees Owed:</span>
+                    <h3 class="mb-0 fw-bold text-danger">${{ outstanding_fees|floatformat:2 }}</h3>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="text-muted">Vehicles Due Service:</span>
+                    <h5 class="mb-0 fw-semibold text-warning">{{ upcoming_service.count }} buses</h5>
+                </div>
+                <div class="mt-4 pt-2 border-top">
+                    <a href="{% url 'transport_maintenance' %}" class="btn btn-outline-primary btn-sm w-100 rounded-3">Review Maintenance Tickets</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-4"><i class="bi bi-bus-front-fill me-2 text-primary"></i>Transport Operations Shortcuts</h5>
+                <div class="row g-3">
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'vehicle_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-bus-front text-primary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Vehicles</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'driver_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-person-badge text-success fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Drivers</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'route_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-map text-info fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Routes Map</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'registration_new' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-person-plus text-warning fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Allocate Seat</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'registration_list' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-people-fill text-danger fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Rosters List</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'transport_attendance' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-calendar-check text-secondary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Roll Call</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'transport_fuel' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-fuel-pump text-dark fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Fuel Tracker</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'transport_reports' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-file-earmark-text text-primary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Reports</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details lists -->
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Service Schedules Due</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Type</th>
+                                <th>Next Service</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in upcoming_service %}
+                            <tr>
+                                <td>{{ log.vehicle.vehicle_name }}</td>
+                                <td><span class="badge bg-light text-dark">{{ log.maintenance_type }}</span></td>
+                                <td>{{ log.next_service_date }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-3">All vehicles are current on maintenance checks.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-shield-exclamation text-danger me-2"></i>Recent Incident Reports</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Action Taken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inc in incidents %}
+                            <tr>
+                                <td>{{ inc.incident_date }}</td>
+                                <td class="small">{{ inc.description }}</td>
+                                <td class="small text-muted">{{ inc.action_taken }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-3">No incidents logged.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3 text-end">
+                    <a href="{% url 'transport_incidents' %}" class="btn btn-light btn-sm rounded-3">File / Log Incident Report</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

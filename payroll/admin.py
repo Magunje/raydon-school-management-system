@@ -1,15 +1,23 @@
 from django.contrib import admin
 
 from .models import (
+    BankTransferFile,
+    BankTransferLine,
     EmployeePayrollProfile,
+    OvertimeRecord,
     PayrollAdjustment,
     PayrollApproval,
+    PayrollAccountingPosting,
     PayrollAuditLog,
+    PayrollComponentDefinition,
     PayrollExportLog,
+    PayrollFormula,
     PayrollItem,
     PayrollPeriod,
     PayrollRun,
     Payslip,
+    SalaryStructure,
+    StaffLoan,
 )
 
 
@@ -73,5 +81,15 @@ class PayrollAuditLogAdmin(admin.ModelAdmin):
     list_display = ("action", "period", "run", "actor", "created_at")
     list_filter = ("action", "created_at")
     search_fields = ("details", "run__employee_name", "run__employee_number")
+
+
+admin.site.register(SalaryStructure)
+admin.site.register(PayrollComponentDefinition)
+admin.site.register(PayrollFormula)
+admin.site.register(OvertimeRecord)
+admin.site.register(StaffLoan)
+admin.site.register(PayrollAccountingPosting)
+admin.site.register(BankTransferFile)
+admin.site.register(BankTransferLine)
 
 # Register your models here.

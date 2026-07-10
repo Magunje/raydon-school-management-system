@@ -1,7 +1,10 @@
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 from accounts.permissions import permission_required
+from human_resources.models import EmployeeProfile
 from school_system_django.native import delete_record, render_detail_page, render_record_form_page, render_table_page
+from teachers.models import TeacherEmployeeProfile
 
 
 TEACHER_PROFILE_FIELDS = ["user_id", "phone_number", "email", "qualifications", "workload_notes"]
@@ -10,22 +13,20 @@ TEACHER_ATTENDANCE_FIELDS = ["user_id", "attendance_date", "status", "notes"]
 
 @permission_required("staff.view")
 def profiles(request):
-    return render_table_page(
+    q = (request.GET.get("q") or "").strip()
+    teachers = EmployeeProfile.objects.filter(employee_category__in=["TEACHER", "ACADEMIC", "HOD"]).select_related(
+        "department_ref", "position_ref"
+    ).prefetch_related("teacher_extension")
+    if q:
+        teachers = teachers.filter(first_name__icontains=q) | teachers.filter(surname__icontains=q) | teachers.filter(employee_number__icontains=q)
+    return render(
         request,
-        "Teacher Profiles",
-        "teacher_profiles",
-        ["profile_id", "user_id", "phone_number", "email", "qualifications", "workload_notes"],
-        "Teacher qualifications, contact details, and workload notes.",
-        order_by="profile_id DESC",
-        search_columns=["phone_number", "email", "qualifications", "workload_notes"],
-        pk_column="profile_id",
-        create_href="/teachers/new",
-        create_label="New Teacher",
-        row_actions=[
-            {"label": "View", "href": "/teachers/{profile_id}", "icon": "bi-eye", "class": "btn-outline-primary"},
-            {"label": "Edit", "href": "/teachers/{profile_id}/edit", "icon": "bi-pencil", "class": "btn-outline-secondary"},
-            {"label": "Delete", "href": "/teachers/{profile_id}/delete", "icon": "bi-trash", "class": "btn-outline-danger", "method": "post", "confirm": "Delete this teacher profile?"},
-        ],
+        "teachers/profiles.html",
+        {
+            "teachers": teachers.order_by("surname", "first_name"),
+            "q": q,
+            "legacy_count": TeacherEmployeeProfile.objects.filter(legacy_profile_id__isnull=False).count(),
+        },
     )
 
 

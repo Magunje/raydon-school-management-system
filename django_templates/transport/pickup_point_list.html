@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'route_list' %}">Routes</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ route.route_code }}</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+        </div>
+        <a href="{% url 'pickup_point_new' route.pk %}" class="btn btn-primary rounded-3"><i class="bi bi-plus-lg me-2"></i>Add Stop</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Stop Location</th>
+                        <th>Pickup Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stop in stops %}
+                    <tr>
+                        <td><span class="fw-semibold text-dark">{{ stop.location_name }}</span></td>
+                        <td>{{ stop.pickup_time|time:"H:i" }}</td>
+                        <td>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ stop.status }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">No pickup points added for this route yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

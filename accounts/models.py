@@ -18,6 +18,13 @@ ROLE_CHOICES = [
     ("Transport Staff", "Transport Staff"),
     ("Hostel Staff", "Hostel Staff"),
     ("Nurse", "Nurse"),
+    ("SaaS Administrator", "SaaS Administrator"),
+    ("Academic Administrator", "Academic Administrator"),
+    ("Finance Officer", "Finance Officer"),
+    ("HR Officer", "HR Officer"),
+    ("Payroll Officer", "Payroll Officer"),
+    ("Guidance Counsellor", "Guidance Counsellor"),
+    ("Auditor", "Auditor"),
     ("Parent", "Parent"),
     ("Student", "Student"),
 ]

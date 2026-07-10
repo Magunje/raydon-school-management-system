@@ -1,0 +1,33 @@
+{% load static %}
+<aside class="app-sidebar" data-sidebar aria-label="Main navigation">
+    <div class="sidebar-brand-row">
+        <a class="sidebar-brand" href="{% if request.user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'portal_dashboard' %}{% endif %}">
+            <img src="{% static 'img/raydon-system-logo.svg' %}" alt="{{ school_name }}">
+            <span>
+                <strong>{{ school_name }}</strong>
+                <small>{% if request.user.is_authenticated %}{{ current_role|default:"School Portal" }}{% else %}Student Portal{% endif %}</small>
+            </span>
+        </a>
+        <button class="shell-icon-button sidebar-close" type="button" data-sidebar-close aria-label="Close navigation">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="System modules">
+        {% if request.user.is_authenticated %}
+            {% for item in visible_menu_items %}
+            <a class="sidebar-link{% if request.path == item.href %} active{% endif %}" href="{{ item.href }}">
+                <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                <span>{{ item.label }}</span>
+            </a>
+            {% endfor %}
+        {% else %}
+            {% for item in student_menu_items %}
+            <a class="sidebar-link{% if request.path == item.href %} active{% endif %}" href="{{ item.href }}">
+                <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                <span>{{ item.label }}</span>
+            </a>
+            {% endfor %}
+        {% endif %}
+    </nav>
+</aside>

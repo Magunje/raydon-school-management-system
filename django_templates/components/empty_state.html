@@ -1,0 +1,8 @@
+<div class="ui-empty-state">
+    <i class="bi {{ icon|default:'bi-inbox' }}" aria-hidden="true"></i>
+    <strong>{{ title|default:"No records found" }}</strong>
+    {% if message %}<p>{{ message }}</p>{% endif %}
+    {% if action_href %}
+    <a class="btn btn-primary" href="{{ action_href }}"><i class="bi {{ action_icon|default:'bi-plus-circle' }}"></i> {{ action_label }}</a>
+    {% endif %}
+</div>

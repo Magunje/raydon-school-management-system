@@ -49,6 +49,185 @@ def _sqlite_table_sql():
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS library_members (
+            member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NULL,
+            staff_id integer NULL,
+            card_number varchar(100) UNIQUE,
+            barcode_path varchar(255) NULL,
+            status varchar(40) NOT NULL DEFAULT 'Active',
+            created_at text
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_reservations (
+            reservation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_id integer NOT NULL,
+            pupil_id integer NULL,
+            staff_id integer NULL,
+            reserve_date text,
+            status varchar(40) NOT NULL DEFAULT 'Pending',
+            notification_sent integer DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_digital_resources (
+            resource_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title varchar(255) NOT NULL,
+            category varchar(80) NOT NULL,
+            file_path varchar(255) NOT NULL,
+            original_filename varchar(255),
+            uploaded_by integer,
+            uploaded_at text,
+            allowed_roles varchar(255)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_settings (
+            setting_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            daily_overdue_fine numeric NOT NULL DEFAULT 0.50,
+            damaged_book_penalty numeric NOT NULL DEFAULT 5.00,
+            lost_book_penalty numeric NOT NULL DEFAULT 15.00,
+            max_books_allowed integer NOT NULL DEFAULT 3,
+            borrow_duration_days integer NOT NULL DEFAULT 14
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostels (
+            hostel_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hostel_code varchar(50) UNIQUE NOT NULL,
+            hostel_name varchar(100) NOT NULL,
+            hostel_type varchar(40) NOT NULL,
+            capacity integer NOT NULL DEFAULT 0,
+            warden_id integer NULL,
+            status varchar(40) NOT NULL DEFAULT 'Active'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_rooms (
+            room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_number varchar(50) NOT NULL,
+            hostel_id integer NOT NULL,
+            floor integer NOT NULL DEFAULT 0,
+            capacity integer NOT NULL DEFAULT 0,
+            current_occupancy integer NOT NULL DEFAULT 0,
+            status varchar(40) NOT NULL DEFAULT 'Available'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_beds (
+            bed_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bed_number varchar(50) NOT NULL,
+            room_id integer NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Available',
+            current_occupant_id integer NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_allocations (
+            allocation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NOT NULL,
+            hostel_id integer NOT NULL,
+            room_id integer NOT NULL,
+            bed_id integer NOT NULL,
+            boarding_date text,
+            status varchar(40) NOT NULL DEFAULT 'Active',
+            guardian_notified integer NOT NULL DEFAULT 0,
+            fee_posted integer NOT NULL DEFAULT 0,
+            created_at text
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_transfers (
+            transfer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NOT NULL,
+            previous_allocation_id integer NOT NULL,
+            new_hostel_id integer NOT NULL,
+            new_room_id integer NOT NULL,
+            new_bed_id integer NOT NULL,
+            reason text,
+            transfer_date text,
+            approved_by_id integer NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_attendance (
+            attendance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NOT NULL,
+            date text NOT NULL,
+            time_slot varchar(50) NOT NULL,
+            status varchar(40) NOT NULL,
+            remarks text,
+            recorded_by_id integer
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_discipline (
+            discipline_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NOT NULL,
+            incident_date text NOT NULL,
+            incident_description text NOT NULL,
+            action_taken varchar(100),
+            staff_id integer NOT NULL,
+            parent_notified integer NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_visitors (
+            visitor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            visitor_name varchar(180) NOT NULL,
+            relationship varchar(100) NOT NULL,
+            pupil_id integer NOT NULL,
+            visit_date text NOT NULL,
+            time_in text NOT NULL,
+            time_out text,
+            contact_number varchar(50) NOT NULL,
+            approval_status varchar(40) NOT NULL DEFAULT 'Pending',
+            approved_by_id integer
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_inventory (
+            inventory_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hostel_id integer NOT NULL,
+            room_id integer,
+            item_name varchar(100) NOT NULL,
+            quantity integer NOT NULL DEFAULT 0,
+            status varchar(50) NOT NULL DEFAULT 'Good'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_fee_records (
+            fee_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pupil_id integer NOT NULL,
+            charge_type varchar(80) NOT NULL,
+            amount numeric NOT NULL,
+            date_charged text NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Unpaid'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_maintenance (
+            maintenance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hostel_id integer NOT NULL,
+            room_id integer NOT NULL,
+            bed_id integer,
+            issue_description text NOT NULL,
+            reported_by_id integer NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Pending',
+            reported_date text NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_notices (
+            notice_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title varchar(150) NOT NULL,
+            content text NOT NULL,
+            published_date text NOT NULL,
+            is_active integer NOT NULL DEFAULT 1
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS inventory_items (
             item_id INTEGER PRIMARY KEY AUTOINCREMENT,
             item_name varchar(255) NOT NULL,
@@ -154,6 +333,185 @@ def _postgres_table_sql():
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS library_members (
+            member_id SERIAL PRIMARY KEY,
+            pupil_id integer NULL,
+            staff_id integer NULL,
+            card_number varchar(100) UNIQUE,
+            barcode_path varchar(255) NULL,
+            status varchar(40) NOT NULL DEFAULT 'Active',
+            created_at text
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_reservations (
+            reservation_id SERIAL PRIMARY KEY,
+            book_id integer NOT NULL,
+            pupil_id integer NULL,
+            staff_id integer NULL,
+            reserve_date text,
+            status varchar(40) NOT NULL DEFAULT 'Pending',
+            notification_sent integer DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_digital_resources (
+            resource_id SERIAL PRIMARY KEY,
+            title varchar(255) NOT NULL,
+            category varchar(80) NOT NULL,
+            file_path varchar(255) NOT NULL,
+            original_filename varchar(255),
+            uploaded_by integer,
+            uploaded_at text,
+            allowed_roles varchar(255)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS library_settings (
+            setting_id SERIAL PRIMARY KEY,
+            daily_overdue_fine numeric NOT NULL DEFAULT 0.50,
+            damaged_book_penalty numeric NOT NULL DEFAULT 5.00,
+            lost_book_penalty numeric NOT NULL DEFAULT 15.00,
+            max_books_allowed integer NOT NULL DEFAULT 3,
+            borrow_duration_days integer NOT NULL DEFAULT 14
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostels (
+            hostel_id SERIAL PRIMARY KEY,
+            hostel_code varchar(50) UNIQUE NOT NULL,
+            hostel_name varchar(100) NOT NULL,
+            hostel_type varchar(40) NOT NULL,
+            capacity integer NOT NULL DEFAULT 0,
+            warden_id integer NULL,
+            status varchar(40) NOT NULL DEFAULT 'Active'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_rooms (
+            room_id SERIAL PRIMARY KEY,
+            room_number varchar(50) NOT NULL,
+            hostel_id integer NOT NULL,
+            floor integer NOT NULL DEFAULT 0,
+            capacity integer NOT NULL DEFAULT 0,
+            current_occupancy integer NOT NULL DEFAULT 0,
+            status varchar(40) NOT NULL DEFAULT 'Available'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_beds (
+            bed_id SERIAL PRIMARY KEY,
+            bed_number varchar(50) NOT NULL,
+            room_id integer NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Available',
+            current_occupant_id integer NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_allocations (
+            allocation_id SERIAL PRIMARY KEY,
+            pupil_id integer NOT NULL,
+            hostel_id integer NOT NULL,
+            room_id integer NOT NULL,
+            bed_id integer NOT NULL,
+            boarding_date text,
+            status varchar(40) NOT NULL DEFAULT 'Active',
+            guardian_notified integer NOT NULL DEFAULT 0,
+            fee_posted integer NOT NULL DEFAULT 0,
+            created_at text
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_transfers (
+            transfer_id SERIAL PRIMARY KEY,
+            pupil_id integer NOT NULL,
+            previous_allocation_id integer NOT NULL,
+            new_hostel_id integer NOT NULL,
+            new_room_id integer NOT NULL,
+            new_bed_id integer NOT NULL,
+            reason text,
+            transfer_date text,
+            approved_by_id integer NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_attendance (
+            attendance_id SERIAL PRIMARY KEY,
+            pupil_id integer NOT NULL,
+            date text NOT NULL,
+            time_slot varchar(50) NOT NULL,
+            status varchar(40) NOT NULL,
+            remarks text,
+            recorded_by_id integer
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_discipline (
+            discipline_id SERIAL PRIMARY KEY,
+            pupil_id integer NOT NULL,
+            incident_date text NOT NULL,
+            incident_description text NOT NULL,
+            action_taken varchar(100),
+            staff_id integer NOT NULL,
+            parent_notified integer NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_visitors (
+            visitor_id SERIAL PRIMARY KEY,
+            visitor_name varchar(180) NOT NULL,
+            relationship varchar(100) NOT NULL,
+            pupil_id integer NOT NULL,
+            visit_date text NOT NULL,
+            time_in text NOT NULL,
+            time_out text,
+            contact_number varchar(50) NOT NULL,
+            approval_status varchar(40) NOT NULL DEFAULT 'Pending',
+            approved_by_id integer
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_inventory (
+            inventory_id SERIAL PRIMARY KEY,
+            hostel_id integer NOT NULL,
+            room_id integer,
+            item_name varchar(100) NOT NULL,
+            quantity integer NOT NULL DEFAULT 0,
+            status varchar(50) NOT NULL DEFAULT 'Good'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_fee_records (
+            fee_id SERIAL PRIMARY KEY,
+            pupil_id integer NOT NULL,
+            charge_type varchar(80) NOT NULL,
+            amount numeric NOT NULL,
+            date_charged text NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Unpaid'
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_maintenance (
+            maintenance_id SERIAL PRIMARY KEY,
+            hostel_id integer NOT NULL,
+            room_id integer NOT NULL,
+            bed_id integer,
+            issue_description text NOT NULL,
+            reported_by_id integer NOT NULL,
+            status varchar(40) NOT NULL DEFAULT 'Pending',
+            reported_date text NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS hostel_notices (
+            notice_id SERIAL PRIMARY KEY,
+            title varchar(150) NOT NULL,
+            content text NOT NULL,
+            published_date text NOT NULL,
+            is_active integer NOT NULL DEFAULT 1
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS inventory_items (
             item_id SERIAL PRIMARY KEY,
             item_name varchar(255) NOT NULL,
@@ -228,7 +586,33 @@ PORTAL_SCHEMA_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_inventory_items_name ON inventory_items (item_name)",
     "CREATE INDEX IF NOT EXISTS idx_pos_sales_receipt ON pos_sales (receipt_no)",
     "CREATE INDEX IF NOT EXISTS idx_pos_sale_items_sale ON pos_sale_items (sale_id)",
+    "CREATE INDEX IF NOT EXISTS idx_hostel_allocations_pupil ON hostel_allocations (pupil_id)",
+    "CREATE INDEX IF NOT EXISTS idx_hostel_beds_room ON hostel_beds (room_id)",
+    "CREATE INDEX IF NOT EXISTS idx_hostel_rooms_hostel ON hostel_rooms (hostel_id)",
+    "CREATE INDEX IF NOT EXISTS idx_hostel_attendance_pupil_date ON hostel_attendance (pupil_id, date)",
 ]
+
+
+def _ensure_column(cursor, table_name, column_name, column_type, vendor="sqlite"):
+    try:
+        if vendor == "postgresql":
+            cursor.execute(
+                """
+                SELECT 1 
+                FROM information_schema.columns 
+                WHERE table_name = %s AND column_name = %s
+                """,
+                [table_name, column_name],
+            )
+            exists = cursor.fetchone() is not None
+        else:
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            exists = any(row[1] == column_name for row in cursor.fetchall())
+            
+        if not exists:
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+    except Exception:
+        pass
 
 
 def ensure_schema_with_cursor(cursor, vendor="sqlite"):
@@ -236,6 +620,22 @@ def ensure_schema_with_cursor(cursor, vendor="sqlite"):
         cursor.execute(statement)
     for statement in PORTAL_SCHEMA_INDEXES:
         cursor.execute(statement)
+
+    # Ensure extra columns exist on library_books
+    _ensure_column(cursor, "library_books", "publisher", "varchar(180) NULL", vendor)
+    _ensure_column(cursor, "library_books", "publication_year", "integer NULL", vendor)
+    _ensure_column(cursor, "library_books", "subject", "varchar(120) NULL", vendor)
+    _ensure_column(cursor, "library_books", "edition", "varchar(80) NULL", vendor)
+    _ensure_column(cursor, "library_books", "shelf_location", "varchar(80) NULL", vendor)
+    
+    # Ensure extra columns exist on library_issues
+    _ensure_column(cursor, "library_issues", "staff_id", "integer NULL", vendor)
+    _ensure_column(cursor, "library_issues", "librarian_id", "integer NULL", vendor)
+    _ensure_column(cursor, "library_issues", "return_librarian_id", "integer NULL", vendor)
+    _ensure_column(cursor, "library_issues", "book_condition", "varchar(40) NULL", vendor)
+    _ensure_column(cursor, "library_issues", "fine_amount", "numeric NOT NULL DEFAULT 0", vendor)
+    _ensure_column(cursor, "library_issues", "fine_paid", "integer NOT NULL DEFAULT 0", vendor)
+
 
 
 def _table_exists(cursor, table_name):

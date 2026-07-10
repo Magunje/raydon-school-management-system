@@ -4,49 +4,37 @@
 {% block title %}{{ title }} - {{ app_title }}{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <div>
-        <h1 class="h3 mb-1">{{ title }}</h1>
-        <p class="text-secondary mb-0">{{ subtitle }}</p>
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-        {% for action in actions %}
-        <a class="btn btn-outline-primary" href="{{ action.href }}"><i class="bi {{ action.icon }}"></i> {{ action.label }}</a>
-        {% endfor %}
-    </div>
-</div>
+{% include "components/page_header.html" with breadcrumb_parent="Records" title=title subtitle=subtitle actions=actions %}
 
 {% if tabs %}
 <ul class="nav nav-tabs mb-4">
     {% for tab in tabs %}
     <li class="nav-item">
-        <a class="nav-link {% if tab.active %}active fw-bold text-primary{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
+        <a class="nav-link {% if tab.active %}active fw-bold{% endif %}" href="{{ tab.href }}">{{ tab.label }}</a>
     </li>
     {% endfor %}
 </ul>
 {% endif %}
 
-<div class="row g-3 mb-3">
+<div class="ui-stat-grid">
     {% for label, value in stats %}
-    <div class="col-sm-6 col-lg-3">
-        <div class="stat-card"><span>{{ label }}</span><strong>{{ value }}</strong></div>
-    </div>
+    {% include "components/stat_card.html" with label=label value=value icon="bi-clipboard-data" %}
     {% endfor %}
 </div>
 
-<section class="panel mb-3 filter-panel">
-    <form class="row g-2" method="get">
+<section class="ui-card filter-panel" aria-label="Filters">
+    <form class="row g-3" method="get">
         {% if active_tab %}
         <input type="hidden" name="tab" value="{{ active_tab }}">
         {% elif request.GET.tab %}
         <input type="hidden" name="tab" value="{{ request.GET.tab }}">
         {% endif %}
-        <div class="{% if filters %}col-lg-5{% else %}col-md-8{% endif %}">
+        <div class="{% if filters %}col-lg-5{% else %}col-md-8{% endif %} ui-field">
             <label for="q">Search</label>
             <input id="q" name="q" value="{{ q }}" placeholder="Search records">
         </div>
         {% for filter in filters %}
-        <div class="col-md-4 col-lg-2">
+        <div class="col-md-4 col-lg-2 ui-field">
             <label for="filter-{{ filter.name }}">{{ filter.label }}</label>
             <select id="filter-{{ filter.name }}" name="{{ filter.name }}">
                 <option value="">All</option>
@@ -61,17 +49,17 @@
         </div>
         {% endfor %}
         {% if teachers %}
-        <div class="col-md-4 col-lg-3">
+        <div class="col-md-4 col-lg-3 ui-field">
             <label for="teacher_name_select">View Teacher Timetable Grid</label>
             <select id="teacher_name_select" onchange="if(this.value) window.location.href='?teacher_name=' + encodeURIComponent(this.value);">
-                <option value="">-- Choose Teacher for Grid --</option>
+                <option value="">Choose Teacher for Grid</option>
                 {% for t in teachers %}
                 <option value="{{ t.teacher_name }}">{{ t.teacher_name }}</option>
                 {% endfor %}
             </select>
         </div>
         {% endif %}
-        <div class="col-md-2 col-lg-1">
+        <div class="col-md-2 col-lg-1 ui-field">
             <label for="per_page">Rows</label>
             <select id="per_page" name="per_page">
                 {% for option in per_page_options %}
@@ -80,14 +68,14 @@
             </select>
         </div>
         <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-search"></i> Search</button>
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-search"></i> Search</button>
         </div>
     </form>
 </section>
 
-<section class="panel">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
+<section class="ui-card">
+    <div class="table-wrap">
+        <table class="table table-hover align-middle ui-table">
             <thead>
             <tr>
                 {% for column in columns %}<th>{{ column_labels|get_item:column|default:column }}</th>{% endfor %}
@@ -102,12 +90,12 @@
                 {% endfor %}
                 {% if has_row_actions %}
                 <td>
-                    <div class="d-flex justify-content-end gap-1 flex-wrap">
+                    <div class="table-action-group">
                         {% for action in row.row_actions %}
                         {% if action.method == "post" %}
-                        <form method="post" action="{{ action.href }}" onsubmit="return confirm('{{ action.confirm|default:"Continue?" }}')">
+                        <form method="post" action="{{ action.href }}" data-confirm-form>
                             {% csrf_token %}
-                            <button class="btn btn-sm {{ action.class|default:'btn-outline-secondary' }}" type="submit" title="{{ action.label }}">
+                            <button class="btn btn-sm {{ action.class|default:'btn-outline-secondary' }}" type="submit" title="{{ action.label }}" data-confirm-message="{{ action.confirm|default:'Continue?' }}">
                                 <i class="bi {{ action.icon }}"></i> {{ action.label }}
                             </button>
                         </form>
@@ -122,29 +110,15 @@
                 {% endif %}
             </tr>
             {% empty %}
-            <tr><td colspan="{{ columns|length|add:1 }}" class="text-center text-secondary py-4">No records found.</td></tr>
+            <tr>
+                <td colspan="{{ columns|length|add:1 }}">
+                    {% include "components/empty_state.html" with title="No records found" message="Try changing your filters or search phrase." %}
+                </td>
+            </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
-    {% if pagination %}
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
-        <div class="text-secondary small">
-            Page {{ pagination.page }} of {{ pagination.total_pages }} | {{ pagination.total }} records
-        </div>
-        <div class="btn-group">
-            {% if pagination.has_previous %}
-            <a class="btn btn-outline-secondary btn-sm" href="{{ pagination.previous_url }}">Previous</a>
-            {% else %}
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Previous</button>
-            {% endif %}
-            {% if pagination.has_next %}
-            <a class="btn btn-outline-secondary btn-sm" href="{{ pagination.next_url }}">Next</a>
-            {% else %}
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Next</button>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+    {% include "components/pagination.html" %}
 </section>
 {% endblock %}

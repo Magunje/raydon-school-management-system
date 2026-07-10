@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Block -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+            <p class="text-muted mb-0">Record and review hosteling rules violation incidents.</p>
+        </div>
+        <a href="{% url 'hostel_discipline_new' %}" class="btn btn-primary rounded-3 px-3"><i class="bi bi-exclamation-octagon me-1"></i> Log Incident</a>
+    </div>
+
+    <!-- Roster table -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small border-bottom">
+                        <th>Student</th>
+                        <th>Incident Date</th>
+                        <th>Violation Description</th>
+                        <th>Action Imposed</th>
+                        <th>Recorded By (Staff)</th>
+                        <th>Alerts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">{{ rec.pupil.first_name }} {{ rec.pupil.surname }}</div>
+                            <div class="small text-muted">Adm No: {{ rec.pupil.admission_no }}</div>
+                        </td>
+                        <td class="font-monospace small">{{ rec.incident_date }}</td>
+                        <td class="text-dark">{{ rec.incident_description }}</td>
+                        <td>
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 fw-semibold">{{ rec.action_taken|default:"Under review" }}</span>
+                        </td>
+                        <td class="text-muted small">{{ rec.staff.full_name }}</td>
+                        <td>
+                            {% if rec.parent_notified == 1 %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2"><i class="bi bi-chat-left-dots me-1"></i> Parent Notified</span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">Pending notice</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-shield-check fs-1 d-block mb-3 text-success"></i>
+                            Excellent! No hostel rules violation incidents logged.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

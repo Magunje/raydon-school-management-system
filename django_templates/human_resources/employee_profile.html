@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.full_name }} - Human Resources{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with breadcrumb_parent="Human Resources" title=employee.full_name subtitle="Employee profile, employment history, leave, attendance, contracts and authorised HR records." %}
+
+<section class="ui-card mb-3">
+    <div class="employee-profile-summary">
+        <div class="employee-photo">
+            {% if employee.profile_photo %}
+            <img src="{{ employee.profile_photo.url }}" alt="{{ employee.full_name }}">
+            {% else %}
+            <span>{{ employee.first_name|slice:":1" }}{{ employee.surname|slice:":1" }}</span>
+            {% endif %}
+        </div>
+        <div>
+            <h2>{{ employee.full_name }}</h2>
+            <div class="profile-meta">
+                <span>{{ employee.employee_number }}</span>
+                <span>{{ employee.position }}</span>
+                <span>{{ employee.department }}</span>
+                {% include "components/status_badge.html" with status=employee.status label=employee.get_status_display %}
+            </div>
+            <div class="profile-contact">
+                <span><i class="bi bi-telephone"></i> {{ employee.phone_number }}</span>
+                <span><i class="bi bi-envelope"></i> {{ employee.email|default:"-" }}</span>
+                <span><i class="bi bi-calendar-check"></i> Joined {{ employee.employment_date|date:"Y-m-d" }}</span>
+            </div>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-outline-secondary" href="/admin/human_resources/employeeprofile/{{ employee.id }}/change/"><i class="bi bi-pencil"></i> Edit Employee</a>
+            <button class="btn btn-outline-secondary" type="button" data-print><i class="bi bi-printer"></i> Print Profile</button>
+            <a class="btn btn-outline-danger" href="/admin/human_resources/employeeprofile/{{ employee.id }}/change/"><i class="bi bi-archive"></i> Archive</a>
+        </div>
+    </div>
+</section>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" type="button">Overview</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#employment" type="button">Employment</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#qualifications" type="button">Qualifications</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#leave" type="button">Leave</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#attendance" type="button">Attendance</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#contracts" type="button">Contracts</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#documents" type="button">Documents</button></li>
+</ul>
+
+<div class="tab-content">
+    <section class="tab-pane fade show active ui-card" id="overview" tabindex="0">
+        <div class="row g-3">
+            <div class="col-lg-4"><div class="record-field"><span>Employee Number</span><strong>{{ employee.employee_number }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Category</span><strong>{{ employee.get_employee_category_display }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Employment Type</span><strong>{{ employee.get_employment_type_display }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Gender</span><strong>{{ employee.gender }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>National ID</span><strong>{{ employee.national_id }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Next of Kin</span><strong>{{ employee.next_of_kin }} · {{ employee.next_of_kin_phone }}</strong></div></div>
+        </div>
+    </section>
+
+    <section class="tab-pane fade ui-card" id="employment" tabindex="0">
+        <div class="row g-3">
+            <div class="col-lg-4"><div class="record-field"><span>Department</span><strong>{{ employee.department }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Position</span><strong>{{ employee.position }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Supervisor</span><strong>{{ employee.supervisor.full_name|default:"-" }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Work Location</span><strong>{{ employee.work_location|default:"-" }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Probation End Date</span><strong>{{ employee.probation_end_date|date:"Y-m-d"|default:"-" }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Contract End Date</span><strong>{{ employee.contract_end_date|date:"Y-m-d"|default:"-" }}</strong></div></div>
+        </div>
+        {% if employee.teacher_extension %}
+        <h3 class="section-title mt-4">Teaching Extension</h3>
+        <div class="row g-3">
+            <div class="col-lg-4"><div class="record-field"><span>Teaching Subjects</span><strong>{{ employee.teacher_extension.teaching_subjects|default:"-" }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Assigned Classes</span><strong>{{ employee.teacher_extension.assigned_classes|default:"-" }}</strong></div></div>
+            <div class="col-lg-4"><div class="record-field"><span>Professional Registration</span><strong>{{ employee.teacher_extension.professional_registration|default:"-" }}</strong></div></div>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="tab-pane fade ui-card" id="qualifications" tabindex="0">
+        <div class="table-wrap">
+            <table class="table ui-table">
+                <thead><tr><th>Qualification</th><th>Institution</th><th>Field</th><th>Date Obtained</th><th>Grade</th></tr></thead>
+                <tbody>
+                {% for qualification in employee.qualifications.all %}
+                <tr><td>{{ qualification.qualification }}</td><td>{{ qualification.institution|default:"-" }}</td><td>{{ qualification.field_of_study|default:"-" }}</td><td>{{ qualification.date_obtained|date:"Y-m-d"|default:"-" }}</td><td>{{ qualification.grade_or_classification|default:"-" }}</td></tr>
+                {% empty %}
+                <tr><td colspan="5">{% include "components/empty_state.html" with title="No qualifications recorded" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tab-pane fade ui-card" id="leave" tabindex="0">
+        <div class="table-wrap">
+            <table class="table ui-table">
+                <thead><tr><th>Application</th><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for leave in employee.leave_applications.all %}
+                <tr><td>{{ leave.application_number }}</td><td>{{ leave.get_leave_type_display }}</td><td>{{ leave.start_date|date:"Y-m-d" }}</td><td>{{ leave.end_date|date:"Y-m-d" }}</td><td>{{ leave.days_requested }}</td><td>{% include "components/status_badge.html" with status=leave.status label=leave.get_status_display %}</td></tr>
+                {% empty %}
+                <tr><td colspan="6">{% include "components/empty_state.html" with title="No leave records" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tab-pane fade ui-card" id="attendance" tabindex="0">
+        <div class="table-wrap">
+            <table class="table ui-table">
+                <thead><tr><th>Date</th><th>Status</th><th>Clock In</th><th>Clock Out</th><th>Late Minutes</th><th>Overtime</th></tr></thead>
+                <tbody>
+                {% for record in employee.attendance_records.all|slice:":20" %}
+                <tr><td>{{ record.attendance_date|date:"Y-m-d" }}</td><td>{% include "components/status_badge.html" with status=record.status label=record.get_status_display %}</td><td>{{ record.clock_in|default:"-" }}</td><td>{{ record.clock_out|default:"-" }}</td><td>{{ record.late_minutes }}</td><td>{{ record.overtime_hours }}</td></tr>
+                {% empty %}
+                <tr><td colspan="6">{% include "components/empty_state.html" with title="No attendance records" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tab-pane fade ui-card" id="contracts" tabindex="0">
+        <div class="table-wrap">
+            <table class="table ui-table">
+                <thead><tr><th>Contract Number</th><th>Type</th><th>Start</th><th>End</th><th>Salary or Grade</th><th>Status</th></tr></thead>
+                <tbody>
+                {% for contract in employee.contracts.all %}
+                <tr><td>{{ contract.contract_number }}</td><td>{{ contract.get_contract_type_display }}</td><td>{{ contract.start_date|date:"Y-m-d" }}</td><td>{{ contract.end_date|date:"Y-m-d"|default:"-" }}</td><td>{{ contract.salary_or_grade|default:"-" }}</td><td>{% include "components/status_badge.html" with status=contract.status label=contract.status|title %}</td></tr>
+                {% empty %}
+                <tr><td colspan="6">{% include "components/empty_state.html" with title="No contract records" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="tab-pane fade ui-card" id="documents" tabindex="0">
+        <div class="table-wrap">
+            <table class="table ui-table">
+                <thead><tr><th>Document</th><th>Category</th><th>Access</th><th>Expiry Date</th><th>Uploaded</th></tr></thead>
+                <tbody>
+                {% for document in employee.documents.all %}
+                <tr><td>{{ document.title }}</td><td>{{ document.get_document_type_display }}</td><td>{% include "components/status_badge.html" with status=document.access_level label=document.get_access_level_display %}</td><td>{{ document.expiry_date|date:"Y-m-d"|default:"-" }}</td><td>{{ document.uploaded_at|date:"Y-m-d" }}</td></tr>
+                {% empty %}
+                <tr><td colspan="5">{% include "components/empty_state.html" with title="No documents uploaded" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

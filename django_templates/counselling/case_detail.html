@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Case Details - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Sidebar Information Card -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Case Profile</h5>
+                <hr>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Case Number</span>
+                    <span class="fw-bold text-dark fs-5">{{ case.case_no }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Student</span>
+                    <span class="fw-bold text-dark">{{ case.student.full_name }}</span>
+                    <span class="text-muted small d-block">Adm No: {{ case.student.admission_no }} | Class: {{ case.student.academic_class.class_name|default:"N/A" }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Counselling Category</span>
+                    <span class="badge bg-light text-dark border fw-semibold">{{ case.category }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Risk Status</span>
+                    {% if case.severity_level == 'Critical' or case.severity_level == 'High' %}
+                    <span class="badge bg-danger rounded-pill fw-semibold">{{ case.severity_level }} Risk</span>
+                    {% else %}
+                    <span class="badge bg-secondary rounded-pill fw-semibold">{{ case.severity_level }} Risk</span>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Case Status</span>
+                    <span class="badge bg-success rounded-pill fw-semibold">{{ case.status }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Assigned Counsellor</span>
+                    <span class="fw-bold text-dark">{{ case.assigned_counsellor.full_name|default:"Unassigned" }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="text-muted small d-block">Opened Date</span>
+                    <span class="text-dark">{{ case.date_opened }}</span>
+                </div>
+            </div>
+
+            <!-- Case Action Cards -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-gear me-2 text-primary"></i>Case Actions</h5>
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'counselling:session_new' case.pk %}" class="btn btn-success rounded-3 py-2"><i class="bi bi-journal-plus me-2"></i>Log Session Notes</a>
+                    <a href="{% url 'counselling:intervention_new' case.pk %}" class="btn btn-outline-primary rounded-3 py-2"><i class="bi bi-clipboard-plus me-2"></i>Add Intervention Plan</a>
+                    <a href="{% url 'counselling:case_list' %}" class="btn btn-light rounded-3 py-2">Back to Registry</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Case Documentation Content Area -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Case Description</h5>
+                <p class="text-secondary mb-0" style="white-space: pre-line;">{{ case.description }}</p>
+            </div>
+
+            <!-- Confidential Sessions Notes -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-lock me-2 text-danger"></i>Confidential Session Notes</h5>
+                <hr>
+                <div class="accordion accordion-flush" id="sessionsAccordion">
+                    {% for session in sessions %}
+                    <div class="accordion-item border-bottom py-2">
+                        <h2 class="accordion-header" id="heading{{ session.pk }}">
+                            <button class="accordion-button collapsed fw-semibold text-dark bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ session.pk }}" aria-expanded="false" aria-controls="collapse{{ session.pk }}">
+                                <div class="d-flex justify-content-between w-100 me-3">
+                                    <span>Session #{{ session.session_number }} ({{ session.date }})</span>
+                                    <span class="text-muted small">Status: {{ session.status }}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ session.pk }}" class="accordion-collapse collapse" aria-labelledby="heading{{ session.pk }}" data-bs-parent="#sessionsAccordion">
+                            <div class="accordion-body bg-light rounded-3 mt-2">
+                                <div class="mb-3">
+                                    <strong class="text-dark small d-block">Session Description & Notes:</strong>
+                                    <p class="text-secondary mb-0" style="white-space: pre-line;">{{ session.session_notes }}</p>
+                                </div>
+                                {% if session.recommendations %}
+                                <div class="mb-2">
+                                    <strong class="text-dark small d-block">Recommendations:</strong>
+                                    <p class="text-secondary mb-0">{{ session.recommendations }}</p>
+                                </div>
+                                {% endif %}
+                                {% if session.follow_up_date %}
+                                <div class="text-muted small">
+                                    <i class="bi bi-clock me-1"></i>Next scheduled follow-up: <strong>{{ session.follow_up_date }}</strong>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3 small">No counselling session notes logged for this case.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Intervention Plans -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-list-check me-2 text-primary"></i>Intervention Plans</h5>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Plan Type</th>
+                                <th>Objectives</th>
+                                <th>Responsible</th>
+                                <th>Review Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in interventions %}
+                            <tr>
+                                <td><span class="badge bg-info text-dark">{{ plan.plan_type }}</span></td>
+                                <td>{{ plan.objectives }}</td>
+                                <td>{{ plan.responsible_person }}</td>
+                                <td>{{ plan.review_date }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3 small">No intervention plans configured for this case.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

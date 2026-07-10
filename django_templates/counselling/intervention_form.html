@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Add Intervention Plan - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-3"><i class="bi bi-clipboard-plus me-2 text-primary"></i>Log Intervention Plan</h4>
+                <div class="alert alert-light border rounded-3 p-3 mb-4">
+                    <h6 class="fw-bold mb-1 text-dark">Case Reference: {{ case.case_no }}</h6>
+                    <div class="text-muted small">
+                        <strong>Student:</strong> {{ case.student.full_name }} | <strong>Category:</strong> {{ case.category }}
+                    </div>
+                </div>
+                <hr class="mb-4">
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Plan Type <span class="text-danger">*</span></label>
+                            <select name="plan_type" class="form-select rounded-3" required>
+                                <option value="" disabled selected>Choose type...</option>
+                                <option value="Academic">Academic Improvement</option>
+                                <option value="Behavioural">Behavioural Support</option>
+                                <option value="Emotional">Emotional Support</option>
+                                <option value="Social">Social Intervention</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">Review Date <span class="text-danger">*</span></label>
+                            <input type="date" name="review_date" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Responsible Person(s) <span class="text-danger">*</span></label>
+                            <input type="text" name="responsible_person" class="form-control rounded-3" placeholder="E.g., Counsellor, Parent, Class Teacher..." required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Objectives <span class="text-danger">*</span></label>
+                            <textarea name="objectives" rows="3" class="form-control rounded-3" placeholder="Define specific goals or targets of the intervention..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Activities & Strategies <span class="text-danger">*</span></label>
+                            <textarea name="activities" rows="3" class="form-control rounded-3" placeholder="What support, counseling exercises, or rules will be put in place..." required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'counselling:case_detail' case.pk %}" class="btn btn-light rounded-3 px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4">Save Plan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

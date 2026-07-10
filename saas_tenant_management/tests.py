@@ -4,13 +4,31 @@ from django.db import models
 from django.http import HttpResponse
 
 from saas_tenant_management.models import (
+    ModuleDefinition,
+    SubscriptionInvoice,
+    SubscriptionPayment,
+    SubscriptionPlan,
     SchoolTenant,
+    TenantModuleActivation,
     TenantBaseModel,
+    TenantSubscription,
     get_current_tenant,
     set_current_tenant,
     clear_current_tenant,
 )
+from saas_tenant_management.services import (
+    activate_module,
+    capture_usage_snapshot,
+    create_school_subscription,
+    create_subscription_invoice,
+    deactivate_module,
+    record_subscription_payment,
+    renew_subscription,
+    seed_default_modules,
+)
 from saas_tenant_management.middleware import TenantMiddleware
+from decimal import Decimal
+import datetime
 
 
 # Concrete model subclassing TenantBaseModel to verify strict multi-school data isolation
@@ -130,3 +148,72 @@ class MultiTenantRoutingTestCase(TestCase):
         self.assertIn(student_a, qs_a)
         self.assertNotIn(student_b, qs_a)
         self.assertEqual(qs_a.count(), 1)
+
+    def test_module_activation_dependencies_billing_and_usage(self):
+        modules = seed_default_modules()
+        plan = SubscriptionPlan.objects.create(
+            code="ENTERPRISE",
+            name="Enterprise Package",
+            monthly_price=Decimal("100.00"),
+            annual_price=Decimal("1000.00"),
+        )
+        subscription = create_school_subscription(
+            tenant=self.tenant_a,
+            plan=plan,
+            start_date=datetime.date(2026, 1, 1),
+            expiry_date=datetime.date(2026, 12, 31),
+            modules={"payroll", "medical"},
+            status="ACTIVE",
+        )
+        self.tenant_a.refresh_from_db()
+        self.assertEqual(self.tenant_a.subscription_plan, "ENTERPRISE")
+        self.assertTrue(self.tenant_a.has_module("payroll"))
+        self.assertTrue(self.tenant_a.has_module("human_resources"))
+        self.assertTrue(TenantModuleActivation.objects.filter(tenant=self.tenant_a, module__code="medical", status="ACTIVE").exists())
+
+        with self.assertRaises(ValidationError):
+            deactivate_module(self.tenant_a, "fees_management")
+        deactivation = deactivate_module(self.tenant_a, "medical", reason="School downgraded")
+        self.assertEqual(deactivation.status, "DISABLED")
+
+        invoice = create_subscription_invoice(
+            subscription,
+            invoice_date=datetime.date(2026, 1, 1),
+            due_date=datetime.date(2026, 1, 31),
+            amount=Decimal("100.00"),
+        )
+        payment = record_subscription_payment(
+            invoice,
+            payment_date=datetime.date(2026, 1, 10),
+            amount=Decimal("100.00"),
+            payment_method="BANK_TRANSFER",
+            reference_number="BANK-001",
+        )
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, "PAID")
+        self.assertTrue(payment.payment_number.startswith("SPAY-"))
+
+        renew_subscription(subscription, datetime.date(2027, 12, 31))
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.status, "ACTIVE")
+        self.assertEqual(subscription.expiry_date, datetime.date(2027, 12, 31))
+
+        snapshot = capture_usage_snapshot(
+            self.tenant_a,
+            user_count=20,
+            student_count=500,
+            storage_usage_mb=Decimal("250.50"),
+            database_size_mb=Decimal("512.00"),
+            api_usage_count=100,
+            login_activity_count=300,
+            snapshot_date=datetime.date(2026, 1, 15),
+        )
+        self.assertEqual(snapshot.student_count, 500)
+
+    def test_tenant_list_view(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.create_user(username="saas_admin", password="password")
+        self.client.force_login(user)
+        response = self.client.get('/saas-tenants/')
+        self.assertEqual(response.status_code, 200)

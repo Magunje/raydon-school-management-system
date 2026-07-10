@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Counselling Cases - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-0"><i class="bi bi-folder-check me-2 text-success"></i>Counselling Case Registry</h4>
+                <p class="text-muted small mb-0">Secure and confidential directory of all ongoing and historical student counseling cases.</p>
+            </div>
+            <a href="{% url 'counselling:case_new' %}" class="btn btn-success rounded-3 py-2"><i class="bi bi-plus-circle me-2"></i>Create New Case</a>
+        </div>
+
+        <!-- Filter Search Bar -->
+        <form method="get" class="row g-3 mb-4">
+            <div class="col-12 col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control bg-light border-0" placeholder="Search by student name, admission number, or case ID...">
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-dark w-100 py-2"><i class="bi bi-funnel me-2"></i>Filter Register</button>
+            </div>
+        </form>
+
+        <!-- Cases Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Student</th>
+                        <th>Category</th>
+                        <th>Risk Assessment</th>
+                        <th>Status</th>
+                        <th>Date Opened</th>
+                        <th>Assigned Counsellor</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in cases %}
+                    <tr>
+                        <td><span class="fw-bold text-secondary">{{ case.case_no }}</span></td>
+                        <td>
+                            <div class="fw-bold">{{ case.student.full_name }}</div>
+                            <div class="text-muted small">Adm No: {{ case.student.admission_no }}</div>
+                        </td>
+                        <td>{{ case.category }}</td>
+                        <td>
+                            {% if case.severity_level == 'Critical' or case.severity_level == 'High' %}
+                            <span class="badge bg-danger rounded-pill">{{ case.severity_level }} Risk</span>
+                            {% elif case.severity_level == 'Medium' %}
+                            <span class="badge bg-warning text-dark rounded-pill">{{ case.severity_level }} Risk</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">{{ case.severity_level }} Risk</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border rounded-pill">{{ case.status }}</span>
+                        </td>
+                        <td>{{ case.date_opened }}</td>
+                        <td>{{ case.assigned_counsellor.full_name|default:"Unassigned" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'counselling:case_detail' case.pk %}" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-eye me-1"></i>View Case</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No counseling cases found matching criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

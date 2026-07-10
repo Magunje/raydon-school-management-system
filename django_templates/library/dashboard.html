@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Summary Widget -->
+    <div class="row g-4 mb-4">
+        {% for label, val in stats %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">{{ label }}</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ val }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                        {% if "Copies" in label %}
+                        <i class="bi bi-journal-album fs-3"></i>
+                        {% elif "Issued" in label %}
+                        <i class="bi bi-journal-arrow-up fs-3"></i>
+                        {% elif "Overdue" in label %}
+                        <i class="bi bi-journal-x fs-3 text-danger"></i>
+                        {% elif "Reservation" in label %}
+                        <i class="bi bi-bookmark-star fs-3"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Finance Summary & Quick Actions -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2 text-primary"></i>Fine Collections</h5>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <span class="text-muted">Total Fines Paid:</span>
+                    <h3 class="mb-0 fw-bold text-success">${{ fine_collections }}</h3>
+                </div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="text-muted">Digital Assets:</span>
+                    <h5 class="mb-0 fw-semibold text-primary">{{ digital_resources }} resources</h5>
+                </div>
+                <div class="mt-4 pt-2 border-top">
+                    <a href="{% url 'library_fines' %}" class="btn btn-outline-primary btn-sm w-100 rounded-3">Configure Fees & Fines</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-4"><i class="bi bi-lightning-charge me-2 text-primary"></i>Librarian Shortcuts</h5>
+                <div class="row g-3">
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'new_library_issue' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-journal-arrow-up text-primary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Issue Book</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'library_issues' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-journal-arrow-down text-success fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Return Book</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'new_library_book' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-plus-circle text-info fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Add Book</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'digital_library' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-cloud-arrow-up text-warning fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Upload Digital</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'library_reservations' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-bookmark-star text-secondary fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Waitlists</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-sm-4 col-md-3 text-center">
+                        <a href="{% url 'library_reports' %}" class="d-block p-3 rounded-4 bg-light hover-shadow text-decoration-none">
+                            <i class="bi bi-file-earmark-text text-danger fs-3 d-block mb-2"></i>
+                            <span class="small fw-semibold text-dark">Reports</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Grid -->
+    <div class="row g-4">
+        <!-- Popular Books -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-fire me-2 text-danger"></i>Most Borrowed Books</h5>
+                    <a href="{% url 'library_books' %}" class="small text-decoration-none">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>Book Title</th>
+                                <th>Author</th>
+                                <th>Category</th>
+                                <th class="text-end">Issues Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in popular_books %}
+                            <tr>
+                                <td><strong>{{ b.title }}</strong></td>
+                                <td class="text-muted">{{ b.author }}</td>
+                                <td><span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2">{{ b.category }}</span></td>
+                                <td class="text-end fw-bold text-primary">{{ b.issue_count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No borrowings logged yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Added Books -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recently Registered</h5>
+                    <a href="{% url 'library_books' %}" class="small text-decoration-none">Catalogue</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Shelf Location</th>
+                                <th class="text-end">Total Copies</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in recently_added %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ b.title }}</div>
+                                    <div class="small text-muted">{{ b.author }}</div>
+                                </td>
+                                <td><span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2">{{ b.category }}</span></td>
+                                <td class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ b.shelf_location|default:"-" }}</td>
+                                <td class="text-end fw-bold text-dark">{{ b.total_copies }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No books registered yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-shadow:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        transform: translateY(-2px);
+        transition: all 0.25s ease-in-out;
+    }
+</style>
+{% endblock %}

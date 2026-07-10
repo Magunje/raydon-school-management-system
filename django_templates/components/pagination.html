@@ -1,0 +1,17 @@
+{% if pagination %}
+<div class="ui-pagination">
+    <span>Page {{ pagination.page }} of {{ pagination.total_pages }} · {{ pagination.total }} records</span>
+    <div class="btn-group">
+        {% if pagination.has_previous %}
+        <a class="btn btn-outline-secondary btn-sm" href="{{ pagination.previous_url }}">Previous</a>
+        {% else %}
+        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Previous</button>
+        {% endif %}
+        {% if pagination.has_next %}
+        <a class="btn btn-outline-secondary btn-sm" href="{{ pagination.next_url }}">Next</a>
+        {% else %}
+        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Next</button>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

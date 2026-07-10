@@ -22,13 +22,21 @@ ROLE_HOSTEL = "Hostel Staff"
 ROLE_NURSE = "Nurse"
 ROLE_PARENT = "Parent"
 ROLE_STUDENT = "Student"
+ROLE_COUNSELLOR = "Guidance Counsellor"
+ROLE_SAAS_ADMIN = "SaaS Administrator"
+ROLE_AUDITOR = "Auditor"
+ROLE_HR_OFFICER = "HR Officer"
+ROLE_PAYROLL_OFFICER = "Payroll Officer"
 
 ADMIN_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN}
+SYSTEM_ADMIN_ROLES = ADMIN_ROLES | {ROLE_SAAS_ADMIN}
+AUDIT_ROLES = SYSTEM_ADMIN_ROLES | {ROLE_AUDITOR}
 HEAD_ROLES = {ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD}
 ACADEMIC_LEADERSHIP_ROLES = HEAD_ROLES | {ROLE_HOD}
 FINANCE_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_BURSAR, ROLE_ACCOUNTANT}
 ARCHIVE_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_BURSAR}
-PAYROLL_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_BURSAR, ROLE_ACCOUNTANT}
+PAYROLL_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_PAYROLL_OFFICER}
+HR_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOD, ROLE_HR_OFFICER}
 ACADEMIC_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOD, ROLE_TEACHER}
 REGISTRAR_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_REGISTRAR, ROLE_CLERK}
 LIBRARY_ROLES = {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_LIBRARIAN}
@@ -36,7 +44,7 @@ STUDENT_SUPPORT_ROLES = {ROLE_TRANSPORT, ROLE_HOSTEL, ROLE_NURSE}
 STAFF_ROLES = (
     ADMIN_ROLES
     | HEAD_ROLES
-    | {ROLE_HOD, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_REGISTRAR, ROLE_CLERK, ROLE_TEACHER, ROLE_LIBRARIAN}
+    | {ROLE_HOD, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_REGISTRAR, ROLE_CLERK, ROLE_TEACHER, ROLE_LIBRARIAN, ROLE_COUNSELLOR, ROLE_HR_OFFICER, ROLE_PAYROLL_OFFICER, ROLE_AUDITOR}
     | STUDENT_SUPPORT_ROLES
 )
 OPERATIONS_ROLES = STAFF_ROLES
@@ -45,15 +53,20 @@ OPERATIONS_ROLES = STAFF_ROLES
 PERMISSIONS = {
     "dashboard.view": OPERATIONS_ROLES | FINANCE_ROLES | {ROLE_STUDENT, ROLE_PARENT},
     "users.manage": ADMIN_ROLES,
-    "saas.manage": {ROLE_SUPER_ADMIN},
-    "settings.manage": ADMIN_ROLES,
-    "audit.view": ADMIN_ROLES,
-    "backups.manage": ADMIN_ROLES,
+    "security.manage": SYSTEM_ADMIN_ROLES,
+    "security.view": AUDIT_ROLES,
+    "api_keys.manage": {ROLE_SUPER_ADMIN, ROLE_SAAS_ADMIN},
+    "saas.manage": {ROLE_SUPER_ADMIN, ROLE_SAAS_ADMIN},
+    "settings.manage": SYSTEM_ADMIN_ROLES,
+    "audit.view": AUDIT_ROLES,
+    "backups.manage": SYSTEM_ADMIN_ROLES,
     "students.view": OPERATIONS_ROLES | {ROLE_BURSAR, ROLE_ACCOUNTANT},
     "students.manage": REGISTRAR_ROLES | {ROLE_BURSAR, ROLE_ACCOUNTANT},
     "students.archive.view": ARCHIVE_ROLES,
     "guardians.manage": REGISTRAR_ROLES | {ROLE_BURSAR, ROLE_ACCOUNTANT},
     "staff.view": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD},
+    "hr.view": HR_ROLES,
+    "hr.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN},
     "classes.view": ACADEMIC_ROLES,
     "classes.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOD},
     "subject_allocations.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOD},
@@ -66,7 +79,9 @@ PERMISSIONS = {
     "payments.record": {ROLE_BURSAR, ROLE_ACCOUNTANT},
     "receipts.edit": ADMIN_ROLES,
     "receipts.delete": {ROLE_SUPER_ADMIN},
-    "reports.view": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_REGISTRAR},
+    "reports.view": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_REGISTRAR, ROLE_HR_OFFICER, ROLE_AUDITOR},
+    "bi.view": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_REGISTRAR, ROLE_HR_OFFICER, ROLE_AUDITOR},
+    "bi.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT},
     "expenses.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_BURSAR, ROLE_ACCOUNTANT},
     "master_receipts.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT},
     "inventory.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_BURSAR, ROLE_ACCOUNTANT, ROLE_LIBRARIAN},
@@ -76,6 +91,12 @@ PERMISSIONS = {
     "notifications.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_REGISTRAR, ROLE_CLERK},
     "elearning.manage": ACADEMIC_ROLES,
     "library.manage": LIBRARY_ROLES,
+    "hostel.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOSTEL},
+    "transport.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_TRANSPORT},
+    "asset.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD},
+    "discipline.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_HOSTEL, ROLE_TEACHER},
+    "counselling.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_COUNSELLOR, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD},
+    "medical.manage": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT, ROLE_DEPUTY_HEAD, ROLE_NURSE},
     "payroll.view": PAYROLL_ROLES,
     "payroll.process": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_BURSAR, ROLE_ACCOUNTANT},
     "payroll.approve": {ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_HEAD, ROLE_HEAD_ALT},
@@ -90,6 +111,7 @@ MENU_ITEMS = [
     {"label": "Archive Database", "href": "/completed-students", "icon": "bi-archive", "permission": "students.archive.view"},
     {"label": "Parents", "href": "/guardians", "icon": "bi-people", "permission": "guardians.manage"},
     {"label": "Staff", "href": "/teachers", "icon": "bi-person-badge", "permission": "staff.view"},
+    {"label": "Human Resources", "href": "/human-resources/", "icon": "bi-people-fill", "permission": "hr.view", "module": "human_resources"},
     {"label": "Classes", "href": "/classes", "icon": "bi-journal-bookmark", "permission": "classes.view"},
     {"label": "Subjects", "href": "/subjects", "icon": "bi-book", "permission": "classes.view"},
     {"label": "Subject Allocations", "href": "/allocations", "icon": "bi-bookmark-star", "permission": "subject_allocations.manage"},
@@ -101,24 +123,32 @@ MENU_ITEMS = [
     {"label": "E-Learning", "href": "/e-learning", "icon": "bi-cloud-arrow-up", "permission": "elearning.manage"},
     {"label": "Announcements", "href": "/notifications/announcements/", "icon": "bi-megaphone", "permission": "notifications.manage"},
     {"label": "Textbooks", "href": "/textbook-loans", "icon": "bi-book-half", "permission": "library.manage"},
-    {"label": "Library", "href": "/library", "icon": "bi-bookshelf", "permission": "library.manage"},
+    {"label": "Library", "href": "/library/", "icon": "bi-bookshelf", "permission": "library.manage"},
+    {"label": "Hostels", "href": "/hostels/", "icon": "bi-building", "permission": "hostel.manage"},
+    {"label": "Transport", "href": "/transport/", "icon": "bi-bus-front", "permission": "transport.manage"},
+    {"label": "Medical Clinic", "href": "/medical-clinic/", "icon": "bi-heart-pulse", "permission": "medical.manage", "module": "medical"},
+    {"label": "Assets", "href": "/assets/", "icon": "bi-tag", "permission": "asset.manage"},
+    {"label": "Discipline", "href": "/discipline/", "icon": "bi-shield-exclamation", "permission": "discipline.manage"},
+    {"label": "Counselling", "href": "/counselling/", "icon": "bi-heart-pulse", "permission": "counselling.manage"},
     {"label": "Fees Structure", "href": "/fees-structure", "icon": "bi-list-columns", "permission": "fees.manage"},
     {"label": "Payments", "href": "/payments", "icon": "bi-receipt", "permission": "fees.view"},
     {"label": "Record Payment", "href": "/payments/new", "icon": "bi-plus-circle", "permission": "payments.record"},
     {"label": "Portal Payments", "href": "/portal-payment-requests", "icon": "bi-bank", "permission": "fees.manage"},
     {"label": "Statements", "href": "/reports/statement", "icon": "bi-file-text", "permission": "statements.view"},
     {"label": "Reports", "href": "/reports", "icon": "bi-file-earmark-text", "permission": "reports.view"},
+    {"label": "Business Intelligence", "href": "/business-intelligence/", "icon": "bi-bar-chart-line", "permission": "bi.view", "module": "business_intelligence"},
     {"label": "Expenses", "href": "/expenses", "icon": "bi-wallet2", "permission": "expenses.manage"},
     {"label": "General Ledger", "href": "/reports/accounting", "icon": "bi-journal-check", "permission": "expenses.manage"},
     {"label": "Master Receipts", "href": "/master-receipts", "icon": "bi-receipt-cutoff", "permission": "master_receipts.manage"},
     {"label": "Inventory", "href": "/inventory", "icon": "bi-box-seam", "permission": "inventory.manage"},
     {"label": "Bursar POS", "href": "/uniform-pos", "icon": "bi-shop", "permission": "pos.manage"},
-    {"label": "Payroll", "href": "/payroll/", "icon": "bi-cash-stack", "permission": "payroll.view"},
+    {"label": "Payroll", "href": "/payroll/", "icon": "bi-cash-stack", "permission": "payroll.view", "module": "payroll"},
     {"label": "Users", "href": "/users", "icon": "bi-person-gear", "permission": "users.manage"},
+    {"label": "Security Admin", "href": "/security-admin/", "icon": "bi-shield-lock", "permission": "security.view", "module": "system_administration"},
     {"label": "Settings", "href": "/settings", "icon": "bi-gear", "permission": "settings.manage"},
     {"label": "Backups", "href": "/backups", "icon": "bi-database", "permission": "backups.manage"},
     {"label": "Audit Trail", "href": "/audit-trail", "icon": "bi-shield-check", "permission": "audit.view"},
-    {"label": "SaaS Tenants", "href": "/admin/saas_tenant_management/schooltenant/", "icon": "bi-building-gear", "permission": "saas.manage"},
+    {"label": "SaaS Tenants", "href": "/saas-tenants/", "icon": "bi-building-gear", "permission": "saas.manage"},
     {"label": "Website", "href": "/", "icon": "bi-globe", "permission": "dashboard.view"},
 ]
 
@@ -131,6 +161,12 @@ STUDENT_MENU_ITEMS = [
     {"label": "Attendance", "href": "/student-portal/attendance", "icon": "bi-calendar-check"},
     {"label": "Timetable", "href": "/student-portal/timetable", "icon": "bi-calendar3"},
     {"label": "Textbooks", "href": "/student-portal/textbooks", "icon": "bi-book-half"},
+    {"label": "Library", "href": "/student-portal/library", "icon": "bi-bookshelf"},
+    {"label": "Hostel", "href": "/student-portal/hostel", "icon": "bi-building"},
+    {"label": "My Transport", "href": "/student-portal/transport", "icon": "bi-bus-front"},
+    {"label": "School Assets", "href": "/student-portal/assets", "icon": "bi-tag"},
+    {"label": "My Discipline", "href": "/student-portal/discipline", "icon": "bi-shield-exclamation"},
+    {"label": "Counselling", "href": "/student-portal/counselling", "icon": "bi-heart-pulse"},
     {"label": "E-Learning", "href": "/student-portal/e-learning", "icon": "bi-cloud-arrow-down"},
 ]
 
@@ -169,6 +205,9 @@ def visible_menu(user):
     for item in MENU_ITEMS:
         # SaaS Tenants option is only visible on the master portal domain
         if item["label"] == "SaaS Tenants" and current_tenant is not None:
+            continue
+        module_code = item.get("module")
+        if current_tenant is not None and module_code and not current_tenant.has_premium_module(module_code):
             continue
         if role_has_permission(role, item["permission"]):
             items.append(item)

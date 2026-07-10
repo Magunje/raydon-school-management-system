@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+            <p class="text-muted mb-0">Set lending rates and audit outstanding student library penalty records.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Configuration settings Form -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-gear-fill me-2 text-primary"></i>Rules & Fine Configuration</h5>
+                <form method="post" class="form-panel mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="update_settings" value="1">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Daily Overdue Rate (USD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">$</span>
+                            <input type="number" step="0.01" name="daily_overdue_fine" class="form-control" value="{{ settings.daily_overdue_fine }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Damaged Book Penalty (USD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">$</span>
+                            <input type="number" step="0.01" name="damaged_book_penalty" class="form-control" value="{{ settings.damaged_book_penalty }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Lost Book Penalty (USD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">$</span>
+                            <input type="number" step="0.01" name="lost_book_penalty" class="form-control" value="{{ settings.lost_book_penalty }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Max Books Borrowed Limit</label>
+                        <input type="number" name="max_books_allowed" class="form-control" value="{{ settings.max_books_allowed }}" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-semibold">Standard Borrow Duration (Days)</label>
+                        <input type="number" name="borrow_duration_days" class="form-control" value="{{ settings.borrow_duration_days }}" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-save me-1"></i> Update Configurations</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Fines Audit Table -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Outstanding & Paid Penalties</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-muted small border-bottom">
+                                <th>Borrower (Student)</th>
+                                <th>Book Title</th>
+                                <th>Return Date</th>
+                                <th>Assessment</th>
+                                <th>Fine Due</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fine in fines %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ fine.student_name }}</div>
+                                    <div class="small text-muted">Adm No: {{ fine.admission_no }}</div>
+                                </td>
+                                <td><strong>{{ fine.title }}</strong></td>
+                                <td>{{ fine.return_date }}</td>
+                                <td>
+                                    {% if fine.book_condition == 'Good' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Good</span>
+                                    {% elif fine.book_condition == 'Damaged' %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">Damaged</span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Lost</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold text-danger">${{ fine.fine_amount }}</td>
+                                <td>
+                                    {% if fine.fine_paid == 1 %}
+                                    <span class="badge bg-success text-white rounded-pill px-2">Cleared & Paid</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark rounded-pill px-2">Invoiced (Outstanding)</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-shield-check fs-1 d-block mb-3 text-success"></i>
+                                    Excellent! No student fine penalty logs outstanding.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

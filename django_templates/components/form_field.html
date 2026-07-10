@@ -1,0 +1,31 @@
+{% if field.widget == "hidden" %}
+<input id="{{ field.name }}" name="{{ field.name }}" type="hidden" value="{{ field.value|default:'' }}">
+{% else %}
+<div class="{{ field.col_class|default:'col-md-6' }} ui-field">
+    <label for="{{ field.name }}">{{ field.label }}{% if field.required %}<span aria-label="required">*</span>{% endif %}</label>
+    {% if field.widget == "textarea" %}
+    <textarea id="{{ field.name }}" name="{{ field.name }}" rows="3" placeholder="{{ field.placeholder|default:'' }}" {% if field.readonly %}readonly{% endif %} {% if field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+    {% elif field.widget == "select" %}
+    <select id="{{ field.name }}" name="{{ field.name }}" {% if field.readonly %}disabled{% endif %} {% if field.required %}required{% endif %}>
+        {% for option in field.options %}
+        {% if option.items %}
+        <option value="{{ option.value }}" {% if option.value|stringformat:"s" == field.value|stringformat:"s" %}selected{% endif %}>{{ option.label }}</option>
+        {% else %}
+        <option value="{{ option }}" {% if option|stringformat:"s" == field.value|stringformat:"s" %}selected{% endif %}>{{ option }}</option>
+        {% endif %}
+        {% endfor %}
+    </select>
+    {% if field.readonly %}<input type="hidden" name="{{ field.name }}" value="{{ field.value|default:'' }}">{% endif %}
+    {% elif field.type == "file" %}
+    {% if field.value %}
+    <div class="current-file">
+        <span>Current file: {{ field.value }}</span>
+    </div>
+    {% endif %}
+    <input id="{{ field.name }}" name="{{ field.name }}" type="file" {% if field.accept %}accept="{{ field.accept }}"{% endif %} {% if field.required and not field.value %}required{% endif %}>
+    {% else %}
+    <input id="{{ field.name }}" name="{{ field.name }}" type="{{ field.type|default:'text' }}" value="{{ field.value|default:'' }}" placeholder="{{ field.placeholder|default:'' }}" {% if field.readonly %}readonly{% endif %} {% if field.required %}required{% endif %}>
+    {% endif %}
+    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+</div>
+{% endif %}

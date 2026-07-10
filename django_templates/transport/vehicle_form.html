@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-4">{{ title }}</h4>
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Registration Number *</label>
+                        <input type="text" name="registration_number" class="form-control rounded-3" value="{{ vehicle.registration_number }}" required {% if vehicle %}readonly{% endif %}>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Vehicle Name *</label>
+                        <input type="text" name="vehicle_name" class="form-control rounded-3" value="{{ vehicle.vehicle_name }}" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Vehicle Type</label>
+                            <input type="text" name="vehicle_type" class="form-control rounded-3" value="{{ vehicle.vehicle_type }}" placeholder="e.g. Bus, Coaster">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Capacity (Seats) *</label>
+                            <input type="number" name="capacity" class="form-control rounded-3" value="{{ vehicle.capacity|default:15 }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Make</label>
+                            <input type="text" name="make" class="form-control rounded-3" value="{{ vehicle.make }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Model</label>
+                            <input type="text" name="model" class="form-control rounded-3" value="{{ vehicle.model }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Year</label>
+                            <input type="number" name="year" class="form-control rounded-3" value="{{ vehicle.year }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Fuel Type</label>
+                            <input type="text" name="fuel_type" class="form-control rounded-3" value="{{ vehicle.fuel_type }}" placeholder="Diesel/Petrol">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Purchase Date</label>
+                            <input type="date" name="purchase_date" class="form-control rounded-3" value="{{ vehicle.purchase_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Current Mileage (KM)</label>
+                            <input type="number" name="current_mileage" class="form-control rounded-3" value="{{ vehicle.current_mileage|default:0 }}">
+                        </div>
+                    </div>
+
+                    {% if vehicle %}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Vehicle Status</label>
+                        <select name="status" class="form-select rounded-3">
+                            <option value="Active" {% if vehicle.status == "Active" %}selected{% endif %}>Active</option>
+                            <option value="Under Maintenance" {% if vehicle.status == "Under Maintenance" %}selected{% endif %}>Under Maintenance</option>
+                            <option value="Out of Service" {% if vehicle.status == "Out of Service" %}selected{% endif %}>Out of Service</option>
+                            <option value="Retired" {% if vehicle.status == "Retired" %}selected{% endif %}>Retired</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary flex-grow-1 rounded-3">Save Vehicle</button>
+                        <a href="{% url 'vehicle_list' %}" class="btn btn-light rounded-3">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

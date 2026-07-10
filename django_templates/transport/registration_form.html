@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                <h4 class="fw-bold text-dark mb-4">{{ title }}</h4>
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Student *</label>
+                        <select name="student_id" class="form-select rounded-3 select2" required>
+                            <option value="">-- Choose Student --</option>
+                            {% for stud in students %}
+                            <option value="{{ stud.pk }}">{{ stud.first_name }} {{ stud.surname }} ({{ stud.admission_no }} - {{ stud.academic_class.class_name }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Route *</label>
+                        <select name="route_id" id="routeSelect" class="form-select rounded-3" required>
+                            <option value="">-- Choose Route --</option>
+                            {% for r in routes %}
+                            <option value="{{ r.pk }}">{{ r.route_code }} - {{ r.route_name }} ({{ r.assigned_vehicle.vehicle_name|default:"No bus" }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Pickup Stop *</label>
+                        <select name="pickup_point_id" id="stopSelect" class="form-select rounded-3" required>
+                            <option value="">-- Choose Stop --</option>
+                            {% for stop in stops %}
+                            <option value="{{ stop.pk }}" data-route="{{ stop.route_id }}">{{ stop.location_name }} ({{ stop.pickup_time|time:"H:i" }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Trip Type *</label>
+                            <select name="trip_type" class="form-select rounded-3" required>
+                                <option value="Return Trip">Return Trip</option>
+                                <option value="One-Way">One-Way</option>
+                                <option value="Temporary">Temporary</option>
+                                <option value="Permanent">Permanent</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Effective Date *</label>
+                            <input type="date" name="effective_date" class="form-control rounded-3" value="{{ today }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Transport Fee ($) *</label>
+                        <input type="number" step="0.01" name="transport_fee" class="form-control rounded-3" value="45.00" required>
+                        <div class="form-text small text-muted">This amount will automatically debit the student fee account.</div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary flex-grow-1 rounded-3">Allocate Space & Activate</button>
+                        <a href="{% url 'registration_list' %}" class="btn btn-light rounded-3">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const routeSel = document.getElementById("routeSelect");
+        const stopSel = document.getElementById("stopSelect");
+        const allStops = Array.from(stopSel.options).slice(1); // skip placeholder
+
+        routeSel.addEventListener("change", function() {
+            const routeId = this.value;
+            // Clear current stops
+            stopSel.innerHTML = '<option value="">-- Choose Stop --</option>';
+            
+            if (routeId) {
+                const filtered = allStops.filter(opt => opt.getAttribute("data-route") === routeId);
+                filtered.forEach(opt => stopSel.appendChild(opt.cloneNode(true)));
+            } else {
+                allStops.forEach(opt => stopSel.appendChild(opt.cloneNode(true)));
+            }
+        });
+    });
+</script>
+{% endblock %}

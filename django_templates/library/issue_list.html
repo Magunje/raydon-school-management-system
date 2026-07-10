@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Block -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+            <p class="text-muted mb-0">Monitor active textbook loans, circulation schedules, and returns.</p>
+        </div>
+        <a href="{% url 'new_library_issue' %}" class="btn btn-primary rounded-3 px-3"><i class="bi bi-journal-plus me-1"></i> Issue Book Copy</a>
+    </div>
+
+    <!-- Tab Filter Block -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="btn-group rounded-3 overflow-hidden" role="group">
+                <a href="?status=Borrowed" class="btn {% if selected_status == 'Borrowed' %}btn-primary{% else %}btn-outline-primary{% endif %} px-4">Active Borrowings</a>
+                <a href="?status=Returned" class="btn {% if selected_status == 'Returned' %}btn-primary{% else %}btn-outline-primary{% endif %} px-4">Returned Registry</a>
+                <a href="?status=Damaged" class="btn {% if selected_status == 'Damaged' %}btn-primary{% else %}btn-outline-primary{% endif %} px-4">Damaged Books</a>
+                <a href="?status=Lost" class="btn {% if selected_status == 'Lost' %}btn-primary{% else %}btn-outline-primary{% endif %} px-4">Lost Books</a>
+            </div>
+            
+            <span class="text-muted small fw-semibold">Count: <strong class="text-dark">{{ issues|length }} records</strong></span>
+        </div>
+    </div>
+
+    <!-- Active issues Table -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small border-bottom">
+                        <th>Book Title</th>
+                        <th>Borrower</th>
+                        <th>Identifier / Card</th>
+                        <th>Issue Date</th>
+                        <th>Due Date</th>
+                        {% if selected_status != 'Borrowed' %}
+                        <th>Returned Date</th>
+                        <th>Condition</th>
+                        {% endif %}
+                        <th>Status</th>
+                        <th>Fine Accrued</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for issue in issues %}
+                    <tr {% if issue.is_overdue %}class="table-danger-soft"{% endif %}>
+                        <td>
+                            <div class="fw-bold text-dark">{{ issue.title }}</div>
+                            <div class="small text-muted">ISBN: {{ issue.isbn|default:"-" }}</div>
+                        </td>
+                        <td>
+                            {% if issue.student_name %}
+                            <div class="fw-bold text-dark">{{ issue.student_name }}</div>
+                            <div class="small text-muted">Student</div>
+                            {% else %}
+                            <div class="fw-bold text-dark">{{ issue.staff_name }}</div>
+                            <div class="small text-muted">Staff / Teacher</div>
+                            {% endif %}
+                        </td>
+                        <td class="small font-monospace">
+                            {% if issue.admission_no %}
+                            {{ issue.admission_no }}
+                            {% else %}
+                            {{ issue.employee_number }}
+                            {% endif %}
+                        </td>
+                        <td>{{ issue.issue_date }}</td>
+                        <td>
+                            <span class="{% if issue.is_overdue %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                {{ issue.due_date }}
+                                {% if issue.is_overdue %}
+                                <i class="bi bi-exclamation-triangle-fill ms-1" title="Overdue book alert!"></i>
+                                {% endif %}
+                            </span>
+                        </td>
+                        
+                        {% if selected_status != 'Borrowed' %}
+                        <td>{{ issue.return_date|default:"-" }}</td>
+                        <td>
+                            {% if issue.book_condition == 'Good' %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">{{ issue.book_condition }}</span>
+                            {% elif issue.book_condition == 'Damaged' %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">{{ issue.book_condition }}</span>
+                            {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">{{ issue.book_condition }}</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        
+                        <td>
+                            {% if issue.status == 'Borrowed' %}
+                                {% if issue.is_overdue %}
+                                <span class="badge bg-danger text-white rounded-pill px-2">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-primary text-white rounded-pill px-2">Active</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="badge bg-secondary text-white rounded-pill px-2">{{ issue.status }}</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="fw-bold {% if issue.fine_amount > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            ${{ issue.fine_amount|default:"0.00" }}
+                        </td>
+                        <td class="text-end">
+                            {% if issue.status == 'Borrowed' %}
+                            <a href="{% url 'return_library_book' issue.issue_id %}" class="btn btn-sm btn-success rounded-3"><i class="bi bi-arrow-return-left me-1"></i> Return Book</a>
+                            {% else %}
+                            <span class="text-muted small">Completed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="bi bi-journal-check fs-1 d-block mb-3 text-secondary"></i>
+                            No lending activity records found under this status.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-danger-soft {
+        background-color: rgba(220, 53, 69, 0.03) !important;
+    }
+</style>
+{% endblock %}

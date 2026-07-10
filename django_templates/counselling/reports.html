@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Counselling Reports - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-4"><i class="bi bi-file-lock2 me-2 text-danger"></i>Confidential Counselling Reports</h4>
+        <hr class="mb-4">
+
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card border border-light shadow-sm rounded-4 p-3 h-100">
+                    <h5 class="fw-bold text-dark mb-2"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Case Registry</h5>
+                    <p class="text-muted small mb-3">Download a complete confidential summary of all counselling cases, categories, and risks.</p>
+                    <a href="{% url 'counselling:export_csv' %}" class="btn btn-outline-success rounded-3 w-100"><i class="bi bi-download me-2"></i>Export CSV Registry</a>
+                </div>
+            </div>
+            
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card border border-light shadow-sm rounded-4 p-3 h-100">
+                    <h5 class="fw-bold text-dark mb-2"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Risk Assessment List</h5>
+                    <p class="text-muted small mb-3">Lists all high and critical risk students to coordinate urgent clinical interventions and reviews.</p>
+                    <button class="btn btn-outline-danger rounded-3 w-100" disabled><i class="bi bi-lock me-2"></i>Print PDF Report</button>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card border border-light shadow-sm rounded-4 p-3 h-100">
+                    <h5 class="fw-bold text-dark mb-2"><i class="bi bi-file-earmark-text me-2 text-dark"></i>Career Advice Register</h5>
+                    <p class="text-muted small mb-3">Lists university applications and career aptitude assessments logged for current students.</p>
+                    <button class="btn btn-outline-dark rounded-3 w-100" disabled><i class="bi bi-lock me-2"></i>Print Register</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

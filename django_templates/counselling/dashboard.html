@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Counselling Dashboard - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Summary Grid -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Total Cases</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ total_cases }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                        <i class="bi bi-folder-check fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Open Cases</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ open_cases }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-success bg-opacity-10 text-success rounded-4">
+                        <i class="bi bi-folder-plus fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">High-Risk Cases</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-danger">{{ high_risk }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-danger bg-opacity-10 text-danger rounded-4">
+                        <i class="bi bi-exclamation-octagon-fill fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <span class="text-muted small text-uppercase fw-semibold">Upcoming Sessions</span>
+                        <h2 class="mb-0 mt-1 fw-bold text-dark">{{ upcoming_appointments.count }}</h2>
+                    </div>
+                    <div class="ms-3 p-3 bg-dark bg-opacity-10 text-dark rounded-4">
+                        <i class="bi bi-calendar-event fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions and Recent Logs -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-lightning-charge me-2 text-primary"></i>Counselling Actions</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'counselling:case_new' %}" class="btn btn-outline-success rounded-3 py-2 text-start"><i class="bi bi-folder-plus me-2"></i>Open Counselling Case</a>
+                    <a href="{% url 'counselling:appointment_new' %}" class="btn btn-outline-primary rounded-3 py-2 text-start"><i class="bi bi-calendar-plus me-2"></i>Schedule Appointment</a>
+                    <a href="{% url 'counselling:career_session_new' %}" class="btn btn-outline-dark rounded-3 py-2 text-start"><i class="bi bi-mortarboard me-2"></i>Record Career guidance</a>
+                    <a href="{% url 'counselling:reports' %}" class="btn btn-outline-secondary rounded-3 py-2 text-start"><i class="bi bi-file-lock2 me-2"></i>Confidential Reports</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4 h-100">
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-folder me-2 text-primary"></i>Active Counselling Cases</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Student</th>
+                                <th>Category</th>
+                                <th>Severity</th>
+                                <th>Counsellor</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in recent_cases %}
+                            <tr>
+                                <td><span class="fw-bold text-secondary">{{ case.case_no }}</span></td>
+                                <td>{{ case.student.full_name }}</td>
+                                <td>{{ case.category }}</td>
+                                <td>
+                                    {% if case.severity_level == 'Critical' or case.severity_level == 'High' %}
+                                    <span class="badge bg-danger rounded-pill">{{ case.severity_level }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary rounded-pill">{{ case.severity_level }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ case.assigned_counsellor.full_name|default:"Unassigned" }}</td>
+                                <td>
+                                    <a href="{% url 'counselling:case_detail' case.pk %}" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-eye me-1"></i>View Case</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No active counselling cases found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

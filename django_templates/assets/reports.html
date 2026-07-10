@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">{{ title }}</h4>
+                <p class="text-muted small mb-0">Select an asset report category to preview details and download exports.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="?type={{ report_type }}&format=csv" class="btn btn-outline-success rounded-3"><i class="bi bi-filetype-csv me-2"></i>Export CSV</a>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4 border-bottom pb-3">
+            <a href="?type=registry" class="btn {% if report_type == 'registry' %}btn-primary{% else %}btn-light{% endif %} rounded-pill px-3 py-1">Asset Master Registry</a>
+            <a href="?type=maintenance" class="btn {% if report_type == 'maintenance' %}btn-primary{% else %}btn-light{% endif %} rounded-pill px-3 py-1">Maintenance History</a>
+            <a href="?type=disposals" class="btn {% if report_type == 'disposals' %}btn-primary{% else %}btn-light{% endif %} rounded-pill px-3 py-1">Disposed Assets</a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h5 class="fw-bold text-dark mb-3">{{ title_label }}</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        {% for h in headers %}
+                        <th>{{ h }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{{ headers|length }}" class="text-center text-muted py-4">No assets match the selected criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

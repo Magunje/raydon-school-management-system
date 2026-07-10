@@ -1,0 +1,6 @@
+<a class="ui-stat-card{% if not href %} no-link{% endif %}" {% if href %}href="{{ href }}"{% else %}role="group"{% endif %}>
+    <span class="stat-icon"><i class="bi {{ icon|default:'bi-bar-chart' }}" aria-hidden="true"></i></span>
+    <span class="stat-label">{{ label }}</span>
+    <strong>{{ value }}</strong>
+    {% if meta %}<small>{{ meta }}</small>{% endif %}
+</a>

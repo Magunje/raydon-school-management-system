@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-sm-4 col-md-3">
+                <label class="form-label fw-semibold text-dark">Select Roster Date</label>
+                <input type="date" name="date" class="form-control rounded-3" value="{{ selected_date }}" onchange="this.form.submit()">
+            </div>
+            <div class="col-12 col-sm-8 col-md-9 text-end">
+                <h4 class="fw-bold text-dark mb-0">Transit Roll Call: {{ selected_date }}</h4>
+            </div>
+        </form>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Route</th>
+                            <th>Pickup Stop</th>
+                            <th>Morning Boarding</th>
+                            <th>Afternoon Drop-off</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in sheet %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-dark">{{ row.pupil.first_name }} {{ row.pupil.surname }}</span>
+                                <div class="small text-muted">{{ row.pupil.admission_no }}</div>
+                            </td>
+                            <td>{{ row.route.route_name }}</td>
+                            <td>{{ row.pickup_point.location_name }}</td>
+                            <td>
+                                <select name="morning_{{ row.pupil.pk }}" class="form-select form-select-sm rounded-3">
+                                    <option value="Present" {% if row.status_morning == "Present" %}selected{% endif %}>Present</option>
+                                    <option value="Absent" {% if row.status_morning == "Absent" %}selected{% endif %}>Absent</option>
+                                    <option value="Sick" {% if row.status_morning == "Sick" %}selected{% endif %}>Sick</option>
+                                    <option value="Excused" {% if row.status_morning == "Excused" %}selected{% endif %}>Excused</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="afternoon_{{ row.pupil.pk }}" class="form-select form-select-sm rounded-3">
+                                    <option value="Present" {% if row.status_afternoon == "Present" %}selected{% endif %}>Present</option>
+                                    <option value="Absent" {% if row.status_afternoon == "Absent" %}selected{% endif %}>Absent</option>
+                                    <option value="Sick" {% if row.status_afternoon == "Sick" %}selected{% endif %}>Sick</option>
+                                    <option value="Excused" {% if row.status_afternoon == "Excused" %}selected{% endif %}>Excused</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" name="remarks_{{ row.pupil.pk }}" class="form-control form-control-sm rounded-3" value="{{ row.remarks }}" placeholder="No issues">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No commuters allocated to active transit services.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if sheet %}
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Submit Roster Log</button>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

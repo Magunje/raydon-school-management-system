@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Human Resources - {{ school_name }}{% endblock %}
+
+{% block content %}
+{% include "components/page_header.html" with breadcrumb_parent="Human Resources" title="Employee Directory" subtitle="Manage employee records, contracts, leave, recruitment, attendance, appraisals and HR documents." %}
+
+<div class="ui-stat-grid">
+    {% include "components/stat_card.html" with label="Total Employees" value=total_employees icon="bi-people-fill" href="#directory" %}
+    {% include "components/stat_card.html" with label="Active Employees" value=active_employees icon="bi-check-circle-fill" href="#directory" %}
+    {% include "components/stat_card.html" with label="Employees on Leave" value=on_leave icon="bi-calendar-heart" href="#leaves" %}
+    {% include "components/stat_card.html" with label="Open Vacancies" value=open_vacancies icon="bi-briefcase-fill" href="#vacancies" %}
+    {% include "components/stat_card.html" with label="New Employees" value=new_employees icon="bi-person-plus-fill" meta="This month" %}
+    {% include "components/stat_card.html" with label="Pending Leave" value=pending_leave icon="bi-hourglass-split" href="#leaves" %}
+    {% include "components/stat_card.html" with label="Contracts Expiring" value=contracts_expiring icon="bi-file-earmark-text" %}
+    {% include "components/stat_card.html" with label="Pending Appraisals" value=pending_appraisals icon="bi-clipboard-check" %}
+</div>
+
+<section class="ui-card mb-3">
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <h2 class="section-title">Employees by Department</h2>
+            <div class="metric-list">
+                {% for item in employees_by_department %}
+                <div><span>{{ item.department|default:"Unassigned" }}</span><strong>{{ item.total }}</strong></div>
+                {% empty %}
+                <div><span>No department data</span><strong>0</strong></div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <h2 class="section-title">Employees by Category</h2>
+            <div class="metric-list">
+                {% for item in employees_by_category %}
+                <div><span>{{ item.employee_category }}</span><strong>{{ item.total }}</strong></div>
+                {% empty %}
+                <div><span>No category data</span><strong>0</strong></div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <h2 class="section-title">Status Distribution</h2>
+            <div class="metric-list">
+                {% for item in employees_by_status %}
+                <div><span>{{ item.status|title }}</span><strong>{{ item.total }}</strong></div>
+                {% empty %}
+                <div><span>No status data</span><strong>0</strong></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<ul class="nav nav-tabs mb-3" id="hrTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="directory-tab" data-bs-toggle="tab" data-bs-target="#directory" type="button" role="tab" aria-controls="directory" aria-selected="true">
+            <i class="bi bi-person-badge me-1"></i> Employee Directory
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="vacancies-tab" data-bs-toggle="tab" data-bs-target="#vacancies" type="button" role="tab" aria-controls="vacancies" aria-selected="false">
+            <i class="bi bi-briefcase me-1"></i> Vacancies
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="leaves-tab" data-bs-toggle="tab" data-bs-target="#leaves" type="button" role="tab" aria-controls="leaves" aria-selected="false">
+            <i class="bi bi-calendar-check me-1"></i> Leave
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab" aria-controls="activity" aria-selected="false">
+            <i class="bi bi-activity me-1"></i> Recent HR Activity
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <section class="tab-pane fade show active" id="directory" role="tabpanel" aria-labelledby="directory-tab" tabindex="0">
+        <div class="ui-card filter-panel">
+            <form class="row g-3" method="get">
+                <div class="col-lg-3 ui-field">
+                    <label for="hr-q">Search</label>
+                    <input id="hr-q" name="q" value="{{ filters.q }}" placeholder="Employee number, name, phone, email">
+                </div>
+                <div class="col-md-3 col-lg-2 ui-field">
+                    <label for="department">Department</label>
+                    <select id="department" name="department">
+                        <option value="">All</option>
+                        {% for department in departments %}
+                        <option value="{{ department }}" {% if filters.department == department %}selected{% endif %}>{{ department }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2 ui-field">
+                    <label for="position">Position</label>
+                    <select id="position" name="position">
+                        <option value="">All</option>
+                        {% for position in positions %}
+                        <option value="{{ position }}" {% if filters.position == position %}selected{% endif %}>{{ position }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2 ui-field">
+                    <label for="employee_category">Category</label>
+                    <select id="employee_category" name="employee_category">
+                        <option value="">All</option>
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if filters.employee_category == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2 ui-field">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-1 ui-field">
+                    <label for="per_page">Rows</label>
+                    <select id="per_page" name="per_page">
+                        <option value="10" {% if filters.per_page == "10" %}selected{% endif %}>10</option>
+                        <option value="25" {% if filters.per_page == "25" %}selected{% endif %}>25</option>
+                        <option value="50" {% if filters.per_page == "50" %}selected{% endif %}>50</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-12 d-flex gap-2 justify-content-end">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+                    <a class="btn btn-outline-secondary" href="?"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
+                    <button class="btn btn-outline-secondary" type="button" data-print><i class="bi bi-printer"></i> Print</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="ui-card">
+            <div class="table-wrap">
+                <table class="table table-hover align-middle ui-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" aria-label="Select all employees"></th>
+                            <th>Employee Number</th>
+                            <th>Employee Name</th>
+                            <th>Category</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Employment Type</th>
+                            <th>Status</th>
+                            <th>Phone Number</th>
+                            <th>Email Address</th>
+                            <th>Employment Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td><input type="checkbox" aria-label="Select {{ emp.full_name }}"></td>
+                            <td><strong>{{ emp.employee_number }}</strong></td>
+                            <td>
+                                <a class="record-link" href="{% url 'human_resources_employee_profile' emp.id %}">
+                                    {{ emp.full_name }}
+                                </a>
+                                <small class="d-block text-secondary">{{ emp.nationality|default:"" }}</small>
+                            </td>
+                            <td>{{ emp.get_employee_category_display }}</td>
+                            <td>{{ emp.department }}</td>
+                            <td>{{ emp.position }}</td>
+                            <td>{{ emp.get_employment_type_display }}</td>
+                            <td>{% include "components/status_badge.html" with status=emp.status label=emp.get_status_display %}</td>
+                            <td>{{ emp.phone_number }}</td>
+                            <td>{{ emp.email|default:"-" }}</td>
+                            <td>{{ emp.employment_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="table-action-group">
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'human_resources_employee_profile' emp.id %}"><i class="bi bi-eye"></i> View</a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="/admin/human_resources/employeeprofile/{{ emp.id }}/change/"><i class="bi bi-pencil"></i> Edit</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="12">{% include "components/empty_state.html" with title="No employees found" message="No employee records match the selected filters." %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="ui-pagination">
+                <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count }} employees</span>
+                <div class="btn-group">
+                    {% if page_obj.has_previous %}
+                    <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a class="btn btn-outline-secondary btn-sm" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="tab-pane fade" id="vacancies" role="tabpanel" aria-labelledby="vacancies-tab" tabindex="0">
+        <div class="ui-card">
+            <div class="table-wrap">
+                <table class="table table-hover align-middle ui-table">
+                    <thead>
+                        <tr>
+                            <th>Vacancy Reference</th>
+                            <th>Job Title</th>
+                            <th>Department</th>
+                            <th>Posts</th>
+                            <th>Employment Type</th>
+                            <th>Status</th>
+                            <th>Closing Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vac in vacancies %}
+                        <tr>
+                            <td><strong>{{ vac.vacancy_number }}</strong></td>
+                            <td>{{ vac.title }}</td>
+                            <td>{{ vac.department }}</td>
+                            <td>{{ vac.number_of_posts }}</td>
+                            <td>{{ vac.employment_type }}</td>
+                            <td>{% include "components/status_badge.html" with status=vac.status label=vac.get_status_display %}</td>
+                            <td>{{ vac.closing_date|date:"Y-m-d" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7">{% include "components/empty_state.html" with title="No vacancies found" %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="tab-pane fade" id="leaves" role="tabpanel" aria-labelledby="leaves-tab" tabindex="0">
+        <div class="ui-card">
+            <div class="table-wrap">
+                <table class="table table-hover align-middle ui-table">
+                    <thead>
+                        <tr>
+                            <th>Application Number</th>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_applications %}
+                        <tr>
+                            <td><strong>{{ leave.application_number }}</strong></td>
+                            <td>{{ leave.employee.full_name }}</td>
+                            <td>{{ leave.get_leave_type_display }}</td>
+                            <td>{{ leave.start_date|date:"Y-m-d" }}</td>
+                            <td>{{ leave.end_date|date:"Y-m-d" }}</td>
+                            <td>{{ leave.days_requested }}</td>
+                            <td>{% include "components/status_badge.html" with status=leave.status label=leave.get_status_display %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7">{% include "components/empty_state.html" with title="No leave applications" %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="tab-pane fade" id="activity" role="tabpanel" aria-labelledby="activity-tab" tabindex="0">
+        <div class="ui-card">
+            <h2 class="section-title">Recent Employees</h2>
+            <div class="metric-list">
+                {% for emp in recent_employees %}
+                <div>
+                    <span><a class="record-link" href="{% url 'human_resources_employee_profile' emp.id %}">{{ emp.full_name }}</a> · {{ emp.position }}</span>
+                    <strong>{{ emp.employment_date|date:"M d" }}</strong>
+                </div>
+                {% empty %}
+                <div><span>No recent employee activity</span><strong>-</strong></div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

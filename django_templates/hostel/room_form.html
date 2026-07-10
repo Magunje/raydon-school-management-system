@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+    <div class="mb-4">
+        <a href="{% url 'room_list' hostel.hostel_id %}" class="btn btn-outline-secondary btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Back to Rooms</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+        <p class="text-muted small border-bottom pb-3">Set up a room in {{ hostel.hostel_name }}. Beds will be automatically provisioned based on capacity.</p>
+
+        <form method="post" class="mt-4 form-panel">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Room Number / ID <span class="text-danger">*</span></label>
+                    <input type="text" name="room_number" class="form-control" placeholder="e.g. 101, A-12" required>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <label class="form-label">Floor level</label>
+                    <input type="number" name="floor" class="form-control" placeholder="e.g. 0 for Ground, 1 for First" value="0">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Room Capacity (Number of beds) <span class="text-danger">*</span></label>
+                    <select name="capacity" class="form-select bg-light">
+                        <option value="2">2 Beds (Double Share)</option>
+                        <option value="4" selected>4 Beds (Quad Share)</option>
+                        <option value="6">6 Beds (Group Dorm)</option>
+                        <option value="8">8 Beds (Large Dorm)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2 justify-content-end">
+                <a href="{% url 'room_list' hostel.hostel_id %}" class="btn btn-outline-secondary rounded-3 px-4">Cancel</a>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Create Room & Beds</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

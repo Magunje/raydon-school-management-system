@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ school_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Block -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">{{ title }}</h3>
+            <p class="text-muted mb-0">Monitor gate checks, check-in, check-out times, and print passes.</p>
+        </div>
+        <a href="{% url 'hostel_visitor_new' %}" class="btn btn-primary rounded-3 px-3"><i class="bi bi-person-plus-fill me-1"></i> Log Visitor Check-in</a>
+    </div>
+
+    <!-- Table -->
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small border-bottom">
+                        <th>Visitor Name</th>
+                        <th>Relationship</th>
+                        <th>Boarder Student</th>
+                        <th>Date of Visit</th>
+                        <th>Checked-in</th>
+                        <th>Checked-out</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in visitors %}
+                    <tr>
+                        <td><strong class="text-dark">{{ v.visitor_name }}</strong><br><span class="text-muted small">Ph: {{ v.contact_number }}</span></td>
+                        <td>{{ v.relationship }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ v.pupil.first_name }} {{ v.pupil.surname }}</div>
+                            <div class="small text-muted">Adm No: {{ v.pupil.admission_no }}</div>
+                        </td>
+                        <td>{{ v.visit_date }}</td>
+                        <td class="font-monospace text-muted small"><i class="bi bi-clock me-1"></i>{{ v.time_in }}</td>
+                        <td class="font-monospace text-muted small">
+                            {% if v.time_out %}
+                            <i class="bi bi-clock-history me-1"></i>{{ v.time_out }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if v.approval_status == 'Approved' %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">Currently Inside</span>
+                            {% elif v.approval_status == 'Completed' %}
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2">Checked Out</span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2">{{ v.approval_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-2">
+                                <a href="{% url 'hostel_visitor_pass' v.visitor_id %}" class="btn btn-sm btn-outline-secondary rounded-3" title="Print Gate Pass"><i class="bi bi-qr-code"></i> Pass Label</a>
+                                {% if v.approval_status == 'Approved' %}
+                                <a href="{% url 'hostel_visitor_checkout' v.visitor_id %}" class="btn btn-sm btn-danger rounded-3" onclick="return confirm('Log checkout for this visitor?');"><i class="bi bi-box-arrow-right"></i> Check out</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-rolodex fs-1 d-block mb-3"></i>
+                            No visitors logged.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
