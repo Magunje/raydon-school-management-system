@@ -65,7 +65,7 @@ For detailed steps, refer to [INSTALLATION.md](file:///c:/Users/RAYDON/OneDrive/
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/raidonmagunje/raydon-school-management-system.git
+   git clone https://github.com/Magunje/raydon-school-management-system.git
    cd raydon-school-management-system
    ```
 
@@ -157,4 +157,4 @@ For detailed guidelines, refer to [DEPLOYMENT.md](file:///c:/Users/RAYDON/OneDri
 ## ✉️ Contact
 - **Project Owner**: Raidon Magunje
 - **Email**: [raidonmagunje@gmail.com](mailto:raidonmagunje@gmail.com)
-- **GitHub**: [@raidonmagunje](https://github.com/raidonmagunje)
+- **GitHub**: [@Magunje](https://github.com/Magunje)
