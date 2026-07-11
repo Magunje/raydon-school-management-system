@@ -69,20 +69,28 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarStorageKey = "raydonSidebarCollapsed";
     const isWideLayout = () => window.innerWidth > 1180;
     let lastSidebarTrigger = null;
-    const showSidebar = () => {
-        document.body.classList.remove("sidebar-collapsed");
+    const setSidebarCollapsed = (collapsed) => {
+        document.body.classList.toggle("sidebar-collapsed", collapsed);
         try {
-            window.localStorage.removeItem(sidebarStorageKey);
+            if (collapsed) {
+                window.localStorage.setItem(sidebarStorageKey, "1");
+            } else {
+                window.localStorage.removeItem(sidebarStorageKey);
+            }
         } catch (error) {
-            // Private browsing modes can block localStorage; the visible navigation still works for this page.
+            // Private browsing modes can block localStorage; the visual state still works for this page.
         }
     };
 
-    showSidebar();
+    try {
+        setSidebarCollapsed(isWideLayout() && window.localStorage.getItem(sidebarStorageKey) === "1");
+    } catch (error) {
+        setSidebarCollapsed(false);
+    }
 
     const openSidebar = (event) => {
         lastSidebarTrigger = event?.currentTarget || null;
-        showSidebar();
+        setSidebarCollapsed(false);
         document.body.classList.add("sidebar-open");
         window.requestAnimationFrame(() => {
             const focusTarget = sidebar?.querySelector("[data-sidebar-close], .sidebar-link, .nav-link, .logout-link");
@@ -90,6 +98,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
     const closeSidebar = () => {
+        if (isWideLayout()) {
+            setSidebarCollapsed(true);
+            return;
+        }
         const wasOpen = document.body.classList.contains("sidebar-open");
         document.body.classList.remove("sidebar-open");
         if (wasOpen && lastSidebarTrigger && window.innerWidth <= 1180) {
@@ -99,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const restoreSidebar = (event) => {
         lastSidebarTrigger = event?.currentTarget || null;
-        showSidebar();
+        setSidebarCollapsed(false);
         if (!isWideLayout()) {
             openSidebar(event);
         } else {
@@ -119,9 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.querySelectorAll(".app-sidebar .sidebar-link, .sidebar .nav-link, .sidebar .logout-link").forEach((link) => {
         link.addEventListener("click", () => {
-            if (!isWideLayout()) {
-                closeSidebar();
-            }
+            closeSidebar();
         });
     });
 
@@ -141,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.addEventListener("resize", () => {
         if (window.innerWidth > 1180) {
-            closeSidebar();
+            document.body.classList.remove("sidebar-open");
         }
     });
 

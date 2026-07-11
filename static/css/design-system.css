@@ -320,6 +320,20 @@ body.sidebar-collapsed .shell-toggle {
     display: none;
 }
 
+.app-sidebar .sidebar-close {
+    display: inline-flex;
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    box-shadow: none;
+}
+
+.app-sidebar .sidebar-close:hover {
+    border-color: rgba(255, 255, 255, 0.48);
+    background: rgba(255, 255, 255, 0.20);
+    color: #fff;
+}
+
 .user-chip {
     gap: 9px;
     min-width: 0;
