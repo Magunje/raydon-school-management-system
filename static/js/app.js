@@ -66,9 +66,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const sidebar = document.querySelector("[data-sidebar]");
+    const sidebarStorageKey = "raydonSidebarCollapsed";
+    const isWideLayout = () => window.innerWidth > 1180;
     let lastSidebarTrigger = null;
+    const setSidebarCollapsed = (collapsed) => {
+        document.body.classList.toggle("sidebar-collapsed", collapsed);
+        try {
+            if (collapsed) {
+                window.localStorage.setItem(sidebarStorageKey, "1");
+            } else {
+                window.localStorage.removeItem(sidebarStorageKey);
+            }
+        } catch (error) {
+            // Private browsing modes can block localStorage; the visual state still works for this page.
+        }
+    };
+
+    try {
+        if (window.localStorage.getItem(sidebarStorageKey) === "1") {
+            document.body.classList.add("sidebar-collapsed");
+        }
+    } catch (error) {
+        // Ignore storage read errors and keep the default visible navigation.
+    }
+
     const openSidebar = (event) => {
         lastSidebarTrigger = event?.currentTarget || null;
+        setSidebarCollapsed(false);
         document.body.classList.add("sidebar-open");
         window.requestAnimationFrame(() => {
             const focusTarget = sidebar?.querySelector("[data-sidebar-close], .sidebar-link, .nav-link, .logout-link");
@@ -83,16 +107,42 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    const restoreSidebar = (event) => {
+        lastSidebarTrigger = event?.currentTarget || null;
+        setSidebarCollapsed(false);
+        if (!isWideLayout()) {
+            openSidebar(event);
+        } else {
+            window.requestAnimationFrame(() => {
+                sidebar?.querySelector(".sidebar-link, .sidebar-brand")?.focus({ preventScroll: true });
+            });
+        }
+    };
+
     document.querySelectorAll("[data-sidebar-toggle]").forEach((button) => {
-        button.addEventListener("click", openSidebar);
+        button.addEventListener("click", restoreSidebar);
     });
 
     document.querySelectorAll("[data-sidebar-close]").forEach((button) => {
         button.addEventListener("click", closeSidebar);
     });
 
-    document.querySelectorAll(".app-sidebar .sidebar-link, .sidebar .nav-link, .sidebar .logout-link, .sidebar .brand, .sidebar-brand").forEach((link) => {
-        link.addEventListener("click", closeSidebar);
+    document.querySelectorAll(".app-sidebar .sidebar-link, .sidebar .nav-link, .sidebar .logout-link").forEach((link) => {
+        link.addEventListener("click", () => {
+            if (isWideLayout()) {
+                setSidebarCollapsed(true);
+                return;
+            }
+            closeSidebar();
+        });
+    });
+
+    document.querySelectorAll(".sidebar .brand, .sidebar-brand").forEach((link) => {
+        link.addEventListener("click", () => {
+            if (!isWideLayout()) {
+                closeSidebar();
+            }
+        });
     });
 
     document.addEventListener("keydown", (event) => {
@@ -105,6 +155,31 @@ document.addEventListener("DOMContentLoaded", () => {
         if (window.innerWidth > 1180) {
             closeSidebar();
         }
+    });
+
+    document.querySelectorAll("[data-smart-back]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const fallback = button.dataset.backFallback || "/";
+            const next = new URLSearchParams(window.location.search).get("next");
+            if (next && next.startsWith("/") && !next.startsWith("//")) {
+                window.location.assign(next);
+                return;
+            }
+
+            if (document.referrer) {
+                try {
+                    const referrer = new URL(document.referrer);
+                    if (referrer.origin === window.location.origin && referrer.href !== window.location.href && window.history.length > 1) {
+                        window.history.back();
+                        return;
+                    }
+                } catch (error) {
+                    // Invalid referrers fall through to the safe fallback.
+                }
+            }
+
+            window.location.assign(fallback);
+        });
     });
 
     const portalUpdatesUrl = document.body.dataset.portalUpdatesUrl;

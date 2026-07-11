@@ -1,7 +1,10 @@
 <header class="app-topbar">
     <div class="topbar-title-group">
-        <button class="shell-icon-button shell-toggle" type="button" data-sidebar-toggle aria-label="Open navigation">
-            <i class="bi bi-list"></i>
+        <button class="shell-icon-button shell-toggle" type="button" data-sidebar-toggle aria-label="Show navigation" title="Show navigation">
+            <i class="bi bi-layout-sidebar"></i>
+        </button>
+        <button class="shell-icon-button shell-back-button" type="button" data-smart-back data-back-fallback="{% if request.user.is_authenticated %}{% url 'accounts:dashboard' %}{% else %}{% url 'portal_dashboard' %}{% endif %}" aria-label="Go back" title="Back">
+            <i class="bi bi-arrow-left"></i>
         </button>
         <div>
             <nav class="breadcrumb-line" aria-label="Breadcrumb">
