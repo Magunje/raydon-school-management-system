@@ -236,6 +236,7 @@ def settings(request):
 
 @permission_required("audit.view")
 def audit(request):
+    href_pattern = "/django/settings/audit/{audit_id}/" if request.path.startswith("/django/") else "/audit-trail/{audit_id}"
     return render_table_page(
         request,
         "Audit Trail",
@@ -245,8 +246,16 @@ def audit(request):
         order_by="audit_id DESC",
         search_columns=["username", "action", "details"],
         pk_column="audit_id",
-        row_actions=[],
+        row_actions=[
+            {"label": "View", "href": href_pattern, "icon": "bi-eye", "class": "btn-outline-primary"},
+        ],
     )
+
+
+@permission_required("audit.view")
+def audit_detail(request, audit_id):
+    from school_system_django.native import render_detail_page
+    return render_detail_page(request, "Audit Log Detail", "audit_log", "audit_id", audit_id)
 
 
 @permission_required("backups.manage")

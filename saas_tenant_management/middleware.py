@@ -28,7 +28,7 @@ def ensure_runtime_schema(db_path):
 
 
 def ensure_tenant_db(tenant, db_path):
-    if os.path.exists(db_path):
+    if os.path.exists(db_path) and os.path.getsize(db_path) > 0:
         ensure_runtime_schema(db_path)
         return
 

@@ -24,3 +24,26 @@ def security_list(request):
         "locked_accounts": locked_accounts,
     }
     return render(request, "system_administration/profile_list.html", context)
+
+
+def health_check(request):
+    from django.http import JsonResponse
+    from django.db import connection
+    from django.conf import settings
+
+    health = {
+        "status": "healthy",
+        "database": "unknown",
+        "environment": "production" if not settings.DEBUG else "development",
+    }
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        health["database"] = "connected"
+    except Exception as e:
+        health["status"] = "unhealthy"
+        health["database"] = f"error: {str(e)}"
+
+    status_code = 200 if health["status"] == "healthy" else 500
+    return JsonResponse(health, status=status_code)

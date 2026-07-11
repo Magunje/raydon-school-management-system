@@ -1,73 +1,89 @@
-# Production Deployment Guide
+# Production Deployment & Infrastructure Guide
 
-This document describes how to deploy the Raydon School Management System to production environments.
-
----
-
-## 🔒 Production Security Checklist
-
-Prior to moving to a live production environment, make sure to audit the following configurations:
-
-1. **Secret Key**: Never expose the default `SECRET_KEY` in git. Generate a strong unique key in `.env`.
-2. **Debug Mode**: Always set `DEBUG=False` in production to prevent stack traces from leaking data structure internals to end users.
-3. **Allowed Hosts**: Define domain boundaries clearly in `ALLOWED_HOSTS`. Do not use wildcards (`*`).
-4. **Database Credentials**: Set a secure PostgreSQL database server. Never use dev SQLite backend for persistent production multi-tenant setups.
-5. **HTTPS (SSL)**: Secure connections using HTTPS by routing traffic through Nginx, Cloudflare, or setting up SSL let's encrypt certificates. Set `SECURE_SSL_REDIRECT=True` in settings.
+This guide details how to configure, deploy, and maintain the **Raydon School Management System Enterprise Edition** on a live Virtual Private Server (VPS) such as Contabo, DigitalOcean, AWS, or Azure.
 
 ---
 
-## 📦 Deployment Environments
-
-### 1. Fly.io Deployment
-The application is pre-configured to build via Docker and deploy on Fly.io using `fly.toml`:
-
-```bash
-# Log in to Fly CLI
-fly auth login
-
-# Set production environment secrets
-fly secrets set SECRET_KEY="your-random-production-key"
-fly secrets set DEBUG="False"
-fly secrets set DATABASE_URL="postgresql://user:pass@host:port/dbname"
-
-# Deploy
-fly deploy
-```
-
-### 2. Docker / Container Deployment
-To build and test the production Docker container locally:
-
-```bash
-# Build the Docker image
-docker build -t raydon-school-system:latest .
-
-# Run container with environment configuration
-docker run -d -p 8000:8000 --env-file .env raydon-school-system:latest
-```
+## 🏗️ Technical Architecture
+The system is built on a containerized Three-Tier Architecture:
+1. **Presentation Layer**: Client web browser proxying through Nginx (port `80`/`443`).
+2. **Application Layer**: Gunicorn WSGI workers driving the Django 5+ application (port `8000`).
+3. **Data Layer**: Isolated multi-tenant PostgreSQL 16 database (port `5432`) and shared volumes.
 
 ---
 
-## 🗄️ Database Migrations in Production
+## 📦 Container Services & Configuration
+The orchestration relies on **Docker Compose**. The service layout consists of:
+- **`db` (PostgreSQL 16)**: Houses school schemas and active tenant tables.
+- **`web` (Gunicorn/Django)**: Runs business logic, schedules, and calculations.
+- **`nginx` (Reverse Proxy)**: Compiles static files, routes endpoints, and forces host/SSL headers.
 
-Always run migrations on the live production database before starting the WSGI workers to ensure schema changes are safely updated:
+### 1. Nginx Routing
+Nginx is configured to serve static assets and proxy all requests to Gunicorn. It dynamically forwards subdomain hosts (`raydonhigh.localhost`, `schoolname.raydonsystem.com`) to allow multi-tenant schema isolation in the database middleware.
 
-```bash
-python manage.py migrate --noinput
-```
+### 2. PostgreSQL Connection Pooling
+To optimize queries and conserve memory on the server, `CONN_MAX_AGE` is set to `600` seconds inside Django's [settings.py](file:///c:/Users/RAYDON/OneDrive/Imágenes/Desktop/SCHOOL%20SYSTEM/school_system_django/settings.py).
 
-If static assets are modified, compile them:
-```bash
-python manage.py collectstatic --noinput
+### 3. Production SQLite Ban
+To preserve data integrity, the system strictly forbids SQLite in production. If `DEBUG=False` or `ENV=production`, the application checks for a `DATABASE_URL` and will raise an `ImproperlyConfigured` exception if it is missing, preventing accidental local database usage.
+
+---
+
+## ⚙️ Environment Configuration (`.env`)
+Create a `.env` file in the project root directory. Here is a production configuration example:
+
+```env
+# Application Settings
+SECRET_KEY="your-strong-production-random-key"
+DEBUG=False
+ENV=production
+ALLOWED_HOSTS="localhost,127.0.0.1,.raydonsystem.com"
+
+# PostgreSQL Configuration
+DB_NAME=raydon_school
+DB_USER=raydon_admin
+DB_PASSWORD=SecurePasswordHere123
+
+# Network Port
+PORT=8000
 ```
 
 ---
 
-## ⚙️ WSGI Server Execution
+## 🚀 Live VPS Setup & Deployment
 
-In production, avoid running on Django's `runserver` development command. Instead, use a high-performance WSGI server such as **Gunicorn**:
-
+### Step 1: Clone the Codebase
+SSH into your VPS server and clone the updated repository:
 ```bash
-gunicorn school_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+git clone https://github.com/your-username/raydon-school-system.git /var/www/raydon-school-system
+cd /var/www/raydon-school-system
 ```
 
-Recommended workers formula: `(2 * CPU cores) + 1`.
+### Step 2: Configure Permissions
+Grant execution permissions to the automated deployment script:
+```bash
+chmod +x deploy.sh
+```
+
+### Step 3: Run the Automated Deploy Script
+Execute the deployment workflow:
+```bash
+./deploy.sh
+```
+This script will automatically:
+1. Pull standard Docker base images and compile container files.
+2. Spin up containers in the background (`detached` mode).
+3. Wait until the PostgreSQL database container health check reports `healthy`.
+4. Execute Django database schema migrations.
+5. Collect static assets for Nginx into a shared folder.
+6. Verify and output internal application health statuses.
+
+---
+
+## 📈 Monitoring & Health Checks
+- **Health Endpoint**: The application exposes a public, database-aware endpoint at `/health/` and `/django/health/`.
+- **Verify status manually**:
+  ```bash
+  curl -i http://localhost/health/
+  ```
+  Returns `200 OK` and `{"status": "healthy", "database": "connected"}` if the system is fully operational.

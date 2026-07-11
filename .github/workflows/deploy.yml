@@ -1,0 +1,79 @@
+name: CI/CD Production Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    name: Run Checks & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django System Checks
+        run: |
+          python manage.py check
+
+      - name: Run Unit Tests
+        run: |
+          python manage.py test
+
+  build:
+    name: Build Docker Container
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: raydon-school-system:latest
+
+  deploy:
+    name: Deploy to Live VPS Server
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Simulates automatic SSH execution on Contabo/DigitalOcean/AWS VPS
+      # Requires repository secrets SSH_HOST, SSH_USER, SSH_KEY configured.
+      - name: Execute Remote SSH Deploy Script
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        if: env.SSH_HOST != ''
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /var/www/raydon-school-system
+            git pull origin master
+            chmod +x deploy.sh
+            ./deploy.sh

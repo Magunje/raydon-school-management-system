@@ -59,6 +59,8 @@ from saas_tenant_management import views as saas_tenant_management_views
 
 
 urlpatterns = [
+    path('health/', system_administration_views.health_check, name='health_check'),
+    path('django/health/', system_administration_views.health_check, name='health_check_prefixed'),
     path('', website_views.home, name='website'),
     path('about-us', website_views.page, {"slug": "about-us"}, name='website_about'),
     path('admissions', website_views.page, {"slug": "admissions"}, name='website_admissions'),
@@ -82,6 +84,7 @@ urlpatterns = [
     path('users/<int:user_id>/edit', account_views.edit_user, name='edit_user'),
     path('users/<int:user_id>/delete', account_views.delete_user, name='delete_user'),
     path('audit-trail', settings_views.audit, name='audit_trail'),
+    path('audit-trail/<int:audit_id>', settings_views.audit_detail, name='audit_detail'),
     path('settings', settings_views.settings, name='settings'),
     path('settings/whatsapp/test', settings_views.settings, name='whatsapp_test_send'),
     path('guardians', parent_views.parents, name='guardians'),

@@ -843,7 +843,10 @@ def student_subjects_edit(request, admission_no=None, pupil_id=None):
     pupil = student_from_ref(admission_no or pupil_id)
     if not pupil:
         messages.error(request, "Student was not found.")
-        return redirect("/pupils")
+        if request.path.startswith("/django/"):
+            return redirect("/django/students/")
+        else:
+            return redirect("/pupils")
         
     settings = school_settings()
     current_year = settings.get("current_year") or 2026
@@ -916,7 +919,10 @@ def student_subjects_edit(request, admission_no=None, pupil_id=None):
             audit_action(request, "Subject Registration Update", log_details)
             
             messages.success(request, "Registered subjects updated successfully.")
-            return redirect(f"/pupils/{pupil['admission_no']}")
+            if request.path.startswith("/django/"):
+                return redirect(f"/django/students/{pupil['admission_no']}/")
+            else:
+                return redirect(f"/pupils/{pupil['admission_no']}")
         except Exception as exc:
             messages.error(request, f"Could not update subject registration: {exc}")
             return redirect(request.path)
@@ -925,9 +931,10 @@ def student_subjects_edit(request, admission_no=None, pupil_id=None):
     master_subjects = dict_rows("SELECT * FROM subjects WHERE status = 'Active' ORDER BY display_order, subject_name")
     
     # Query registration history
+    group_concat_fn = "string_agg" if connection.vendor == "postgresql" else "GROUP_CONCAT"
     history = dict_rows(
-        """
-        SELECT ss.form, ss.stream, ss.academic_year, GROUP_CONCAT(s.subject_name, ', ') as subjects_list
+        f"""
+        SELECT ss.form, ss.stream, ss.academic_year, {group_concat_fn}(s.subject_name, ', ') as subjects_list
         FROM student_subjects ss
         JOIN subjects s ON s.subject_id = ss.subject_id
         WHERE ss.pupil_id = %s

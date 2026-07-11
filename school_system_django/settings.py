@@ -31,7 +31,14 @@ def env_list(name, default=""):
 
 
 def database_config():
+    debug_mode = os.environ.get("DEBUG", "True").strip().lower() in ("true", "1", "yes")
+    env_mode = os.environ.get("ENV", "").strip().lower()
+    is_production = not debug_mode or env_mode == "production"
+
     database_url = os.environ.get("DATABASE_URL", "").strip()
+    if is_production and not database_url:
+        raise ImproperlyConfigured("DATABASE_URL environment variable must be set in production. SQLite is not allowed in production.")
+
     if not database_url:
         sqlite_name = os.environ.get("SQLITE_NAME", "").strip()
         if sqlite_name:
@@ -49,6 +56,7 @@ def database_config():
             "PASSWORD": parsed.password or "",
             "HOST": parsed.hostname or "",
             "PORT": str(parsed.port or ""),
+            "CONN_MAX_AGE": 600,
         }
     raise ImproperlyConfigured("Unsupported DATABASE_URL scheme. The system must run on PostgreSQL.")
 
