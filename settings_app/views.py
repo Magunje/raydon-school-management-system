@@ -245,6 +245,7 @@ def audit(request):
         order_by="audit_id DESC",
         search_columns=["username", "action", "details"],
         pk_column="audit_id",
+        row_actions=[],
     )
 
 

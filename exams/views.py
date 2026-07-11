@@ -1095,6 +1095,7 @@ def predictions(request, tabbed=False):
         order_by="created_at DESC",
         search_columns=["risk_level", "trend_label"],
         pk_column="prediction_id",
+        row_actions=[],
         extra_context={"tabs": tabs, "active_tab": "predictions"}
     )
 

@@ -23,7 +23,7 @@ STAFF_MODULES = [
     {"key": "timetable", "label": "Timetable", "href": "/timetables/grid", "icon": "bi-calendar3", "permission": "timetable.view"},
     {"key": "finance", "label": "Finance", "href": "/payments", "icon": "bi-receipt", "permission": "fees.view"},
     {"key": "portal_payments", "label": "Portal Payments", "href": "/portal-payment-requests", "icon": "bi-bank", "permission": "fees.manage"},
-    {"key": "library", "label": "Library", "href": "/library", "icon": "bi-bookshelf", "permission": "library.manage"},
+    {"key": "library", "label": "Library", "href": "/library/", "icon": "bi-bookshelf", "permission": "library.manage"},
     {"key": "communications", "label": "Announcements", "href": "/notifications/announcements/", "icon": "bi-megaphone", "permission": "notifications.manage"},
     {"key": "staff", "label": "Staff", "href": "/teachers", "icon": "bi-person-badge", "permission": "staff.view"},
     {"key": "reports", "label": "Reports", "href": "/reports", "icon": "bi-file-earmark-text", "permission": "reports.view"},

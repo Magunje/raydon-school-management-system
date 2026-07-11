@@ -922,7 +922,10 @@ def prepare_row_actions(rows, row_actions):
         actions = []
         for action in row_actions:
             action_copy = dict(action)
-            action_copy["href"] = format_action_href(action.get("href"), item)
+            href = format_action_href(action.get("href"), item)
+            if href == "#":
+                continue
+            action_copy["href"] = href
             actions.append(action_copy)
         item["row_actions"] = actions
         prepared.append(item)
@@ -1065,7 +1068,7 @@ def render_table_page(
                 "icon": icon,
             }
         )
-    if pk_column and not row_actions:
+    if pk_column and row_actions is None:
         row_actions = [
             {"label": "View", "href": f"{request.path.rstrip('/')}/{{{pk_column}}}", "icon": "bi-eye", "class": "btn-outline-primary"},
             {"label": "Edit", "href": f"{request.path.rstrip('/')}/{{{pk_column}}}/edit", "icon": "bi-pencil", "class": "btn-outline-secondary"},

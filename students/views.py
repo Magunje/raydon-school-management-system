@@ -836,11 +836,11 @@ def edit(request, pupil_id=None, admission_no=None):
 
 
 @permission_required("students.manage")
-def student_subjects_edit(request, admission_no):
+def student_subjects_edit(request, admission_no=None, pupil_id=None):
     from school_system_django.native import school_settings, dict_rows, one_row, audit_action
     from django.db import transaction, connection
     
-    pupil = student_from_ref(admission_no)
+    pupil = student_from_ref(admission_no or pupil_id)
     if not pupil:
         messages.error(request, "Student was not found.")
         return redirect("/pupils")
@@ -1402,6 +1402,7 @@ def fee_override(request, pupil_id):
         params=[pupil_id],
         pk_column="override_id",
         create_href=f"/pupils/{pupil_id}/fee-override/new",
+        row_actions=[],
     )
 
 
@@ -1423,6 +1424,7 @@ def balance_adjustments(request, pupil_id):
         params=[pupil_id],
         pk_column="adjustment_id",
         create_href=f"/pupils/{pupil_id}/balance-adjustments/new",
+        row_actions=[],
     )
 
 
