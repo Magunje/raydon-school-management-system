@@ -47,7 +47,7 @@ def main():
         ("/exams", "exams"),
         ("/notifications", "notifications"),
         ("/e-learning", "e-learning"),
-        ("/library", "library"),
+        ("/library/", "library"),
         ("/inventory", "inventory"),
         ("/uniform-pos", "uniform POS"),
         ("/payroll/", "payroll"),

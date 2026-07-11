@@ -19,7 +19,7 @@ services:
     build: .
     container_name: raydon_web
     restart: always
-    command: sh -c "python manage.py migrate --fake-initial --noinput && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 school_project.wsgi:application"
+    command: gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 school_project.wsgi:application
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/uploads
