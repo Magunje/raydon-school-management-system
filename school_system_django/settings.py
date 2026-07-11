@@ -246,6 +246,26 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://raydonsystems.co.zw",
+    "https://*.raydonsystems.co.zw",
+    "https://raydonsystem.com",
+    "https://*.raydonsystem.com",
+    "http://localhost:8000",
+    "http://localhost:8085",
+    "http://127.0.0.1:8085",
+]
+
+extra_origins = env_list("CSRF_TRUSTED_ORIGINS", "")
+for origin in extra_origins:
+    if origin.strip():
+        if not origin.startswith(("http://", "https://")):
+            origin = f"https://{origin}"
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
