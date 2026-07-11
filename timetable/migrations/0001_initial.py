@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
                 ('preferred_sessions', models.CharField(choices=[('Morning', 'Morning Session'), ('Afternoon', 'Afternoon Session'), ('Any', 'Any Session')], default='Any', max_length=50)),
                 ('is_practical', models.BooleanField(default=False, help_text='Practical subjects allow consecutive double periods')),
                 ('required_room_type', models.CharField(choices=[('Classroom', 'Normal Classroom'), ('Science Lab', 'Science Lab'), ('Computer Lab', 'Computer Lab'), ('Library', 'Library'), ('Special Room', 'Special Room')], default='Classroom', max_length=50)),
-                ('school_class', models.ForeignKey(db_column='class_id', on_delete=django.db.models.deletion.CASCADE, related_name='subject_allocations', to='students.schoolclass')),
+                ('school_class', models.ForeignKey(db_column='class_id', db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='subject_allocations', to='students.schoolclass')),
                 ('subject', models.ForeignKey(db_column='subject_id', on_delete=django.db.models.deletion.CASCADE, related_name='allocations', to='academics.subject')),
                 ('teacher', models.ForeignKey(db_column='teacher_id', limit_choices_to={'role': 'Teacher'}, on_delete=django.db.models.deletion.CASCADE, related_name='subject_allocations', to='accounts.userprofile')),
             ],

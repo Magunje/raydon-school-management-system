@@ -30,7 +30,13 @@ class SubjectAllocation(models.Model):
     ]
 
     allocation_id = models.AutoField(primary_key=True)
-    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, db_column='class_id', related_name='subject_allocations')
+    school_class = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.CASCADE,
+        db_column='class_id',
+        related_name='subject_allocations',
+        db_constraint=False,
+    )
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, db_column='subject_id', related_name='allocations')
     teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE, db_column='teacher_id', related_name='subject_allocations', limit_choices_to={'role': 'Teacher'})
     periods_per_week = models.IntegerField(default=4)
