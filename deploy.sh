@@ -22,7 +22,7 @@ done
 
 # 4. Run database migrations inside the web container
 echo "Running database migrations..."
-docker compose exec -T web python manage.py migrate --noinput
+docker compose exec -T web python manage.py migrate --fake-initial --noinput
 
 # 5. Collect static assets
 echo "Collecting static assets..."
