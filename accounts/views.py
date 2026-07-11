@@ -123,12 +123,9 @@ def logout_view(request):
 def dashboard(request):
     role = normalized_role(request.user)
     
-    # Check if this is the master SaaS administration portal
     is_saas_portal = False
     if hasattr(request, "tenant") and request.tenant is None:
-        host_header = request.get_host().split(":")[0].lower()
-        if host_header in ["saas.localhost", "saas.raydonsystem.com", "admin.localhost"]:
-            is_saas_portal = True
+        is_saas_portal = True
 
     if is_saas_portal:
         from saas_tenant_management.models import SchoolTenant
