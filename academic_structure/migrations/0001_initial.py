@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('allocated_at', models.DateTimeField(auto_now_add=True)),
                 ('academic_class', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='allocations', to='academic_structure.academicclass')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='allocations', to='students.pupil')),
+                ('student', models.ForeignKey(db_constraint=False, on_delete=django.db.models.deletion.CASCADE, related_name='allocations', to='students.pupil')),
             ],
             options={
                 'db_table': 'student_class_allocations',

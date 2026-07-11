@@ -167,7 +167,7 @@ class AcademicClass(models.Model):
 
 class StudentClassAllocation(models.Model):
     student = models.ForeignKey(
-        "students.Pupil", on_delete=models.CASCADE, related_name="allocations"
+        "students.Pupil", on_delete=models.CASCADE, related_name="allocations", db_constraint=False
     )
     academic_class = models.ForeignKey(
         AcademicClass, on_delete=models.CASCADE, related_name="allocations"
