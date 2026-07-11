@@ -6,12 +6,9 @@ from .permissions import STUDENT_MENU_ITEMS, user_has_permission, visible_menu
 def school_context(request):
     role = user_role(request.user) if hasattr(request, "user") else ""
     
-    # Check if this is the master SaaS administration portal
     is_saas_portal = False
     if hasattr(request, "tenant") and request.tenant is None:
-        host_header = request.get_host().split(":")[0].lower()
-        if host_header in ["saas.localhost", "saas.raydonsystem.com", "admin.localhost"]:
-            is_saas_portal = True
+        is_saas_portal = True
 
     if is_saas_portal:
         platform_settings = {}

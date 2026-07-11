@@ -15,10 +15,7 @@ SAAS_PORTAL_HOSTS = {"saas.localhost", "saas.raydonsystem.com", "admin.localhost
 
 
 def is_saas_portal_request(request):
-    if not hasattr(request, "tenant") or request.tenant is not None:
-        return False
-    host_header = request.get_host().split(":")[0].lower()
-    return host_header in SAAS_PORTAL_HOSTS
+    return hasattr(request, "tenant") and request.tenant is None
 
 
 def ensure_saas_platform_settings_table():
