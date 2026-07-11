@@ -89,6 +89,12 @@ class TenantMiddleware:
             MASTER_DB_PATH = settings.DATABASES['default']['NAME']
 
     def __call__(self, request):
+        # Clean up duplicated headers from proxy layers (e.g. Origin)
+        if 'HTTP_ORIGIN' in request.META:
+            origin = request.META['HTTP_ORIGIN']
+            if ',' in origin:
+                request.META['HTTP_ORIGIN'] = origin.split(',')[0].strip()
+
         reset_master_connection()
         if request.path_info in TENANT_BYPASS_PATHS:
             set_current_tenant(None)
