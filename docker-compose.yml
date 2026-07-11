@@ -40,8 +40,7 @@ services:
     container_name: raydon_nginx
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8085:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - static_volume:/app/staticfiles:ro
