@@ -1,7 +1,17 @@
-from django.contrib.auth.decorators import login_required
+from django.db import connection, transaction
 
 from accounts.permissions import permission_required
-from school_system_django.native import delete_record, render_detail_page, render_record_form_page, render_table_page
+from school_system_django.native import (
+    dict_rows,
+    delete_record,
+    now_text,
+    qn,
+    render_detail_page,
+    render_record_form_page,
+    render_table_page,
+    table_columns,
+    table_exists,
+)
 
 
 GUARDIAN_FIELDS = [
@@ -17,8 +27,95 @@ GUARDIAN_FIELDS = [
 ]
 
 
+def _guardian_key(name, phone):
+    return ((name or "").strip().lower(), (phone or "").strip())
+
+
+def sync_guardians_from_pupils():
+    if not table_exists("guardians") or not table_exists("pupils"):
+        return 0
+
+    guardian_columns = set(table_columns("guardians"))
+    pupil_columns = set(table_columns("pupils"))
+    if not {"full_name", "phone_number"}.issubset(guardian_columns):
+        return 0
+    if not {"pupil_id", "guardian_name", "guardian_phone"}.issubset(pupil_columns):
+        return 0
+
+    existing = {}
+    for guardian in dict_rows("SELECT guardian_id, full_name, phone_number FROM guardians"):
+        key = _guardian_key(guardian.get("full_name"), guardian.get("phone_number"))
+        if key[0] and key[1] and key not in existing:
+            existing[key] = guardian["guardian_id"]
+
+    pupils = dict_rows(
+        """
+        SELECT pupil_id, guardian_id, guardian_name, guardian_phone, address
+        FROM pupils
+        WHERE TRIM(COALESCE(guardian_name, '')) != ''
+          AND TRIM(COALESCE(guardian_phone, '')) != ''
+        """
+    )
+    if not pupils:
+        return 0
+
+    insert_columns = ["full_name", "relationship", "phone_number"]
+    optional_values = {
+        "address": lambda pupil: pupil.get("address") or "",
+        "created_at": lambda pupil: now_text(),
+    }
+    for column in optional_values:
+        if column in guardian_columns:
+            insert_columns.append(column)
+
+    created = 0
+    with transaction.atomic():
+        for pupil in pupils:
+            key = _guardian_key(pupil.get("guardian_name"), pupil.get("guardian_phone"))
+            if not key[0] or not key[1]:
+                continue
+
+            guardian_id = existing.get(key)
+            if not guardian_id:
+                values = {
+                    "full_name": pupil.get("guardian_name").strip(),
+                    "relationship": "Guardian",
+                    "phone_number": pupil.get("guardian_phone").strip(),
+                }
+                for column, value_func in optional_values.items():
+                    if column in guardian_columns:
+                        values[column] = value_func(pupil)
+
+                placeholders = ", ".join(["%s"] * len(insert_columns))
+                quoted_columns = ", ".join(qn(column) for column in insert_columns)
+                if connection.vendor == "postgresql":
+                    sql = f"INSERT INTO {qn('guardians')} ({quoted_columns}) VALUES ({placeholders}) RETURNING guardian_id"
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, [values[column] for column in insert_columns])
+                        result = cursor.fetchone()
+                        guardian_id = result[0] if result else None
+                else:
+                    sql = f"INSERT INTO {qn('guardians')} ({quoted_columns}) VALUES ({placeholders})"
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql, [values[column] for column in insert_columns])
+                        guardian_id = getattr(cursor, "lastrowid", None)
+                if guardian_id:
+                    existing[key] = guardian_id
+                    created += 1
+
+            if guardian_id and "guardian_id" in pupil_columns and pupil.get("guardian_id") != guardian_id:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        f"UPDATE {qn('pupils')} SET {qn('guardian_id')} = %s WHERE {qn('pupil_id')} = %s",
+                        [guardian_id, pupil["pupil_id"]],
+                    )
+
+    return created
+
+
 @permission_required("guardians.manage")
 def parents(request):
+    sync_guardians_from_pupils()
     return render_table_page(
         request,
         "Parent and Guardian Contacts",

@@ -515,6 +515,9 @@ def register(request):
                     current_year,
                     settings.get("current_term"),
                 )
+                from parents.views import sync_guardians_from_pupils
+
+                sync_guardians_from_pupils()
                 
             # Log creations
             subject_names = []
@@ -821,6 +824,9 @@ def edit(request, pupil_id=None, admission_no=None):
                 settings.get("current_year") or 2026,
                 settings.get("current_term"),
             )
+            from parents.views import sync_guardians_from_pupils
+
+            sync_guardians_from_pupils()
             return response
         except Exception as exc:
             messages.error(request, f"Could not update student: {exc}")
