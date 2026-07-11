@@ -27,6 +27,18 @@ To optimize queries and conserve memory on the server, `CONN_MAX_AGE` is set to 
 ### 3. Production SQLite Ban
 To preserve data integrity, the system strictly forbids SQLite in production. If `DEBUG=False` or `ENV=production`, the application checks for a `DATABASE_URL` and will raise an `ImproperlyConfigured` exception if it is missing, preventing accidental local database usage.
 
+### 4. Legacy SQLite Data Import
+Older Raydon SMS installations used unmanaged legacy tables in `school_system.db`.
+Production now runs on PostgreSQL, so copy that SQLite file to the VPS and run:
+
+```bash
+SQLITE_IMPORT_PATH=/var/www/raydon-school-management-system/school_system.db ./deploy.sh
+```
+
+When `SQLITE_IMPORT_PATH` is set, `deploy.sh` imports only unmanaged legacy tables
+from SQLite into PostgreSQL using `import_sqlite_legacy --replace`. Normal Django
+migrations still own the managed PostgreSQL tables.
+
 ---
 
 ## ⚙️ Environment Configuration (`.env`)

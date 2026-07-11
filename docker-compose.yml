@@ -29,6 +29,9 @@ services:
       - ENV=production
       - SECRET_KEY=${SECRET_KEY:-local-development-only-change-this-key-before-production-2026}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,.localhost,saas.localhost}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-False}
+      - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-False}
     depends_on:
       db:
         condition: service_healthy

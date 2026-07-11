@@ -28,24 +28,47 @@ done
 echo "Running database migrations..."
 docker compose run --rm --no-deps web python manage.py migrate --fake-initial --noinput
 
-# 6. Collect static assets in the shared static volume
+# 6. Optionally import legacy SQLite tables into PostgreSQL
+if [ -n "${SQLITE_IMPORT_PATH:-}" ]; then
+    if [ ! -f "$SQLITE_IMPORT_PATH" ]; then
+        echo "SQLITE_IMPORT_PATH is set but file does not exist: $SQLITE_IMPORT_PATH"
+        exit 1
+    fi
+    echo "Importing legacy SQLite tables from $SQLITE_IMPORT_PATH..."
+    docker compose run --rm --no-deps \
+        -v "$SQLITE_IMPORT_PATH:/tmp/legacy.sqlite:ro" \
+        web python manage.py import_sqlite_legacy /tmp/legacy.sqlite --replace
+fi
+
+# 7. Collect static assets in the shared static volume
 echo "Collecting static assets..."
 docker compose run --rm --no-deps web python manage.py collectstatic --noinput
 
-# 7. Re-create and run application containers in background
+# 8. Re-create and run application containers in background
 echo "Starting application containers..."
 docker compose up -d --force-recreate web nginx
 
-# 8. Check container health status
+# 9. Check container health status
 echo "Checking web application containers status..."
 docker compose ps
 
-# 9. Check endpoints using Python stdlib
+# 10. Check endpoints using Python stdlib
 echo "Querying internal application health check..."
-docker compose exec -T web python - <<'PY'
+for attempt in $(seq 1 30); do
+    if docker compose exec -T web python - <<'PY'
 from urllib.request import urlopen
 
 print(urlopen("http://localhost:8000/health/", timeout=10).read().decode())
 PY
+    then
+        break
+    fi
+    echo "Health check attempt ${attempt}/30 failed. Retrying in 2 seconds..."
+    sleep 2
+    if [ "$attempt" = "30" ]; then
+        echo "Health check failed after 30 attempts."
+        exit 1
+    fi
+done
 
 echo "=== Deployment Completed Successfully ==="
