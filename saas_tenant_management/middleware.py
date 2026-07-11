@@ -11,6 +11,7 @@ from saas_tenant_management.schema import ensure_sqlite_tenant_schema
 MASTER_DB_PATH = None
 IS_TESTING = 'test' in sys.argv or 'test_coverage' in sys.argv
 _SCHEMA_CHECKED_PATHS = set()
+TENANT_BYPASS_PATHS = ("/health/", "/django/health/")
 
 
 def reset_master_connection():
@@ -25,6 +26,10 @@ def ensure_runtime_schema(db_path):
         return
     ensure_sqlite_tenant_schema(db_path)
     _SCHEMA_CHECKED_PATHS.add(db_path)
+
+
+def using_sqlite_database():
+    return connections["default"].settings_dict.get("ENGINE", "").endswith("sqlite3")
 
 
 def ensure_tenant_db(tenant, db_path):
@@ -85,6 +90,11 @@ class TenantMiddleware:
 
     def __call__(self, request):
         reset_master_connection()
+        if request.path_info in TENANT_BYPASS_PATHS:
+            set_current_tenant(None)
+            request.tenant = None
+            return self.get_response(request)
+
         # Extract host header and split into domain and port
         host_header = request.get_host()
         parts = host_header.split(":")
@@ -142,8 +152,8 @@ class TenantMiddleware:
             request.tenant = matched_tenant
             set_current_tenant(matched_tenant)
 
-            # Switch connection to tenant-specific database file if we are not running unit tests in memory
-            if not IS_TESTING:
+            # Switch to tenant-specific SQLite files only in local SQLite mode.
+            if not IS_TESTING and using_sqlite_database():
                 # Clean name for safe filename
                 safe_name = "".join(c for c in matched_tenant.name if c.isalnum() or c in ("_", "-")).strip().replace(" ", "_").lower()
                 db_filename = f"tenant_{safe_name}_{matched_tenant.tenant_id.hex[:8]}.db"
