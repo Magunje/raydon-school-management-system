@@ -102,7 +102,7 @@ class TenantMiddleware:
         host_port = int(parts[1]) if len(parts) > 1 else None
 
         # Check if this is the master SaaS administration portal domain
-        if host_domain in ["saas.localhost", "saas.raydonsystem.com", "admin.localhost"]:
+        if host_domain in ["saas.localhost", "saas.raydonsystem.com", "admin.localhost", "raydonsystems.co.zw", "www.raydonsystems.co.zw"]:
             set_current_tenant(None)
             request.tenant = None
             # Switch back to Master database if we are running in file mode
