@@ -198,7 +198,19 @@ def current_user_role(user):
 def school_settings():
     if not table_exists("school_settings"):
         return {}
-    return one_row("SELECT * FROM school_settings WHERE setting_id = 1") or {}
+    settings = one_row("SELECT * FROM school_settings WHERE setting_id = 1") or {}
+    try:
+        from academic_structure.services import current_calendar
+
+        snapshot = current_calendar()
+        settings["current_term"] = snapshot.display_term
+        settings["current_year"] = int(snapshot.display_year)
+        settings["calendar_status"] = snapshot.status
+        settings["next_term"] = snapshot.next_term.name if snapshot.next_term else ""
+        settings["next_term_start_date"] = snapshot.next_term.start_date if snapshot.next_term else None
+    except Exception:
+        pass
+    return settings
 
 
 def audit_action(request, action, details=""):

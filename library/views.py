@@ -879,7 +879,7 @@ def download_digital_resource(request, resource_id):
     allowed = [r.strip() for r in (res["allowed_roles"] or "Teacher,Student").split(",")]
     if role != "Super Admin" and role not in allowed:
         messages.error(request, "You do not have download permissions for this resource.")
-        return redirect("portal_dashboard" if role == "Student" else "library_dashboard")
+        return redirect("student_portal:dashboard" if role == "Student" else "library_dashboard")
         
     abs_path = os.path.join(settings.MEDIA_ROOT, res["file_path"].replace("/", os.sep))
     if not os.path.exists(abs_path):

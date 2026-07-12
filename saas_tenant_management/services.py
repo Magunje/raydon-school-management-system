@@ -14,6 +14,7 @@ from django.db import connection, connections, transaction
 from django.utils import timezone
 import psycopg
 
+from academic_structure.models import AcademicTerm, AcademicYear
 from saas_tenant_management.models import (
     COMPULSORY_MODULES,
     MODULE_DEPENDENCIES,
@@ -30,6 +31,7 @@ from saas_tenant_management.models import (
     TenantUsageSnapshot,
     subscription_allows_module,
 )
+from saas_tenant_management.domains import build_full_hostname, normalize_custom_domain, normalize_subdomain_label
 
 
 DEFAULT_TENANT_MODULES = [
@@ -46,6 +48,16 @@ DEFAULT_TENANT_MODULES = [
     ("transport", "Transport"),
     ("reports", "Reports"),
 ]
+
+CORE_MODULE_CODES = {"student_registration", "fees_management", "reports"}
+
+
+def parse_bool(value, default=False):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def next_saas_number(prefix, model):
@@ -147,6 +159,83 @@ def tenant_database_settings(tenant):
     return config
 
 
+def normalize_school_code(value):
+    return str(value or "").strip().upper()
+
+
+def normalize_tenant_payload(data):
+    school_code = normalize_school_code(data.get("school_code"))
+    raw_subdomain = data.get("subdomain") or school_code.lower()
+    subdomain = normalize_subdomain_label(raw_subdomain) or school_code.lower()
+    custom_domain = normalize_custom_domain(data.get("custom_domain"))
+    production_domain = build_full_hostname(subdomain)
+    modules = data.get("modules") or []
+    if isinstance(modules, str):
+        modules = [modules]
+    modules = sorted({str(module).strip() for module in modules if str(module).strip()} | CORE_MODULE_CODES)
+    return {
+        "school_name": (data.get("school_name") or data.get("name") or "").strip(),
+        "school_code": school_code,
+        "school_email": (data.get("school_email") or data.get("email") or "").strip(),
+        "school_phone": (data.get("school_phone") or data.get("phone") or "").strip(),
+        "school_address": (data.get("school_address") or data.get("address") or "").strip(),
+        "subdomain": subdomain,
+        "custom_domain": custom_domain,
+        "production_domain": production_domain,
+        "testing_port": data.get("testing_port") or None,
+        "plan_type": (data.get("plan_type") or "STANDARD").strip().upper(),
+        "modules": modules,
+        "subscription_start": data.get("subscription_start") or timezone.localdate(),
+        "subscription_end": data.get("subscription_end"),
+        "trial_end": data.get("trial_end"),
+        "trial_period": int(data.get("trial_period") or 14),
+        "is_trial": parse_bool(data.get("is_trial"), True),
+        "max_students": int(data.get("max_students") or 500),
+        "max_users": int(data.get("max_users") or 25),
+        "amount": Decimal(str(data.get("amount") or "0")),
+        "currency": (data.get("currency") or "USD").strip().upper(),
+        "billing_cycle": (data.get("billing_cycle") or "MONTHLY").strip().upper(),
+        "database_name": data.get("database_name"),
+        "database_user": data.get("database_user"),
+        "database_password": data.get("database_password"),
+    }
+
+
+def tenant_conflicts(*, school_code, subdomain, custom_domain=None, exclude_tenant_id=None):
+    queryset = SchoolTenant.objects.all()
+    if exclude_tenant_id:
+        queryset = queryset.exclude(tenant_id=exclude_tenant_id)
+    conflicts = []
+    if school_code and queryset.filter(school_code__iexact=school_code).exists():
+        conflicts.append(f"School code {school_code} is already in use.")
+    if subdomain and queryset.filter(subdomain__iexact=subdomain).exists():
+        conflicts.append(f"Subdomain {subdomain} is already assigned.")
+    if custom_domain and queryset.filter(custom_domain__iexact=custom_domain).exists():
+        conflicts.append(f"Custom domain {custom_domain} is already assigned.")
+    return conflicts
+
+
+def check_tenant_availability(*, school_code, subdomain, custom_domain=None, exclude_tenant_id=None):
+    normalized_subdomain = normalize_subdomain_label(subdomain)
+    normalized_custom_domain = normalize_custom_domain(custom_domain)
+    conflicts = tenant_conflicts(
+        school_code=normalize_school_code(school_code),
+        subdomain=normalized_subdomain,
+        custom_domain=normalized_custom_domain,
+        exclude_tenant_id=exclude_tenant_id,
+    )
+    conflict_text = " ".join(conflicts)
+    return {
+        "school_code_available": f"School code {normalize_school_code(school_code)} is already in use." not in conflict_text,
+        "subdomain_available": f"Subdomain {normalized_subdomain} is already assigned." not in conflict_text,
+        "custom_domain_available": (not normalized_custom_domain) or (f"Custom domain {normalized_custom_domain} is already assigned." not in conflict_text),
+        "normalized_subdomain": normalized_subdomain,
+        "normalized_custom_domain": normalized_custom_domain,
+        "full_hostname": build_full_hostname(normalized_subdomain),
+        "conflicts": conflicts,
+    }
+
+
 def install_tenant_connection(tenant):
     alias = f"tenant_{tenant.tenant_id.hex}"
     connections.databases[alias] = tenant_database_settings(tenant)
@@ -242,24 +331,42 @@ def seed_tenant_school_settings(tenant, database_alias):
             ],
         )
 
-
-def create_tenant_super_admin(tenant, database_alias, temporary_password=None):
-    User = get_user_model()
-    temporary_password = temporary_password or generate_temporary_password()
-    domain = tenant.custom_domain or tenant.production_domain or tenant.subdomain_domain or "school.local"
-    domain = domain.replace("www.", "")
-    email = f"admin@{domain}"
-    username = email
-    user, created = User.objects.db_manager(database_alias).get_or_create(
-        username=username,
-        defaults={"email": email, "is_staff": True, "is_superuser": True},
+def seed_tenant_academic_calendar(database_alias, year=None):
+    year = int(year or timezone.localdate().year)
+    defaults = {
+        2026: [
+            (1, "Term 1", datetime.date(2026, 1, 13), datetime.date(2026, 4, 1)),
+            (2, "Term 2", datetime.date(2026, 5, 12), datetime.date(2026, 8, 6)),
+            (3, "Term 3", datetime.date(2026, 9, 8), datetime.date(2026, 12, 8)),
+        ]
+    }
+    terms = defaults.get(year)
+    if not terms:
+        return
+    academic_year, _ = AcademicYear.objects.using(database_alias).get_or_create(
+        year=year,
+        defaults={
+            "name": str(year),
+            "start_date": terms[0][2],
+            "end_date": terms[-1][3],
+            "is_active": False,
+            "is_current": False,
+            "status": "upcoming",
+        },
     )
-    user.email = email
-    user.is_staff = True
-    user.is_superuser = True
-    user.set_password(temporary_password)
-    user.save(using=database_alias)
-    return {"username": username, "email": email, "temporary_password": temporary_password, "created": created}
+    for number, name, start_date, end_date in terms:
+        AcademicTerm.objects.using(database_alias).get_or_create(
+            academic_year=academic_year,
+            term_number=number,
+            defaults={
+                "name": name,
+                "start_date": start_date,
+                "end_date": end_date,
+                "is_active": False,
+                "is_current": False,
+                "status": "upcoming",
+            },
+        )
 
 
 def run_tenant_migrations(tenant):
@@ -277,82 +384,171 @@ def ensure_subscription_plan(plan_code):
     return plan
 
 
-def create_tenant_record(data, logo=None, user=None, provision=True):
-    school_code = (data.get("school_code") or "").upper().strip()
-    subdomain = (data.get("subdomain") or school_code.lower()).strip().lower()
-    plan_type = data.get("plan_type") or "STANDARD"
-    subscription_start = data.get("subscription_start") or timezone.localdate()
-    subscription_end = data.get("subscription_end")
-    trial_end = data.get("trial_end")
-    trial_days = int(data.get("trial_period") or 14)
-    if not trial_end and trial_days:
-        trial_end = subscription_start + datetime.timedelta(days=trial_days)
-    if not subscription_end:
-        subscription_end = subscription_start + datetime.timedelta(days=365)
+def _validated_schedule(normalized):
+    subscription_start = normalized["subscription_start"]
+    subscription_end = normalized["subscription_end"] or (subscription_start + datetime.timedelta(days=365))
+    trial_end = normalized["trial_end"]
+    if not trial_end and normalized["trial_period"]:
+        trial_end = subscription_start + datetime.timedelta(days=normalized["trial_period"])
+    if subscription_end <= subscription_start:
+        raise ValidationError({"subscription_end": "Subscription end date must be after the start date."})
+    if trial_end and trial_end < subscription_start:
+        raise ValidationError({"trial_end": "Trial end date cannot be before the subscription start date."})
+    normalized["subscription_end"] = subscription_end
+    normalized["trial_end"] = trial_end
+    return normalized
 
-    database_name = data.get("database_name") or safe_identifier(school_code or subdomain, "school")
-    database_user = data.get("database_user") or safe_identifier(school_code or subdomain, "usr")
-    database_password = data.get("database_password") or generate_temporary_password(20)
+
+def _validate_tenant_creation_payload(normalized):
+    errors = {}
+    if not normalized["school_name"]:
+        errors["school_name"] = "School name is required."
+    if not normalized["school_code"]:
+        errors["school_code"] = "School code is required."
+    if not normalized["subdomain"]:
+        errors["subdomain"] = "Subdomain is required."
+    if errors:
+        raise ValidationError(errors)
+    conflicts = tenant_conflicts(
+        school_code=normalized["school_code"],
+        subdomain=normalized["subdomain"],
+        custom_domain=normalized["custom_domain"],
+    )
+    if conflicts:
+        raise ValidationError({"availability": conflicts})
+
+
+def sync_tenant_modules(tenant, module_names, *, subscription=None, user=None):
+    seed_default_modules()
+    requested = sorted(set(module_names or []) | CORE_MODULE_CODES)
+    TenantModule.objects.filter(tenant=tenant).exclude(module_name__in=requested).update(enabled=False)
+    for module_name in requested:
+        TenantModule.objects.update_or_create(
+            tenant=tenant,
+            module_name=module_name,
+            defaults={"enabled": True},
+        )
+        try:
+            activate_module(tenant, module_name, subscription=subscription, user=user)
+        except ModuleDefinition.DoesNotExist:
+            continue
+    for disabled in TenantModule.objects.filter(tenant=tenant, enabled=False):
+        try:
+            deactivate_module(tenant, disabled.module_name, user=user, reason="Module disabled in tenant sync")
+        except Exception:
+            continue
+
+
+def mark_tenant_provisioning(tenant, status, *, error=None):
+    tenant.provisioning_status = status
+    tenant.provisioning_error = error
+    if status == "PROVISIONING":
+        tenant.provisioning_started_at = timezone.now()
+    if status == "ACTIVE":
+        tenant.provisioning_completed_at = timezone.now()
+        tenant.is_active = True
+        tenant.is_suspended = False
+    if status == "FAILED":
+        tenant.is_active = False
+    tenant.save(update_fields=[
+        "provisioning_status",
+        "provisioning_error",
+        "provisioning_started_at",
+        "provisioning_completed_at",
+        "is_active",
+        "is_suspended",
+        "active",
+        "updated_at",
+    ])
+
+
+def perform_tenant_provisioning(tenant, *, database_password=None, user=None):
+    database_password = database_password or tenant.get_database_password() or generate_temporary_password(20)
+    provision_result = provision_postgresql_database(tenant, database_password)
+    database_alias = run_tenant_migrations(tenant)
+    seed_tenant_school_settings(tenant, database_alias)
+    seed_tenant_academic_calendar(database_alias, timezone.localdate().year)
+    admin_credentials = create_tenant_super_admin(tenant, database_alias)
+    return {
+        "created": True,
+        "database_alias": database_alias,
+        "database_name": tenant.database_name,
+        "database_user": tenant.database_user,
+        "postgres": provision_result,
+        "admin": admin_credentials,
+    }
+
+
+def create_tenant_record(data, logo=None, user=None, provision=True):
+    normalized = _validated_schedule(normalize_tenant_payload(data))
+    _validate_tenant_creation_payload(normalized)
+
+    database_name = normalized.get("database_name") or safe_identifier(normalized["school_code"] or normalized["subdomain"], "school")
+    database_user = normalized.get("database_user") or safe_identifier(normalized["school_code"] or normalized["subdomain"], "usr")
+    database_password = normalized.get("database_password") or generate_temporary_password(20)
 
     with transaction.atomic():
         tenant = SchoolTenant(
-            name=data.get("school_name") or data.get("name"),
-            school_code=school_code,
-            email_address=data.get("school_email") or data.get("email"),
-            telephone=data.get("school_phone") or data.get("phone") or "",
-            address=data.get("school_address") or data.get("address") or "",
+            name=normalized["school_name"],
+            school_code=normalized["school_code"],
+            email_address=normalized["school_email"] or None,
+            telephone=normalized["school_phone"] or "+263000000000",
+            address=normalized["school_address"] or "Zimbabwe",
             logo=logo,
-            subdomain=subdomain,
-            custom_domain=(data.get("custom_domain") or "").strip().lower() or None,
-            local_testing_port=data.get("testing_port") or None,
-            production_domain=data.get("production_domain") or None,
+            subdomain=normalized["subdomain"],
+            custom_domain=normalized["custom_domain"],
+            local_testing_port=normalized["testing_port"],
+            production_domain=normalized["production_domain"],
             database_name=database_name,
             database_user=database_user,
-            plan_type=plan_type,
-            max_students=data.get("max_students") or 500,
-            max_users=data.get("max_users") or 25,
-            subscription_start=subscription_start,
-            subscription_end=subscription_end,
-            trial_end=trial_end,
-            is_trial=bool(data.get("is_trial", True)),
-            is_active=True,
+            plan_type=normalized["plan_type"],
+            max_students=normalized["max_students"],
+            max_users=normalized["max_users"],
+            subscription_start=normalized["subscription_start"],
+            subscription_end=normalized["subscription_end"],
+            trial_end=normalized["trial_end"],
+            is_trial=normalized["is_trial"],
+            is_active=False,
             is_suspended=False,
+            provisioning_status="PENDING",
         )
         tenant.set_database_password(database_password)
         tenant.full_clean()
         tenant.save()
 
-        seed_default_modules()
-        module_names = data.get("modules") or [code for code, _label in DEFAULT_TENANT_MODULES]
-        for module_name in module_names:
-            TenantModule.objects.update_or_create(
-                tenant=tenant,
-                module_name=module_name,
-                defaults={"enabled": True},
-            )
-        plan = ensure_subscription_plan(plan_type)
+        plan = ensure_subscription_plan(normalized["plan_type"])
         subscription = TenantSubscription.objects.create(
             subscription_number=next_saas_number("SUB", TenantSubscription),
             tenant=tenant,
             plan=plan,
-            start_date=subscription_start,
-            expiry_date=subscription_end,
+            start_date=normalized["subscription_start"],
+            expiry_date=normalized["subscription_end"],
+            billing_cycle=normalized["billing_cycle"],
             status="TRIAL" if tenant.is_trial else "ACTIVE",
-            amount=Decimal(str(data.get("amount") or "0")),
-            currency=data.get("currency") or "USD",
+            amount=normalized["amount"],
+            currency=normalized["currency"],
             payment_status="TRIAL" if tenant.is_trial else "PENDING",
-            next_billing_date=subscription_end,
+            next_billing_date=normalized["subscription_end"],
         )
         SchoolBrandingProfile.objects.get_or_create(tenant=tenant)
+        sync_tenant_modules(tenant, normalized["modules"], subscription=subscription, user=user)
 
-    create_tenant_media_folder(tenant)
-    provision_result = {"created": False, "reason": "Provisioning skipped."}
     admin_credentials = None
+    provision_result = {"created": False, "reason": "Provisioning skipped."}
     if provision:
-        provision_result = provision_postgresql_database(tenant, database_password)
-        database_alias = run_tenant_migrations(tenant)
-        seed_tenant_school_settings(tenant, database_alias)
-        admin_credentials = create_tenant_super_admin(tenant, database_alias)
+        try:
+            mark_tenant_provisioning(tenant, "PROVISIONING")
+            create_tenant_media_folder(tenant)
+            provision_result = perform_tenant_provisioning(tenant, database_password=database_password, user=user)
+            admin_credentials = provision_result["admin"]
+            mark_tenant_provisioning(tenant, "ACTIVE", error=None)
+            log_saas_action("Tenant provisioning completed", tenant=tenant, user=user, new_value={"status": tenant.provisioning_status})
+        except Exception as exc:
+            mark_tenant_provisioning(tenant, "FAILED", error=str(exc))
+            log_saas_action("Tenant provisioning failed", tenant=tenant, user=user, new_value={"error": str(exc)})
+            provision_result = {"created": False, "error": str(exc)}
+    else:
+        log_saas_action("Tenant provisioning skipped", tenant=tenant, user=user, new_value={"status": tenant.provisioning_status})
 
     log_saas_action(
         "Tenant creation",
@@ -361,11 +557,27 @@ def create_tenant_record(data, logo=None, user=None, provision=True):
         new_value={
             "school_code": tenant.school_code,
             "database_name": tenant.database_name,
-            "modules": module_names,
+            "modules": normalized["modules"],
             "provisioning": provision_result,
         },
     )
     return {"tenant": tenant, "subscription": subscription, "admin": admin_credentials, "provisioning": provision_result}
+
+
+def retry_tenant_provisioning(tenant, *, user=None):
+    if tenant.provisioning_status == "ACTIVE":
+        raise ValidationError("Tenant is already active.")
+    try:
+        mark_tenant_provisioning(tenant, "PROVISIONING", error=None)
+        create_tenant_media_folder(tenant)
+        result = perform_tenant_provisioning(tenant, user=user)
+        mark_tenant_provisioning(tenant, "ACTIVE", error=None)
+        log_saas_action("Tenant provisioning completed", tenant=tenant, user=user, new_value={"status": tenant.provisioning_status})
+        return result
+    except Exception as exc:
+        mark_tenant_provisioning(tenant, "FAILED", error=str(exc))
+        log_saas_action("Tenant provisioning failed", tenant=tenant, user=user, new_value={"error": str(exc)})
+        raise
 
 
 def create_school_subscription(tenant, plan, start_date, expiry_date, modules=None, billing_cycle="MONTHLY", status="TRIAL", user=None):
@@ -509,3 +721,21 @@ def capture_usage_snapshot(tenant, user_count=0, student_count=0, storage_usage_
         },
     )
     return snapshot
+def create_tenant_super_admin(tenant, database_alias, temporary_password=None):
+    User = get_user_model()
+    temporary_password = temporary_password or generate_temporary_password()
+    domain = tenant.custom_domain or tenant.production_domain or tenant.subdomain_domain or "school.local"
+    domain = domain.replace("www.", "")
+    email = f"admin@{domain}"
+    username = email
+
+    user, created = User.objects.db_manager(database_alias).get_or_create(
+        username=username,
+        defaults={"email": email, "is_staff": True, "is_superuser": True},
+    )
+    user.email = email
+    user.is_staff = True
+    user.is_superuser = True
+    user.set_password(temporary_password)
+    user.save(using=database_alias)
+    return {"username": username, "email": email, "temporary_password": temporary_password, "created": created}

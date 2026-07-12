@@ -68,6 +68,7 @@ SECRET_KEY = os.environ.get(
     "local-development-only-change-this-key-before-production-2026",
 )
 DEBUG = env_bool("DEBUG", True)
+SAAS_BASE_DOMAIN = os.environ.get("SAAS_BASE_DOMAIN", "raydonsystems.co.zw").strip().lower().rstrip(".")
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "127.0.0.1,localhost,.localhost,testserver")
 if DEBUG:
     ALLOWED_HOSTS = ["*"]

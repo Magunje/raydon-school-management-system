@@ -1,0 +1,38 @@
+{% extends "staff_portal/base_auth.html" %}
+{% load static %}
+
+{% block title %}Staff Portal - {{ school_name }}{% endblock %}
+
+{% block auth_content %}
+<section class="auth-panel p-4">
+    <div class="text-center mb-4">
+        <img src="{% static 'img/raydon-system-logo.svg' %}" alt="{{ school_name }}" style="width:64px;height:64px">
+        <h1 class="h4 mt-3 mb-1">Staff Portal</h1>
+        <p class="text-secondary mb-0">{{ school_name }}</p>
+    </div>
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    <form method="post" class="form-panel">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_username">Staff number, username, or email</label>
+            <input id="id_username" name="username" autocomplete="username" autofocus required>
+        </div>
+        <div class="mb-3">
+            <label for="id_password">Password</label>
+            <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Login</button>
+    </form>
+    <div class="d-flex justify-content-between small mt-3">
+        <a href="/">Forgot password</a>
+        <a href="/">Support</a>
+    </div>
+</section>
+{% endblock %}

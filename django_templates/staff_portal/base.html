@@ -1,0 +1,46 @@
+{% extends "student_portal/base_auth.html" %}
+
+{% block auth_content %}
+<div class="shell-backdrop" data-sidebar-close aria-hidden="true"></div>
+<div class="app-shell">
+    <aside class="app-sidebar" data-sidebar aria-label="Staff navigation">
+        <div class="sidebar-brand-row">
+            <a class="sidebar-brand" href="{% url 'staff_portal:dashboard' %}">
+                <span>
+                    <strong>{{ school_name }}</strong>
+                    <small>Staff Portal</small>
+                </span>
+            </a>
+        </div>
+        <nav class="sidebar-nav" aria-label="Staff modules">
+            <a class="sidebar-link{% if request.path == '/staff-portal/' %} active{% endif %}" href="{% url 'staff_portal:dashboard' %}"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+            <a class="sidebar-link{% if '/staff-portal/profile' in request.path %} active{% endif %}" href="{% url 'staff_portal:profile' %}"><i class="bi bi-person"></i><span>My Profile</span></a>
+            {% for module in modules %}
+            <a class="sidebar-link{% if request.path == module.href %} active{% endif %}" href="{{ module.href }}"><i class="bi {{ module.icon }}"></i><span>{{ module.label }}</span></a>
+            {% endfor %}
+        </nav>
+    </aside>
+    <div class="main-area">
+        <header class="app-topbar">
+            <div>
+                <strong>{{ school_name }}</strong>
+                <small class="d-block text-secondary">Staff Portal</small>
+            </div>
+            <a class="btn btn-outline-danger btn-sm" href="{% url 'staff_portal:logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </header>
+        <main class="content" id="main-content" tabindex="-1">
+            {% if messages %}
+            <div class="toast-stack" role="status" aria-live="polite">
+                {% for message in messages %}
+                <div class="ui-alert ui-alert-{{ message.tags|default:'info' }}">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

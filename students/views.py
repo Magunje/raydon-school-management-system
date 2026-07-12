@@ -50,6 +50,7 @@ from school_system_django.native import (
     resolve_legacy_class_record,
     simple_pdf,
     school_settings,
+    table_exists,
     today_text,
     update_record,
     update_record_fields,
@@ -264,7 +265,7 @@ def _ensure_enterprise_subject(legacy_subject, form_label):
 
 def sync_enterprise_student_registration(pupil, selected_subject_ids, academic_year_value, term_value=None):
     from student_registry.models import Guardian, Student
-    from subject_management.models import StudentSubjectRegistration
+    from subject_management.models import StudentSubjectRegistration, Subject
 
     academic_year, academic_term, academic_class = _ensure_enterprise_academic_context(
         pupil.get("grade"),
@@ -320,7 +321,7 @@ def sync_enterprise_student_registration(pupil, selected_subject_ids, academic_y
         guardian.save()
 
     selected_subject_ids = [int(subject_id) for subject_id in selected_subject_ids]
-    if selected_subject_ids:
+    if selected_subject_ids and table_exists("subjects"):
         legacy_subjects = dict_rows(
             f"""
             SELECT subject_id, subject_code, subject_name
@@ -342,6 +343,16 @@ def sync_enterprise_student_registration(pupil, selected_subject_ids, academic_y
             academic_year=academic_year,
             academic_term=academic_term,
         )
+
+    if not legacy_subjects and selected_subject_ids:
+        for subject in Subject.objects.filter(id__in=selected_subject_ids, is_active=True):
+            enterprise_subject_ids.append(subject.id)
+            StudentSubjectRegistration.objects.get_or_create(
+                student=student,
+                subject=subject,
+                academic_year=academic_year,
+                academic_term=academic_term,
+            )
 
     StudentSubjectRegistration.objects.filter(
         student=student,
@@ -463,12 +474,14 @@ def register(request):
         
         # 4. Resolve grade_id and class_id
         grade_num = grade_number(form_val)
-        class_rec = resolve_legacy_class_record(
-            grade=form_val,
-            stream=stream_val,
-            grade_id=grade_num,
-            academic_year=current_year,
-        )
+        class_rec = None
+        if table_exists("classes"):
+            class_rec = resolve_legacy_class_record(
+                grade=form_val,
+                stream=stream_val,
+                grade_id=grade_num,
+                academic_year=current_year,
+            )
         class_id = class_rec["class_id"] if class_rec else None
         
         pupil_data = {
@@ -498,15 +511,16 @@ def register(request):
                 
                 # Insert subject registrations
                 from django.db import connection
-                for sub_id in selected_subjects:
-                    cursor = connection.cursor()
-                    cursor.execute(
-                        """
-                        INSERT INTO student_subjects (pupil_id, subject_id, academic_year, form, stream)
-                        VALUES (%s, %s, %s, %s, %s)
-                        """,
-                        [new_id, int(sub_id), current_year, form_val, stream_val]
-                    )
+                if table_exists("student_subjects"):
+                    for sub_id in selected_subjects:
+                        cursor = connection.cursor()
+                        cursor.execute(
+                            """
+                            INSERT INTO student_subjects (pupil_id, subject_id, academic_year, form, stream)
+                            VALUES (%s, %s, %s, %s, %s)
+                            """,
+                            [new_id, int(sub_id), current_year, form_val, stream_val]
+                        )
 
                 enterprise_pupil = {**pupil_data, "pupil_id": new_id}
                 sync_enterprise_student_registration(
@@ -521,9 +535,13 @@ def register(request):
                 
             # Log creations
             subject_names = []
-            if selected_subjects:
+            if selected_subjects and table_exists("subjects"):
                 sub_rows = dict_rows(f"SELECT subject_name FROM subjects WHERE subject_id IN ({','.join(['%s']*len(selected_subjects))})", [int(x) for x in selected_subjects])
                 subject_names = [s["subject_name"] for s in sub_rows]
+            elif selected_subjects:
+                from subject_management.models import Subject
+
+                subject_names = list(Subject.objects.filter(id__in=[int(x) for x in selected_subjects]).values_list("name", flat=True))
                 
             audit_action(request, "Register Student", f"Registered student {first_name} {surname} ({admission_no}). Subjects registered ({len(selected_subjects)}): {', '.join(subject_names)}")
             
@@ -546,7 +564,20 @@ def register(request):
             return redirect("/pupils/register/")
             
     # GET method
-    master_subjects = dict_rows("SELECT * FROM subjects WHERE status = 'Active' ORDER BY display_order, subject_name")
+    if table_exists("subjects"):
+        master_subjects = dict_rows("SELECT * FROM subjects WHERE status = 'Active' ORDER BY display_order, subject_name")
+    else:
+        from subject_management.models import Subject
+
+        master_subjects = [
+            {
+                "subject_id": subject.id,
+                "subject_code": subject.code,
+                "subject_name": subject.name,
+                "grade": "A Level" if subject.level == "A_LEVEL" else "O Level",
+            }
+            for subject in Subject.objects.filter(is_active=True).order_by("level", "name")
+        ]
     return render(
         request,
         "students/register.html",
@@ -739,16 +770,31 @@ def detail(request, pupil_id=None, admission_no=None):
     # Query registered subjects
     settings = school_settings()
     current_year = settings.get("current_year") or 2026
-    registered_subjects = dict_rows(
-        """
-        SELECT s.subject_id, s.subject_code, s.subject_name
-        FROM student_subjects ss
-        JOIN subjects s ON s.subject_id = ss.subject_id
-        WHERE ss.pupil_id = %s AND ss.academic_year = %s
-        ORDER BY s.display_order, s.subject_name
-        """,
-        [pupil["pupil_id"], current_year]
-    )
+    if table_exists("student_subjects") and table_exists("subjects"):
+        registered_subjects = dict_rows(
+            """
+            SELECT s.subject_id, s.subject_code, s.subject_name
+            FROM student_subjects ss
+            JOIN subjects s ON s.subject_id = ss.subject_id
+            WHERE ss.pupil_id = %s AND ss.academic_year = %s
+            ORDER BY s.display_order, s.subject_name
+            """,
+            [pupil["pupil_id"], current_year]
+        )
+    else:
+        from student_registry.models import Student
+
+        registered_subjects = []
+        student = Student.objects.filter(admission_no=pupil["admission_no"]).first()
+        if student:
+            registered_subjects = [
+                {
+                    "subject_id": row.subject_id,
+                    "subject_code": row.subject.code,
+                    "subject_name": row.subject.name,
+                }
+                for row in student.subject_registrations.select_related("subject").filter(academic_year__year=current_year).order_by("subject__name")
+            ]
     
     if request.GET.get("format") == "pdf" or request.path.endswith("/print"):
         return student_profile_pdf_response(pupil, summary)

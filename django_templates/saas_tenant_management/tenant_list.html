@@ -7,14 +7,24 @@
     .tenant-toolbar { gap: .75rem; }
     .tenant-card { border-radius: 8px; }
     .tenant-stat-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; }
-    .wizard-step { display: none; }
-    .wizard-step.active { display: block; }
+    .tenant-modal { z-index: 1055; pointer-events: auto; }
+    .tenant-modal .modal-dialog,
+    .tenant-modal .modal-content,
+    .tenant-modal input,
+    .tenant-modal select,
+    .tenant-modal textarea,
+    .tenant-modal button { pointer-events: auto; }
+    .modal-backdrop { z-index: 1050; }
+    .wizard-step { display: none; pointer-events: none; }
+    .wizard-step.active { display: block; pointer-events: auto; }
     .wizard-nav .step-dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #e7eefc; color: #2454a6; font-weight: 700; }
     .wizard-nav .active .step-dot { background: #0d6efd; color: #fff; }
     .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
     .action-menu .btn { padding: .25rem .45rem; }
     .table td, .table th { vertical-align: middle; }
     .tenant-toast { min-width: 280px; }
+    .field-error { color: #b42318; font-size: .875rem; margin-top: .25rem; }
+    .field-preview { color: #2454a6; font-size: .9rem; }
 </style>
 {% endblock %}
 
@@ -26,7 +36,7 @@
             <h1 class="h3 mb-1 text-gray-800 fw-bold"><i class="bi bi-building-gear me-2 text-primary"></i>SaaS Tenant Management</h1>
             <p class="text-muted mb-0">Provision school tenants, subscriptions, modules, databases, and routing rules.</p>
         </div>
-        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#tenantWizardModal">
+        <button class="btn btn-primary d-flex align-items-center gap-2" type="button" data-add-tenant>
             <i class="bi bi-plus-lg"></i>
             <span>Add Tenant</span>
         </button>
@@ -52,7 +62,23 @@
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm tenant-card p-3 h-100">
                 <div class="d-flex align-items-center">
-                    <div class="tenant-stat-icon bg-warning-subtle text-warning me-3"><i class="bi bi-award fs-4"></i></div>
+                    <div class="tenant-stat-icon bg-warning-subtle text-warning me-3"><i class="bi bi-hourglass-bottom fs-4"></i></div>
+                    <div><div class="text-muted small">Pending</div><div class="fs-4 fw-bold" data-stat="pending_tenants">{{ pending_tenants }}</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="card border-0 shadow-sm tenant-card p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="tenant-stat-icon bg-danger-subtle text-danger me-3"><i class="bi bi-exclamation-triangle fs-4"></i></div>
+                    <div><div class="text-muted small">Failed</div><div class="fs-4 fw-bold" data-stat="failed_tenants">{{ failed_tenants }}</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="card border-0 shadow-sm tenant-card p-3 h-100">
+                <div class="d-flex align-items-center">
+                    <div class="tenant-stat-icon bg-info-subtle text-info me-3"><i class="bi bi-award fs-4"></i></div>
                     <div><div class="text-muted small">Premium</div><div class="fs-4 fw-bold" data-stat="premium_tenants">{{ premium_tenants }}</div></div>
                 </div>
             </div>
@@ -60,24 +86,8 @@
         <div class="col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm tenant-card p-3 h-100">
                 <div class="d-flex align-items-center">
-                    <div class="tenant-stat-icon bg-info-subtle text-info me-3"><i class="bi bi-rocket fs-4"></i></div>
-                    <div><div class="text-muted small">Starter</div><div class="fs-4 fw-bold" data-stat="starter_tenants">{{ starter_tenants }}</div></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-2">
-            <div class="card border-0 shadow-sm tenant-card p-3 h-100">
-                <div class="d-flex align-items-center">
-                    <div class="tenant-stat-icon bg-danger-subtle text-danger me-3"><i class="bi bi-calendar-x fs-4"></i></div>
-                    <div><div class="text-muted small">Expired</div><div class="fs-4 fw-bold" data-stat="expired_subscriptions">{{ expired_subscriptions }}</div></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-2">
-            <div class="card border-0 shadow-sm tenant-card p-3 h-100">
-                <div class="d-flex align-items-center">
-                    <div class="tenant-stat-icon bg-secondary-subtle text-secondary me-3"><i class="bi bi-hourglass-split fs-4"></i></div>
-                    <div><div class="text-muted small">Trials</div><div class="fs-4 fw-bold" data-stat="trial_accounts">{{ trial_accounts }}</div></div>
+                    <div class="tenant-stat-icon bg-secondary-subtle text-secondary me-3"><i class="bi bi-calendar-x fs-4"></i></div>
+                    <div><div class="text-muted small">Expiring Soon</div><div class="fs-4 fw-bold" data-stat="expiring_soon">{{ expiring_soon }}</div></div>
                 </div>
             </div>
         </div>
@@ -85,9 +95,27 @@
 
     <div class="card border-0 shadow-sm tenant-card bg-white p-4">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-list-stars me-2 text-primary"></i>Active School Tenants</h5>
-            <form class="d-flex gap-2" method="get">
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-list-stars me-2 text-primary"></i>School Tenants</h5>
+            <form class="d-flex flex-wrap gap-2" method="get">
                 <input class="form-control" type="search" name="q" value="{{ search_query }}" placeholder="Search school, code, domain, port, plan" style="min-width: 320px;">
+                <select class="form-select" name="status">
+                    <option value="">All statuses</option>
+                    {% for code,label in tenants.model.PROVISIONING_STATUS_CHOICES %}
+                    <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    <option value="EXPIRED" {% if selected_status == "EXPIRED" %}selected{% endif %}>Expired</option>
+                </select>
+                <select class="form-select" name="plan">
+                    <option value="">All plans</option>
+                    {% for value,label in plan_types %}
+                    <option value="{{ value }}" {% if selected_plan == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <select class="form-select" name="trial">
+                    <option value="">Trial and paid</option>
+                    <option value="true" {% if selected_trial == "true" %}selected{% endif %}>Trial only</option>
+                    <option value="false" {% if selected_trial == "false" %}selected{% endif %}>Paid only</option>
+                </select>
                 <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
             </form>
         </div>
@@ -130,13 +158,18 @@
                         <td><span class="badge bg-primary-subtle text-primary">{{ t.get_plan_type_display }}</span></td>
                         <td>{{ t.subscription_end|date:"Y-m-d"|default:"-" }}</td>
                         <td>
-                            {% if t.is_suspended %}
+                            {% if t.provisioning_status == "FAILED" %}
+                            <span class="badge bg-danger-subtle text-danger">Failed</span>
+                            {% elif t.provisioning_status == "PROVISIONING" %}
+                            <span class="badge bg-warning-subtle text-warning">Provisioning</span>
+                            {% elif t.is_suspended %}
                             <span class="badge bg-danger-subtle text-danger">Suspended</span>
-                            {% elif t.is_active %}
+                            {% elif t.provisioning_status == "ACTIVE" %}
                             <span class="badge bg-success-subtle text-success">Active</span>
                             {% else %}
-                            <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                            <span class="badge bg-secondary-subtle text-secondary">{{ t.provisioning_status|default:"Pending" }}</span>
                             {% endif %}
+                            {% if t.subscription_end and t.subscription_end < today %}<span class="badge bg-dark-subtle text-dark">Expired</span>{% endif %}
                             {% if t.is_trial %}<span class="badge bg-info-subtle text-info">Trial</span>{% endif %}
                         </td>
                         <td class="text-end action-menu">
@@ -148,8 +181,13 @@
                             <button class="btn btn-sm btn-outline-warning" title="Suspend" data-action="suspend"><i class="bi bi-pause-circle"></i></button>
                             {% endif %}
                             <button class="btn btn-sm btn-outline-info" title="Renew Subscription" data-action="renew"><i class="bi bi-calendar-plus"></i></button>
+                            {% if t.provisioning_status == "FAILED" %}
+                            <button class="btn btn-sm btn-outline-dark" title="Retry Provisioning" data-action="retry-provisioning"><i class="bi bi-arrow-repeat"></i></button>
+                            {% endif %}
                             <button class="btn btn-sm btn-outline-dark" title="Reset Password" data-action="reset-password"><i class="bi bi-key"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" title="Delete" data-action="delete"><i class="bi bi-trash"></i></button>
+                            {% if t.provisioning_status != "ACTIVE" %}
+                            <button class="btn btn-sm btn-outline-danger" title="Delete Failed Tenant" data-action="delete"><i class="bi bi-trash"></i></button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
@@ -161,9 +199,10 @@
     </div>
 </div>
 
-<div class="modal fade" id="tenantWizardModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade tenant-modal" id="tenantWizardModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <form class="modal-content" data-tenant-form enctype="multipart/form-data">
+            {% csrf_token %}
             <div class="modal-header">
                 <h5 class="modal-title">Create Tenant</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -179,34 +218,49 @@
 
                 <section class="wizard-step active" data-step="1">
                     <div class="row g-3">
-                        <div class="col-md-6"><label class="form-label">School Name</label><input class="form-control" name="school_name" required></div>
-                        <div class="col-md-6"><label class="form-label">School Code</label><input class="form-control" name="school_code" required></div>
-                        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" name="school_email" type="email"></div>
-                        <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="school_phone"></div>
-                        <div class="col-12"><label class="form-label">Address</label><textarea class="form-control" name="school_address" rows="2"></textarea></div>
-                        <div class="col-md-6"><label class="form-label">Logo</label><input class="form-control" name="school_logo" type="file" accept="image/*"></div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_school_name">School Name</label><input class="form-control" id="tenant_school_name" name="school_name" required><div class="field-error" data-error-for="school_name"></div></div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_school_code">School Code</label><input class="form-control" id="tenant_school_code" name="school_code" required><div class="field-error" data-error-for="school_code"></div></div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_email">Email</label><input class="form-control" id="tenant_email" name="school_email" type="email"><div class="field-error" data-error-for="school_email"></div></div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_phone">Phone</label><input class="form-control" id="tenant_phone" name="school_phone"><div class="field-error" data-error-for="school_phone"></div></div>
+                        <div class="col-12"><label class="form-label" for="tenant_address">Address</label><textarea class="form-control" id="tenant_address" name="school_address" rows="2"></textarea><div class="field-error" data-error-for="school_address"></div></div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_logo">Logo</label><input class="form-control" id="tenant_logo" name="school_logo" type="file" accept="image/*"></div>
                     </div>
                 </section>
 
                 <section class="wizard-step" data-step="2">
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Subdomain</label><input class="form-control" name="subdomain" placeholder="school1"></div>
-                        <div class="col-md-4"><label class="form-label">Custom Domain</label><input class="form-control" name="custom_domain" placeholder="www.schoolname.ac.zw"></div>
-                        <div class="col-md-4"><label class="form-label">Testing Port</label><input class="form-control" name="testing_port" type="number" min="1" max="65535"></div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="tenant_subdomain">Tenant Label</label>
+                            <div class="input-group">
+                                <input class="form-control" id="tenant_subdomain" name="subdomain" placeholder="raydonhigh" aria-describedby="tenant-domain-suffix">
+                                <span class="input-group-text" id="tenant-domain-suffix">.raydonsystems.co.zw</span>
+                            </div>
+                            <div class="field-preview mt-2" data-host-preview>The school portal will be available at: -</div>
+                            <div class="field-error" data-error-for="subdomain"></div>
+                        </div>
+                        <div class="col-md-6"><label class="form-label" for="tenant_custom_domain">Custom Domain (Optional)</label><input class="form-control" id="tenant_custom_domain" name="custom_domain" placeholder="portal.schoolname.ac.zw"><div class="field-error" data-error-for="custom_domain"></div></div>
+                        <div class="col-md-4"><label class="form-label" for="tenant_testing_port">Testing Port</label><input class="form-control" id="tenant_testing_port" name="testing_port" type="number" min="1" max="65535"></div>
                     </div>
                 </section>
 
                 <section class="wizard-step" data-step="3">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Plan Type</label>
-                            <select class="form-select" name="plan_type">
+                            <label class="form-label" for="tenant_plan_type">Plan Type</label>
+                            <select class="form-select" id="tenant_plan_type" name="plan_type">
                                 {% for value, label in plan_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3"><label class="form-label">Trial Period</label><input class="form-control" name="trial_period" type="number" min="0" value="14"></div>
-                        <div class="col-md-3"><label class="form-label">Start Date</label><input class="form-control" name="subscription_start" type="date" required></div>
-                        <div class="col-md-3"><label class="form-label">End Date</label><input class="form-control" name="subscription_end" type="date"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_trial_period">Trial Period</label><input class="form-control" id="tenant_trial_period" name="trial_period" type="number" min="0" value="14"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_subscription_start">Start Date</label><input class="form-control" id="tenant_subscription_start" name="subscription_start" type="date" required></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_subscription_end">End Date</label><input class="form-control" id="tenant_subscription_end" name="subscription_end" type="date"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_trial_end">Trial End</label><input class="form-control" id="tenant_trial_end" name="trial_end" type="date"></div>
+                        <div class="col-md-3 d-flex align-items-end"><div class="form-check"><input class="form-check-input" id="tenant_is_trial" name="is_trial" type="checkbox" value="true" checked><label class="form-check-label" for="tenant_is_trial">Trial enabled</label></div></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_max_students">Student Limit</label><input class="form-control" id="tenant_max_students" name="max_students" type="number" min="1" value="500"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_max_users">User Limit</label><input class="form-control" id="tenant_max_users" name="max_users" type="number" min="1" value="25"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_billing_cycle">Billing Cycle</label><select class="form-select" id="tenant_billing_cycle" name="billing_cycle"><option value="MONTHLY">Monthly</option><option value="TERM">Per Term</option><option value="ANNUAL">Annual</option></select></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_currency">Currency</label><input class="form-control" id="tenant_currency" name="currency" value="USD"></div>
+                        <div class="col-md-3"><label class="form-label" for="tenant_amount">Amount</label><input class="form-control" id="tenant_amount" name="amount" type="number" min="0" step="0.01" value="0.00"></div>
                     </div>
                 </section>
 
@@ -226,6 +280,7 @@
                         <i class="bi bi-info-circle"></i>
                         <div>Creating a tenant will provision its record, PostgreSQL database, migrations, modules, media folder, school settings, and super admin credentials.</div>
                     </div>
+                    <div class="alert alert-warning d-none" data-availability-warning></div>
                     <div class="border rounded p-3 bg-light" data-confirmation></div>
                 </section>
             </div>
@@ -281,13 +336,18 @@
 {% block extra_js %}
 <script>
 (function () {
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const addTenantButton = document.querySelector('[data-add-tenant]');
+    const tenantWizardModal = document.getElementById('tenantWizardModal');
+    const csrftoken = document.querySelector('[data-tenant-form] [name=csrfmiddlewaretoken]')?.value || document.querySelector('[name=csrfmiddlewaretoken]').value;
     const wizard = document.querySelector('[data-tenant-form]');
-    const steps = Array.from(document.querySelectorAll('[data-step]'));
-    const labels = Array.from(document.querySelectorAll('[data-step-label]'));
-    const nextBtn = document.querySelector('[data-wizard-next]');
-    const prevBtn = document.querySelector('[data-wizard-prev]');
-    const submitBtn = document.querySelector('[data-wizard-submit]');
+    const steps = Array.from(wizard.querySelectorAll('[data-step]'));
+    const labels = Array.from(wizard.querySelectorAll('[data-step-label]'));
+    const nextBtn = wizard.querySelector('[data-wizard-next]');
+    const prevBtn = wizard.querySelector('[data-wizard-prev]');
+    const submitBtn = wizard.querySelector('[data-wizard-submit]');
+    const hostPreview = wizard.querySelector('[data-host-preview]');
+    const availabilityWarning = wizard.querySelector('[data-availability-warning]');
+    const tenantModal = bootstrap.Modal.getOrCreateInstance(tenantWizardModal, {keyboard: true, backdrop: true});
     const detailsModal = new bootstrap.Modal(document.getElementById('tenantDetailsModal'));
     const renewModal = new bootstrap.Modal(document.getElementById('subscriptionModal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteTenantModal'));
@@ -305,12 +365,65 @@
 
     function setStep(value) {
         step = Math.max(1, Math.min(5, value));
-        steps.forEach(el => el.classList.toggle('active', Number(el.dataset.step) === step));
+        steps.forEach(el => {
+            const isActive = Number(el.dataset.step) === step;
+            el.classList.toggle('active', isActive);
+            el.setAttribute('aria-hidden', String(!isActive));
+        });
         labels.forEach(el => el.classList.toggle('active', Number(el.dataset.stepLabel) === step));
         prevBtn.disabled = step === 1;
         nextBtn.classList.toggle('d-none', step === 5);
         submitBtn.classList.toggle('d-none', step !== 5);
         if (step === 5) buildConfirmation();
+    }
+
+    function clearErrors() {
+        wizard.querySelectorAll('[data-error-for]').forEach(el => { el.textContent = ''; });
+        availabilityWarning.classList.add('d-none');
+        availabilityWarning.textContent = '';
+    }
+
+    function setError(field, message) {
+        const target = wizard.querySelector(`[data-error-for="${field}"]`);
+        if (target) target.textContent = message;
+    }
+
+    function updateHostPreview() {
+        const raw = wizard.querySelector('[name="subdomain"]').value.trim().toLowerCase();
+        const cleaned = raw.replace(/^https?:\/\//, '').replace(/\/+$/, '').replace(/:\d+$/, '').replace(/\.raydonsystems\.co\.zw(\.raydonsystems\.co\.zw)+$/, '.raydonsystems.co.zw').replace(/\.raydonsystems\.co\.zw$/, '');
+        hostPreview.textContent = cleaned ? `The school portal will be available at: ${cleaned}.raydonsystems.co.zw` : 'The school portal will be available at: -';
+    }
+
+    function cleanupModalArtifacts() {
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+
+    function prepareTenantModal() {
+        if (tenantWizardModal.parentElement !== document.body) {
+            document.body.appendChild(tenantWizardModal);
+        }
+        tenantWizardModal.removeAttribute('inert');
+        tenantWizardModal.setAttribute('aria-hidden', 'false');
+        tenantWizardModal.style.pointerEvents = 'auto';
+        tenantWizardModal.querySelector('.modal-dialog')?.style.setProperty('pointer-events', 'auto');
+        tenantWizardModal.querySelector('.modal-content')?.style.setProperty('pointer-events', 'auto');
+        cleanupModalArtifacts();
+        setStep(1);
+    }
+
+    function validateCurrentStep() {
+        const activeStep = wizard.querySelector(`.wizard-step[data-step="${step}"]`);
+        const controls = Array.from(activeStep.querySelectorAll('input, select, textarea'));
+        return controls.every(control => {
+            if (control.checkValidity()) {
+                return true;
+            }
+            control.reportValidity();
+            return false;
+        });
     }
 
     function buildConfirmation() {
@@ -319,11 +432,41 @@
             <div class="row g-2">
                 <div class="col-md-6"><strong>School:</strong> ${data.get('school_name') || '-'}</div>
                 <div class="col-md-6"><strong>Code:</strong> ${data.get('school_code') || '-'}</div>
-                <div class="col-md-6"><strong>Subdomain:</strong> ${data.get('subdomain') || '-'}${data.get('subdomain') ? '.raydonsystems.co.zw' : ''}</div>
+                <div class="col-md-6"><strong>Hostname:</strong> ${data.get('subdomain') || '-'}${data.get('subdomain') ? '.raydonsystems.co.zw' : ''}</div>
                 <div class="col-md-6"><strong>Custom Domain:</strong> ${data.get('custom_domain') || '-'}</div>
                 <div class="col-md-6"><strong>Plan:</strong> ${data.get('plan_type') || '-'}</div>
-                <div class="col-md-6"><strong>Modules:</strong> ${data.getAll('modules').length}</div>
+                <div class="col-md-6"><strong>Modules:</strong> ${data.getAll('modules').join(', ') || '-'}</div>
+                <div class="col-md-6"><strong>Student Limit:</strong> ${data.get('max_students') || '-'}</div>
+                <div class="col-md-6"><strong>User Limit:</strong> ${data.get('max_users') || '-'}</div>
+                <div class="col-md-6"><strong>Subscription Start:</strong> ${data.get('subscription_start') || '-'}</div>
+                <div class="col-md-6"><strong>Subscription End:</strong> ${data.get('subscription_end') || '-'}</div>
+                <div class="col-md-6"><strong>Billing Cycle:</strong> ${data.get('billing_cycle') || '-'}</div>
+                <div class="col-md-6"><strong>Trial:</strong> ${data.get('is_trial') ? 'Enabled' : 'Disabled'}</div>
             </div>`;
+    }
+
+    async function checkAvailability() {
+        const params = new URLSearchParams({
+            school_code: wizard.querySelector('[name="school_code"]').value,
+            subdomain: wizard.querySelector('[name="subdomain"]').value,
+            custom_domain: wizard.querySelector('[name="custom_domain"]').value,
+        });
+        const data = await api(`/api/tenants/check-availability/?${params.toString()}`, {method: 'GET'});
+        if (data.conflicts && data.conflicts.length) {
+            availabilityWarning.textContent = data.conflicts.join(' ');
+            availabilityWarning.classList.remove('d-none');
+            if (!data.school_code_available) setError('school_code', 'This school code is already in use.');
+            if (!data.subdomain_available) setError('subdomain', 'This subdomain is already assigned.');
+            if (!data.custom_domain_available) setError('custom_domain', 'This custom domain is already assigned.');
+            throw new Error(data.conflicts.join(' '));
+        }
+        if (data.normalized_subdomain) {
+            wizard.querySelector('[name="subdomain"]').value = data.normalized_subdomain;
+        }
+        if (!wizard.querySelector('[name="custom_domain"]').value.trim()) {
+            wizard.querySelector('[name="custom_domain"]').value = '';
+        }
+        updateHostPreview();
     }
 
     async function api(url, options = {}) {
@@ -347,16 +490,56 @@
                 <div class="col-md-6"><strong>Subdomain</strong><div>${t.subdomain_domain || '-'}</div></div>
                 <div class="col-md-6"><strong>Custom Domain</strong><div>${t.custom_domain || '-'}</div></div>
                 <div class="col-md-6"><strong>Database</strong><div>${t.database_name || '-'}</div></div>
-                <div class="col-md-6"><strong>Database User</strong><div>${t.database_user || '-'}</div></div>
+                <div class="col-md-6"><strong>Status</strong><div>${t.status_label || '-'}</div></div>
                 <div class="col-md-6"><strong>Plan</strong><div>${t.plan_type || '-'}</div></div>
                 <div class="col-md-6"><strong>Subscription End</strong><div>${t.subscription_end || '-'}</div></div>
                 <div class="col-12"><strong>Modules</strong><div>${(t.modules || []).join(', ') || '-'}</div></div>
             </div>`;
     }
 
-    nextBtn.addEventListener('click', () => setStep(step + 1));
+    tenantWizardModal.addEventListener('shown.bs.modal', () => {
+        tenantWizardModal.removeAttribute('inert');
+        tenantWizardModal.setAttribute('aria-hidden', 'false');
+        document.getElementById('tenant_school_name')?.focus({preventScroll: true});
+    });
+
+    tenantWizardModal.addEventListener('hidden.bs.modal', () => {
+        setStep(1);
+        wizard.reset();
+        wizard.querySelector('[data-loading]')?.classList.add('d-none');
+        submitBtn.disabled = false;
+        clearErrors();
+        cleanupModalArtifacts();
+        addTenantButton?.focus({preventScroll: true});
+    });
+
+    tenantWizardModal.addEventListener('hide.bs.modal', (event) => {
+        if (submitBtn.disabled) {
+            event.preventDefault();
+        }
+    });
+
+    addTenantButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        prepareTenantModal();
+        tenantModal.show(addTenantButton);
+    });
+
+    nextBtn.addEventListener('click', () => {
+        clearErrors();
+        if (!validateCurrentStep()) return;
+        const proceed = async () => {
+            if (step === 2 || step === 4) {
+                await checkAvailability();
+            }
+            setStep(step + 1);
+        };
+        proceed().catch(error => toast(error.message, 'danger'));
+    });
     prevBtn.addEventListener('click', () => setStep(step - 1));
     setStep(1);
+    wizard.querySelector('[name="subdomain"]').addEventListener('input', updateHostPreview);
+    updateHostPreview();
 
     wizard.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -366,9 +549,13 @@
         try {
             const data = await api('/api/tenants/create/', {method: 'POST', body: new FormData(wizard)});
             const admin = data.admin ? ` Admin: ${data.admin.email} / ${data.admin.temporary_password}` : '';
-            toast(`Tenant created successfully.${admin}`, 'success');
-            setTimeout(() => window.location.reload(), 1200);
+            const type = data.ok ? 'success' : 'warning';
+            toast(`${data.message || 'Tenant created.'}${admin}`, type);
+            setTimeout(() => window.location.reload(), 1400);
         } catch (error) {
+            setError('school_code', error.message.includes('School code') ? error.message : '');
+            setError('subdomain', error.message.includes('Subdomain') ? error.message : '');
+            setError('custom_domain', error.message.includes('Custom domain') ? error.message : '');
             toast(error.message, 'danger');
         } finally {
             spinner.classList.add('d-none');
@@ -397,6 +584,11 @@
             } else if (action === 'reset-password') {
                 const data = await api(`/api/tenants/${tenantId}/reset-password/`, {method: 'POST'});
                 toast(`Temporary password: ${data.admin.temporary_password}`, 'success');
+            } else if (action === 'retry-provisioning') {
+                const data = await api(`/api/tenants/${tenantId}/retry-provisioning/`, {method: 'POST'});
+                const admin = data.admin ? ` Admin: ${data.admin.email} / ${data.admin.temporary_password}` : '';
+                toast(`Provisioning retry completed.${admin}`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else if (action === 'delete') {
                 deleteTenantId = tenantId;
                 deleteModal.show();

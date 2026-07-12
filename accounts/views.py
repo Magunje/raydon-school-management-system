@@ -11,8 +11,10 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 from django.db.models import Sum
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
+from .portal_access import clear_portal_session_state, is_school_admin_user, safe_next_url, set_active_portal
 from .permissions import is_staff_portal_role, normalized_role, permission_required, user_has_permission
 from .password_validation import validate_password_strength
 from fees.services import dashboard_metrics, ensure_current_term_bills_for_active_students
@@ -53,8 +55,9 @@ def home(request):
 
 
 def login_view(request):
-    if request.user.is_authenticated:
-        return redirect("/dashboard")
+    if request.user.is_authenticated and is_school_admin_user(request.user):
+        set_active_portal(request, "school_admin")
+        return redirect("school_admin:dashboard")
 
     lockout_key = "staff_login_lockout_until"
     failed_key = "staff_login_failed_attempts"
@@ -90,12 +93,18 @@ def login_view(request):
                 audit_action(request, "Denied staff login", f"{user.username} attempted staff portal login with role {role or '-'}")
             else:
                 auth_login(request, user)
+                clear_portal_session_state(request)
+                set_active_portal(request, "school_admin")
                 request.session.pop(lockout_key, None)
                 request.session.pop(failed_key, None)
                 request.session.pop(identifier_key, None)
                 audit_action(request, "Login", f"{user.username} signed in")
                 messages.success(request, "Signed in successfully.")
-                return redirect(request.GET.get("next") or "/dashboard")
+                next_target = request.GET.get("next")
+                if next_target and next_target.startswith(("/student-portal/", "/staff-portal/")):
+                    next_target = None
+                next_url = safe_next_url(request, next_target, "/", reverse("school_admin:dashboard"))
+                return redirect(next_url)
         else:
             previous_identifier = request.session.get(identifier_key)
             failed_count = int(request.session.get(failed_key, 0) or 0)
@@ -114,9 +123,10 @@ def login_view(request):
 def logout_view(request):
     if request.user.is_authenticated:
         audit_action(request, "Logout", f"{request.user.username} signed out")
+    clear_portal_session_state(request)
     auth_logout(request)
     messages.success(request, "Signed out successfully.")
-    return redirect("/staff/login")
+    return redirect("school_admin:login")
 
 
 @login_required
@@ -143,6 +153,7 @@ def dashboard(request):
             request,
             "accounts/dashboard.html",
             {
+                "base_template": "saas_admin/base.html",
                 "is_saas_portal": True,
                 "dashboard_role": "SaaS Platform Administrator",
                 "saas_stats": saas_stats,
@@ -171,7 +182,12 @@ def dashboard(request):
                 )
         except Exception as exc:
             messages.warning(request, f"Auto term billing could not run: {exc}")
-    fees_dashboard = dashboard_metrics() if user_has_permission(request.user, "fees.view") else {}
+    fees_dashboard = {}
+    if user_has_permission(request.user, "fees.view"):
+        try:
+            fees_dashboard = dashboard_metrics()
+        except Exception:
+            fees_dashboard = {}
     operations = dashboard_operations()
     staff_portal = {}
     try:
@@ -210,6 +226,7 @@ def dashboard(request):
         request,
         "accounts/dashboard.html",
         {
+            "base_template": "school_admin/base.html",
             "dashboard_role": role,
             "settings": settings,
             "operations": operations,

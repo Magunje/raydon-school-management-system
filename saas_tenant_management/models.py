@@ -5,6 +5,8 @@ import contextvars
 from django.core.exceptions import ValidationError
 from django.core import signing
 
+from .domains import build_full_hostname, normalize_custom_domain, normalize_subdomain_label
+
 # ContextVar for thread/async-safe request tenant tracking
 _current_tenant = contextvars.ContextVar("current_tenant", default=None)
 
@@ -34,6 +36,14 @@ def tenant_media_path(instance, filename):
 
 
 class SchoolTenant(models.Model):
+    PROVISIONING_STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("PROVISIONING", "Provisioning"),
+        ("ACTIVE", "Active"),
+        ("FAILED", "Failed"),
+        ("SUSPENDED", "Suspended"),
+    ]
+
     PLAN_TYPES = [
         ("STARTER", "Starter"),
         ("STANDARD", "Standard"),
@@ -82,6 +92,10 @@ class SchoolTenant(models.Model):
     is_trial = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_suspended = models.BooleanField(default=False)
+    provisioning_status = models.CharField(max_length=20, choices=PROVISIONING_STATUS_CHOICES, default="PENDING")
+    provisioning_error = models.TextField(blank=True, null=True)
+    provisioning_started_at = models.DateTimeField(null=True, blank=True)
+    provisioning_completed_at = models.DateTimeField(null=True, blank=True)
     tenant_database_identifier = models.CharField(max_length=120, blank=True, null=True)
     database_name = models.CharField(max_length=120, blank=True, null=True)
     database_user = models.CharField(max_length=120, blank=True, null=True)
@@ -107,13 +121,17 @@ class SchoolTenant(models.Model):
 
     @property
     def primary_domain(self):
-        return self.custom_domain or self.production_domain or self.subdomain_domain
+        return self.custom_domain or self.production_domain or self.full_hostname
 
     @property
     def subdomain_domain(self):
+        return self.full_hostname
+
+    @property
+    def full_hostname(self):
         if not self.subdomain:
             return None
-        return f"{self.subdomain}.raydonsystems.co.zw"
+        return build_full_hostname(self.subdomain)
 
     def set_database_password(self, raw_password):
         self.database_password = signing.dumps(raw_password, salt="tenant-db-password")
@@ -130,15 +148,18 @@ class SchoolTenant(models.Model):
         super().clean()
         if not self.local_testing_port and not self.production_domain and not self.subdomain and not self.custom_domain:
             raise ValidationError("Either a local testing port or a production domain name must be explicitly configured.")
+        if self.custom_domain and self.subdomain and self.custom_domain == self.full_hostname:
+            raise ValidationError({"custom_domain": "Custom domain must be different from the SaaS hostname."})
 
     def save(self, *args, **kwargs):
         update_fields = set(kwargs.get("update_fields") or [])
-        if self.subdomain and not self.production_domain:
-            self.production_domain = self.subdomain_domain
-        if self.custom_domain:
-            self.custom_domain = self.custom_domain.lower().strip()
-        if self.production_domain:
-            self.production_domain = self.production_domain.lower().strip()
+        self.subdomain = normalize_subdomain_label(self.subdomain) or None
+        self.custom_domain = normalize_custom_domain(self.custom_domain)
+        generated_hostname = self.full_hostname
+        if generated_hostname:
+            self.production_domain = generated_hostname
+        elif self.production_domain:
+            self.production_domain = normalize_custom_domain(self.production_domain) or self.production_domain.lower().strip()
         if self.subscription_plan in {"BASIC", "CUSTOM", "ELITE"} and self.plan_type == "STANDARD":
             plan_map = {"BASIC": "STARTER", "CUSTOM": "ENTERPRISE", "ELITE": "ENTERPRISE"}
             self.plan_type = plan_map.get(self.subscription_plan, self.plan_type)
@@ -147,6 +168,10 @@ class SchoolTenant(models.Model):
         explicit_new_status = bool(update_fields & {"is_active", "is_suspended"})
         if not explicit_new_status and self.active is False and self.is_active and not self.is_suspended:
             self.is_active = False
+        if self.is_suspended:
+            self.provisioning_status = "SUSPENDED"
+        elif self.provisioning_status == "ACTIVE":
+            self.is_active = True
         self.active = self.is_active and not self.is_suspended
         super().save(*args, **kwargs)
 

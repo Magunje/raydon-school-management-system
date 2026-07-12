@@ -5,7 +5,9 @@ from functools import wraps
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
+from accounts.portal_access import clear_portal_session_state, safe_next_url
 from accounts.permissions import permission_required
 from fees.services import receipt_context, statement_payment_rows, student_financial_summary
 from reports.views import statement_excel, statement_number, statement_pdf_response
@@ -68,7 +70,7 @@ def student_portal_required(view_func):
     def wrapped(request, *args, **kwargs):
         pupil = current_student(request)
         if pupil is None:
-            return redirect("portal_login")
+            return redirect("student_portal:login")
         return view_func(request, pupil, *args, **kwargs)
 
     return wrapped
@@ -99,13 +101,16 @@ def staff(request):
 
 def student_login(request):
     if current_student(request):
-        return redirect("portal_dashboard")
+        return redirect("student_portal:dashboard")
+
+    if request.user.is_authenticated:
+        clear_portal_session_state(request)
 
     if request.method == "POST":
         remaining = _login_lock_remaining(request)
         if remaining:
             messages.error(request, f"Too many failed attempts. Try again in {max(1, remaining // 60)} minute(s).")
-            return render(request, "portals/student_login.html", {"settings": school_settings()})
+            return render(request, "student_portal/login.html", {"settings": school_settings()})
 
         identifier = (request.POST.get("admission_no") or "").strip()
         date_of_birth = (request.POST.get("date_of_birth") or "").strip()
@@ -113,9 +118,11 @@ def student_login(request):
         if pupil and student_status_is_active(pupil) and str(pupil.get("date_of_birth") or "") == date_of_birth:
             set_student_session(request, pupil)
             _record_login_success(request)
+            request.session["active_portal"] = "student_portal"
             audit_action(request, "Student portal login", f"{pupil['admission_no']} signed in")
             messages.success(request, "Student portal login successful.")
-            return redirect("portal_dashboard")
+            next_url = safe_next_url(request, request.GET.get("next"), "/student-portal/", reverse("student_portal:dashboard"))
+            return redirect(next_url)
 
         _record_login_failure(request)
         if pupil and not student_status_is_active(pupil):
@@ -124,13 +131,16 @@ def student_login(request):
             messages.error(request, "Invalid admission number or date of birth.")
         audit_action(request, "Failed student portal login", f"Identifier {identifier} failed at {request.path}")
 
-    return render(request, "portals/student_login.html", {"settings": school_settings()})
+    response = render(request, "student_portal/login.html", {"settings": school_settings()})
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def student_logout(request):
     clear_student_session(request)
+    clear_portal_session_state(request)
     messages.success(request, "Signed out of the student portal.")
-    return redirect("portal_login")
+    return redirect("student_portal:login")
 
 
 @student_portal_required
@@ -223,7 +233,7 @@ def student_results(request, pupil):
             )
             return result_slip_pdf_response(result, pupil, entries, request)
         messages.error(request, "Result slip not found or not published.")
-        return redirect("portal_results")
+        return redirect("student_portal:results")
 
     rows = published_results(pupil["pupil_id"])
     if request.path.endswith("/pdf") or request.GET.get("format") == "pdf":
@@ -365,7 +375,7 @@ def student_submit_assignment(request, pupil, assignment_id):
     assignment = portal_assignment_for_student(pupil, assignment_id)
     if not assignment:
         messages.error(request, "Assignment not found for your class and subjects.")
-        return redirect("portal_e_learning")
+        return redirect("student_portal:e_learning")
 
     submission = row_if_tables(
         ["e_learning_submissions"],
@@ -375,10 +385,10 @@ def student_submit_assignment(request, pupil, assignment_id):
     if request.method == "POST":
         if assignment["status"] != "Open":
             messages.error(request, "This assignment is closed and cannot receive submissions.")
-            return redirect("portal_submit_assignment", assignment_id=assignment_id)
+            return redirect("student_portal:submit_assignment", assignment_id=assignment_id)
         if submission and submission["status"] == "Marked":
             messages.error(request, "This assignment has already been marked and cannot be updated.")
-            return redirect("portal_submit_assignment", assignment_id=assignment_id)
+            return redirect("student_portal:submit_assignment", assignment_id=assignment_id)
 
         answer_text = request.POST.get("answer_text") or ""
         file_path = submission["file_path"] if submission else None
@@ -410,7 +420,7 @@ def student_submit_assignment(request, pupil, assignment_id):
                 )
                 messages.success(request, "Assignment submitted successfully.")
         audit_action(request, "Student assignment submission", f"{pupil['admission_no']} submitted assignment {assignment_id}")
-        return redirect("portal_submit_assignment", assignment_id=assignment_id)
+        return redirect("student_portal:submit_assignment", assignment_id=assignment_id)
 
     return render(
         request,
@@ -501,7 +511,7 @@ def student_pay(request, pupil, reference_no=None):
             )
             audit_action(request, "Student portal payment request", f"{pupil['admission_no']} submitted {reference}")
             messages.success(request, "Payment reference submitted for approval.")
-            return redirect("portal_payment_status", reference_no=reference)
+            return redirect("student_portal:payment_status", reference_no=reference)
     return render(
         request,
         "portals/student_pay.html",
@@ -527,7 +537,7 @@ def student_receipt(request, pupil, payment_id=None, receipt_no=None):
         context = receipt_context(payment_id=receipt_no)
     if not context or context["pupil"]["pupil_id"] != pupil["pupil_id"]:
         messages.error(request, "Receipt not found.")
-        return redirect("portal_statement")
+        return redirect("student_portal:statement")
     if request.path.endswith("/pdf") or request.GET.get("format") == "pdf":
         from fees.views import receipt_pdf_response
 

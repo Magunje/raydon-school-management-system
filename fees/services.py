@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import connection, transaction
 from django.utils import timezone
 
+from academic_structure.services import current_calendar
 from accounts.decorators import user_role
 from school_system_django.native import (
     audit_action,
@@ -65,8 +66,8 @@ def is_before_period(item, term, year):
 
 
 def current_period():
-    settings = school_settings()
-    return settings.get("current_term") or "Term 1", int(settings.get("current_year") or timezone.localdate().year)
+    snapshot = current_calendar()
+    return snapshot.display_term, int(snapshot.display_year)
 
 
 def can_record_payments(user):
@@ -1145,6 +1146,9 @@ def student_balance_rows(q="", grade="", term="", year="", status="", academic_l
 
 
 def dashboard_metrics():
+    required_tables = {"payments", "term_bills", "balance_adjustments", "pupils"}
+    if any(not table_exists(name) for name in required_tables):
+        return {}
     today = today_text()
     month_prefix = today[:7] + "%"
     payments_today = one_row("SELECT COALESCE(SUM(amount_paid), 0) AS total FROM payments WHERE payment_date = %s", [today])

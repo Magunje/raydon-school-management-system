@@ -5,17 +5,33 @@ from django.apps import apps
 
 class AcademicYear(models.Model):
     year = models.IntegerField(unique=True)
+    name = models.CharField(max_length=32, blank=True, default="")
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    is_current = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, default="upcoming")
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         db_table = "academic_years"
         ordering = ["-year"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_current"],
+                condition=models.Q(is_current=True),
+                name="single_current_academic_year",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.year}"
+        return self.name or f"{self.year}"
 
     def clean(self):
         super().clean()
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValidationError("Academic year start date cannot be after the end date.")
         if self.is_active:
             active_years = AcademicYear.objects.filter(is_active=True)
             if self.pk:
@@ -24,8 +40,16 @@ class AcademicYear(models.Model):
                 raise ValidationError(
                     "Only one academic year can be active globally at any given time."
                 )
+        if self.is_current:
+            current_years = AcademicYear.objects.filter(is_current=True)
+            if self.pk:
+                current_years = current_years.exclude(pk=self.pk)
+            if current_years.exists():
+                raise ValidationError("Only one academic year can be current at any given time.")
 
     def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = str(self.year)
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -41,20 +65,48 @@ class AcademicTerm(models.Model):
         AcademicYear, on_delete=models.CASCADE, related_name="terms"
     )
     term_number = models.IntegerField(choices=TERM_CHOICES)
+    name = models.CharField(max_length=32, blank=True, default="")
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    is_current = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, default="upcoming")
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
         db_table = "academic_terms"
         unique_together = ("academic_year", "term_number")
         ordering = ["academic_year", "term_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_current"],
+                condition=models.Q(is_current=True),
+                name="single_current_academic_term",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.academic_year} - Term {self.term_number}"
+        return f"{self.academic_year} - {self.name or f'Term {self.term_number}'}"
 
     def clean(self):
         super().clean()
         if self.term_number not in [1, 2, 3]:
             raise ValidationError("Term number must be strictly 1, 2, or 3.")
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValidationError("Academic term start date cannot be after the end date.")
+        if self.start_date and self.end_date:
+            overlapping_terms = AcademicTerm.objects.filter(
+                academic_year=self.academic_year,
+                start_date__isnull=False,
+                end_date__isnull=False,
+                start_date__lte=self.end_date,
+                end_date__gte=self.start_date,
+            )
+            if self.pk:
+                overlapping_terms = overlapping_terms.exclude(pk=self.pk)
+            if overlapping_terms.exists():
+                raise ValidationError("Academic terms cannot overlap within the same academic year.")
 
         if self.is_active:
             active_terms = AcademicTerm.objects.filter(is_active=True)
@@ -64,8 +116,16 @@ class AcademicTerm(models.Model):
                 raise ValidationError(
                     "Only one academic term can be active globally at any given time."
                 )
+        if self.is_current:
+            current_terms = AcademicTerm.objects.filter(is_current=True)
+            if self.pk:
+                current_terms = current_terms.exclude(pk=self.pk)
+            if current_terms.exists():
+                raise ValidationError("Only one academic term can be current at any given time.")
 
     def save(self, *args, **kwargs):
+        if not self.name:
+            self.name = f"Term {self.term_number}"
         self.full_clean()
         super().save(*args, **kwargs)
 

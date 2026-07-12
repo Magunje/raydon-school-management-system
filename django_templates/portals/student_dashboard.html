@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "student_portal/base.html" %}
 
 {% block title %}Student Portal - {{ pupil.first_name }} {{ pupil.surname }} - {{ app_title }}{% endblock %}
 
@@ -8,33 +8,33 @@
         <h1 class="h3 mb-1">Student Portal</h1>
         <p class="text-secondary mb-0">{{ pupil.first_name }} {{ pupil.surname }} | {{ pupil.admission_no }} | {{ class_label }}</p>
     </div>
-    <a class="btn btn-outline-danger" href="{% url 'portal_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    <a class="btn btn-outline-danger" href="{% url 'student_portal:logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a>
 </div>
 
 <div class="row g-3 mb-3">
     <div class="col-sm-6 col-xl-3">
-        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_profile' %}">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'student_portal:profile' %}">
             <span>Class</span>
             <strong>{{ class_label|default:"-" }}</strong>
             <small>{{ class_size }} active learner{{ class_size|pluralize }}</small>
         </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_attendance' %}">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'student_portal:attendance' %}">
             <span>Attendance</span>
             <strong>{{ attendance.percentage|floatformat:1 }}%</strong>
             <small>{{ attendance.present_days }} present, {{ attendance.late_days }} late</small>
         </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_statement' %}">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'student_portal:statement' %}">
             <span>Current Balance</span>
             <strong>USD {{ summary.amount_due|default:0|floatformat:2 }}</strong>
             <small>{{ pending_payments|length }} pending portal payment{{ pending_payments|length|pluralize }}</small>
         </a>
     </div>
     <div class="col-sm-6 col-xl-3">
-        <a class="stat-card d-block text-decoration-none" href="{% url 'portal_results' %}">
+        <a class="stat-card d-block text-decoration-none" href="{% url 'student_portal:results' %}">
             <span>Published Results</span>
             <strong>{{ results|length }}</strong>
             <small>{% if results %}Latest {{ results.0.term }} {{ results.0.year }}{% else %}No published reports{% endif %}</small>
@@ -50,7 +50,7 @@
                     <h2 class="h5 mb-1">Today</h2>
                     <p class="text-secondary mb-0">Live academic work and class movement.</p>
                 </div>
-                <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_timetable' %}"><i class="bi bi-calendar3"></i> Timetable</a>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'student_portal:timetable' %}"><i class="bi bi-calendar3"></i> Timetable</a>
             </div>
             <div class="table-responsive">
                 <table class="table align-middle">
@@ -77,10 +77,10 @@
         <section class="panel h-100">
             <h2 class="h5 mb-3">Quick Actions</h2>
             <div class="d-grid gap-2">
-                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_e_learning' %}"><i class="bi bi-cloud-arrow-down"></i> Assignments due: {{ assignments_due|length }}</a>
-                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_pay_fees' %}"><i class="bi bi-bank"></i> Submit payment reference</a>
-                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_statement_pdf' %}"><i class="bi bi-file-earmark-pdf"></i> Download statement</a>
-                <a class="btn btn-outline-primary justify-content-start" href="{% url 'portal_textbooks' %}"><i class="bi bi-book-half"></i> Textbooks overdue: {{ overdue_textbooks }}</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'student_portal:e_learning' %}"><i class="bi bi-cloud-arrow-down"></i> Assignments due: {{ assignments_due|length }}</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'student_portal:pay' %}"><i class="bi bi-bank"></i> Submit payment reference</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'student_portal:statement_pdf' %}"><i class="bi bi-file-earmark-pdf"></i> Download statement</a>
+                <a class="btn btn-outline-primary justify-content-start" href="{% url 'student_portal:textbooks' %}"><i class="bi bi-book-half"></i> Textbooks overdue: {{ overdue_textbooks }}</a>
             </div>
         </section>
     </div>

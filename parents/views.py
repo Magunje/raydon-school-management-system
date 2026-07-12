@@ -173,6 +173,6 @@ def delete(request, guardian_id):
 def portal(request):
     from django.shortcuts import redirect
 
-    return redirect("portal_login")
+    return redirect("student_portal:login")
 
 # Create your views here.

@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from academic_structure.models import (
     AcademicYear,
     AcademicTerm,
@@ -8,20 +9,21 @@ from academic_structure.models import (
     AcademicClass,
     StudentClassAllocation,
 )
+from academic_structure.services import SCHOOL_HOLIDAY_LABEL, current_calendar, sync_current_term
 from students.models import Pupil
 
 
 class AcademicStructureTestCase(TestCase):
     def setUp(self):
         # Setup base academic entities
-        self.year_2026 = AcademicYear.objects.create(year=2026, is_active=True)
+        self.year_2026 = AcademicYear.objects.create(year=2026, is_active=True, is_current=True)
         self.year_2027 = AcademicYear.objects.create(year=2027, is_active=False)
 
         self.term_1 = AcademicTerm.objects.create(
-            academic_year=self.year_2026, term_number=1, is_active=True
+            academic_year=self.year_2026, term_number=1, is_active=True, is_current=True, name="Term 1"
         )
         self.term_2 = AcademicTerm.objects.create(
-            academic_year=self.year_2026, term_number=2, is_active=False
+            academic_year=self.year_2026, term_number=2, is_active=False, name="Term 2"
         )
 
         # Setup forms
@@ -145,3 +147,58 @@ class AcademicStructureTestCase(TestCase):
         self.assertIsNotNone(alloc)
         self.assertEqual(small_class.student_count, 3)
         self.assertEqual(small_class.remaining_spaces, -1)
+
+    def test_sync_current_term_marks_zimbabwe_term_2_for_july_2026(self):
+        self.term_1.start_date = timezone.datetime(2026, 1, 13).date()
+        self.term_1.end_date = timezone.datetime(2026, 4, 1).date()
+        self.term_1.save()
+        self.term_2.start_date = timezone.datetime(2026, 5, 12).date()
+        self.term_2.end_date = timezone.datetime(2026, 8, 6).date()
+        self.term_2.save()
+        term_3 = AcademicTerm.objects.create(
+            academic_year=self.year_2026,
+            term_number=3,
+            name="Term 3",
+            start_date=timezone.datetime(2026, 9, 8).date(),
+            end_date=timezone.datetime(2026, 12, 8).date(),
+        )
+        self.year_2026.start_date = timezone.datetime(2026, 1, 13).date()
+        self.year_2026.end_date = timezone.datetime(2026, 12, 8).date()
+        self.year_2026.save()
+
+        snapshot = sync_current_term(date=timezone.datetime(2026, 7, 12).date())
+
+        self.term_1.refresh_from_db()
+        self.term_2.refresh_from_db()
+        term_3.refresh_from_db()
+        self.year_2026.refresh_from_db()
+        self.assertEqual(snapshot.display_term, "Term 2")
+        self.assertEqual(snapshot.display_year, "2026")
+        self.assertTrue(self.term_2.is_current)
+        self.assertFalse(self.term_1.is_current)
+        self.assertFalse(term_3.is_current)
+        self.assertTrue(self.year_2026.is_current)
+
+    def test_current_calendar_reports_holiday_between_terms(self):
+        self.year_2026.start_date = timezone.datetime(2026, 1, 13).date()
+        self.year_2026.end_date = timezone.datetime(2026, 12, 8).date()
+        self.year_2026.save()
+        self.term_1.start_date = timezone.datetime(2026, 1, 13).date()
+        self.term_1.end_date = timezone.datetime(2026, 4, 1).date()
+        self.term_1.save()
+        self.term_2.start_date = timezone.datetime(2026, 5, 12).date()
+        self.term_2.end_date = timezone.datetime(2026, 8, 6).date()
+        self.term_2.save()
+        AcademicTerm.objects.create(
+            academic_year=self.year_2026,
+            term_number=3,
+            name="Term 3",
+            start_date=timezone.datetime(2026, 9, 8).date(),
+            end_date=timezone.datetime(2026, 12, 8).date(),
+        )
+
+        snapshot = current_calendar(date=timezone.datetime(2026, 8, 20).date(), force_sync=True)
+
+        self.assertEqual(snapshot.display_term, SCHOOL_HOLIDAY_LABEL)
+        self.assertEqual(snapshot.display_year, "2026")
+        self.assertEqual(snapshot.next_term.name, "Term 3")

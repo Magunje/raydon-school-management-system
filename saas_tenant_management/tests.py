@@ -22,9 +22,11 @@ from saas_tenant_management.models import (
     set_current_tenant,
     clear_current_tenant,
 )
+from saas_tenant_management.domains import build_full_hostname, normalize_custom_domain, normalize_subdomain_label
 from saas_tenant_management.services import (
     activate_module,
     capture_usage_snapshot,
+    check_tenant_availability,
     create_school_subscription,
     create_tenant_record,
     create_subscription_invoice,
@@ -274,7 +276,7 @@ class TenantManagementApiTestCase(TestCase):
         self.assertNotEqual(tenant.database_password, "PlainPassword123")
         self.assertEqual(tenant.get_database_password(), "PlainPassword123")
         self.assertTrue(TenantModule.objects.filter(tenant=tenant, module_name="library", enabled=True).exists())
-        self.assertTrue((self.media_root / "tenants" / str(tenant.tenant_id)).exists())
+        self.assertFalse((self.media_root / "tenants" / str(tenant.tenant_id)).exists())
 
     def test_school_admin_cannot_access_tenant_api(self):
         self.client.force_login(self.school_admin)
@@ -301,7 +303,7 @@ class TenantManagementApiTestCase(TestCase):
                 "modules": ["student_registration", "fees_management"],
             },
         )
-        self.assertEqual(create_response.status_code, 201)
+        self.assertEqual(create_response.status_code, 202)
         tenant_id = create_response.json()["tenant"]["id"]
 
         edit_response = self.client.put(
@@ -321,5 +323,31 @@ class TenantManagementApiTestCase(TestCase):
         self.assertTrue(activate_response.json()["tenant"]["is_active"])
 
         delete_response = self.client.post(f"/api/tenants/{tenant_id}/delete/")
+        self.assertEqual(delete_response.status_code, 409)
+        self.client.post(f"/api/tenants/{tenant_id}/suspend/")
+        SchoolTenant.objects.filter(tenant_id=tenant_id).update(provisioning_status="FAILED", is_active=False, is_suspended=False, active=False)
+        delete_response = self.client.post(f"/api/tenants/{tenant_id}/delete/")
         self.assertEqual(delete_response.status_code, 200)
         self.assertFalse(SchoolTenant.objects.filter(tenant_id=tenant_id).exists())
+
+    def test_domain_normalization_and_availability(self):
+        tenant = SchoolTenant.objects.create(
+            name="Gamma School",
+            school_code="GAMMA",
+            email_address="gamma@example.com",
+            telephone="+263700000003",
+            address="Gweru",
+            subdomain="gamma.raydonsystems.co.zw",
+            custom_domain="",
+            local_testing_port=8102,
+        )
+        self.assertEqual(tenant.subdomain, "gamma")
+        self.assertEqual(tenant.production_domain, "gamma.raydonsystems.co.zw")
+        self.assertIsNone(tenant.custom_domain)
+        self.assertEqual(normalize_subdomain_label("https://gamma.raydonsystems.co.zw/"), "gamma")
+        self.assertEqual(build_full_hostname("gamma.raydonsystems.co.zw"), "gamma.raydonsystems.co.zw")
+        self.assertIsNone(normalize_custom_domain("gamma.raydonsystems.co.zw"))
+
+        availability = check_tenant_availability(school_code="GAMMA", subdomain="gamma.raydonsystems.co.zw")
+        self.assertFalse(availability["school_code_available"])
+        self.assertFalse(availability["subdomain_available"])

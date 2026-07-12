@@ -1,13 +1,24 @@
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.auth import login as auth_login, logout as auth_logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
+from accounts.portal_access import (
+    clear_portal_session_state,
+    is_school_admin_user,
+    is_staff_portal_user,
+    safe_next_url,
+    set_active_portal,
+    staff_portal_required,
+)
 from accounts.permissions import permission_required
 from accounts.services import ensure_existing_staff_admission_numbers
 from school_system_django.native import delete_record, render_detail_page, render_record_form_page, render_table_page
-from .services import api_payload, is_staff_portal_user, staff_dashboard_context
+from .services import api_payload, staff_dashboard_context
 
 
 STAFF_FIELDS = ["username", "full_name", "role", "status"]
@@ -57,19 +68,43 @@ def attendance(request):
     )
 
 
-@permission_required("dashboard.view")
+def portal_login(request):
+    if request.user.is_authenticated and is_staff_portal_user(request.user):
+        set_active_portal(request, "staff_portal")
+        return redirect("staff_portal:dashboard")
+
+    form = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.get_user()
+        if is_school_admin_user(user) or not is_staff_portal_user(user):
+            form.add_error(None, "This account is not allowed to use the Staff Portal.")
+        else:
+            auth_login(request, user)
+            clear_portal_session_state(request)
+            set_active_portal(request, "staff_portal")
+            messages.success(request, "Signed in successfully.")
+            next_url = safe_next_url(request, request.GET.get("next"), "/staff-portal/", reverse("staff_portal:dashboard"))
+            return redirect(next_url)
+
+    response = render(request, "staff_portal/login.html", {"form": form})
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+def portal_logout(request):
+    clear_portal_session_state(request)
+    auth_logout(request)
+    messages.success(request, "Signed out of the Staff Portal.")
+    return redirect("staff_portal:login")
+
+
+@staff_portal_required
 def portal(request):
-    if not is_staff_portal_user(request.user):
-        messages.error(request, "This account is not allowed to use the staff portal.")
-        return redirect("accounts:dashboard")
     return render(request, "staff/portal_dashboard.html", staff_dashboard_context(request))
 
 
-@permission_required("dashboard.view")
+@staff_portal_required
 def portal_profile(request):
-    if not is_staff_portal_user(request.user):
-        messages.error(request, "This account is not allowed to use the staff portal.")
-        return redirect("accounts:dashboard")
     context = staff_dashboard_context(request)
     return render(request, "staff/portal_profile.html", context)
 

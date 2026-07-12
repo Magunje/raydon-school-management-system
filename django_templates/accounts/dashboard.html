@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"school_admin/base.html" %}
 {% load school_extras %}
 
 {% block title %}Dashboard - {{ app_title }}{% endblock %}
