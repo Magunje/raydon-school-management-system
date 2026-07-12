@@ -2,6 +2,11 @@ from django.test import TestCase, RequestFactory, override_settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.http import HttpResponse
+import json
+import shutil
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 from saas_tenant_management.models import (
     ModuleDefinition,
@@ -9,6 +14,7 @@ from saas_tenant_management.models import (
     SubscriptionPayment,
     SubscriptionPlan,
     SchoolTenant,
+    TenantModule,
     TenantModuleActivation,
     TenantBaseModel,
     TenantSubscription,
@@ -20,6 +26,7 @@ from saas_tenant_management.services import (
     activate_module,
     capture_usage_snapshot,
     create_school_subscription,
+    create_tenant_record,
     create_subscription_invoice,
     deactivate_module,
     record_subscription_payment,
@@ -95,6 +102,16 @@ class MultiTenantRoutingTestCase(TestCase):
         request = self.factory.get("/", HTTP_HOST="harare.raydonsystem.com")
         middleware = TenantMiddleware(lambda req: HttpResponse("Success"))
         
+        response = middleware(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(request.tenant, self.tenant_a)
+
+    def test_raydonsystems_subdomain_routing(self):
+        self.tenant_a.subdomain = "school1"
+        self.tenant_a.save()
+        request = self.factory.get("/", HTTP_HOST="school1.raydonsystems.co.zw")
+        middleware = TenantMiddleware(lambda req: HttpResponse("Success"))
+
         response = middleware(request)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(request.tenant, self.tenant_a)
@@ -213,7 +230,96 @@ class MultiTenantRoutingTestCase(TestCase):
     def test_tenant_list_view(self):
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        user = User.objects.create_user(username="saas_admin", password="password")
+        user = User.objects.create_superuser(username="saas_admin", password="password")
         self.client.force_login(user)
         response = self.client.get('/saas-tenants/')
         self.assertEqual(response.status_code, 200)
+
+
+class TenantManagementApiTestCase(TestCase):
+    def setUp(self):
+        self.media_root = Path(tempfile.mkdtemp())
+        self.override = override_settings(MEDIA_ROOT=self.media_root, ALLOWED_HOSTS=["*"])
+        self.override.enable()
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.super_admin = User.objects.create_superuser(username="super", email="super@example.com", password="password")
+        self.school_admin = User.objects.create_user(username="school_admin", password="password")
+
+    def tearDown(self):
+        self.override.disable()
+        shutil.rmtree(self.media_root, ignore_errors=True)
+
+    def create_api_tenant_without_postgres(self, data, logo=None, user=None, provision=True):
+        return create_tenant_record(data, logo=logo, user=user, provision=False)
+
+    def test_create_tenant_service_encrypts_credentials_and_modules(self):
+        result = create_tenant_record(
+            {
+                "school_name": "Alpha Academy",
+                "school_code": "ALPHA",
+                "school_email": "info@alpha.test",
+                "school_phone": "+263700000001",
+                "school_address": "Harare",
+                "subdomain": "alpha",
+                "plan_type": "PREMIUM",
+                "modules": ["student_registration", "fees_management", "library"],
+                "database_password": "PlainPassword123",
+            },
+            provision=False,
+        )
+
+        tenant = result["tenant"]
+        self.assertEqual(tenant.name, "Alpha Academy")
+        self.assertNotEqual(tenant.database_password, "PlainPassword123")
+        self.assertEqual(tenant.get_database_password(), "PlainPassword123")
+        self.assertTrue(TenantModule.objects.filter(tenant=tenant, module_name="library", enabled=True).exists())
+        self.assertTrue((self.media_root / "tenants" / str(tenant.tenant_id)).exists())
+
+    def test_school_admin_cannot_access_tenant_api(self):
+        self.client.force_login(self.school_admin)
+        response = self.client.get("/api/tenants/")
+        self.assertEqual(response.status_code, 403)
+
+    @patch("saas_tenant_management.views.create_tenant_record")
+    def test_create_edit_suspend_delete_tenant_api(self, mocked_create):
+        mocked_create.side_effect = self.create_api_tenant_without_postgres
+        self.client.force_login(self.super_admin)
+
+        create_response = self.client.post(
+            "/api/tenants/create/",
+            {
+                "school_name": "Beta School",
+                "school_code": "BETA",
+                "school_email": "admin@beta.test",
+                "school_phone": "+263700000002",
+                "school_address": "Bulawayo",
+                "subdomain": "beta",
+                "testing_port": "8101",
+                "plan_type": "STARTER",
+                "trial_period": "7",
+                "modules": ["student_registration", "fees_management"],
+            },
+        )
+        self.assertEqual(create_response.status_code, 201)
+        tenant_id = create_response.json()["tenant"]["id"]
+
+        edit_response = self.client.put(
+            f"/api/tenants/{tenant_id}/update/",
+            data=json.dumps({"school_name": "Beta International School", "plan_type": "PREMIUM"}),
+            content_type="application/json",
+        )
+        self.assertEqual(edit_response.status_code, 200)
+        self.assertEqual(edit_response.json()["tenant"]["school_name"], "Beta International School")
+
+        suspend_response = self.client.post(f"/api/tenants/{tenant_id}/suspend/")
+        self.assertEqual(suspend_response.status_code, 200)
+        self.assertTrue(suspend_response.json()["tenant"]["is_suspended"])
+
+        activate_response = self.client.post(f"/api/tenants/{tenant_id}/activate/")
+        self.assertEqual(activate_response.status_code, 200)
+        self.assertTrue(activate_response.json()["tenant"]["is_active"])
+
+        delete_response = self.client.post(f"/api/tenants/{tenant_id}/delete/")
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(SchoolTenant.objects.filter(tenant_id=tenant_id).exists())

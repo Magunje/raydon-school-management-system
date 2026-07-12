@@ -3,6 +3,7 @@ import uuid
 import os
 import contextvars
 from django.core.exceptions import ValidationError
+from django.core import signing
 
 # ContextVar for thread/async-safe request tenant tracking
 _current_tenant = contextvars.ContextVar("current_tenant", default=None)
@@ -33,6 +34,13 @@ def tenant_media_path(instance, filename):
 
 
 class SchoolTenant(models.Model):
+    PLAN_TYPES = [
+        ("STARTER", "Starter"),
+        ("STANDARD", "Standard"),
+        ("PREMIUM", "Premium"),
+        ("ENTERPRISE", "Enterprise"),
+    ]
+
     SUBSCRIPTION_TIERS = [
         ("STARTER", "Starter Package"),
         ("STANDARD", "Standard Package"),
@@ -57,13 +65,27 @@ class SchoolTenant(models.Model):
     # Routing fields for your multi-tenant environments
     local_testing_port = models.IntegerField(unique=True, null=True, blank=True)
     production_domain = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    subdomain = models.CharField(max_length=80, unique=True, null=True, blank=True)
+    custom_domain = models.CharField(max_length=255, unique=True, null=True, blank=True)
     
     # File handling linking to your dynamic path script
     logo = models.ImageField(upload_to=tenant_media_path, null=True, blank=True)
     address = models.TextField(default="Harare, Zimbabwe")
     telephone = models.CharField(max_length=50, default="+263771000000")
     subscription_plan = models.CharField(max_length=20, choices=SUBSCRIPTION_TIERS, default="BASIC")
+    plan_type = models.CharField(max_length=20, choices=PLAN_TYPES, default="STANDARD")
+    max_students = models.PositiveIntegerField(default=500)
+    max_users = models.PositiveIntegerField(default=25)
+    subscription_start = models.DateField(null=True, blank=True)
+    subscription_end = models.DateField(null=True, blank=True)
+    trial_end = models.DateField(null=True, blank=True)
+    is_trial = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    is_suspended = models.BooleanField(default=False)
     tenant_database_identifier = models.CharField(max_length=120, blank=True, null=True)
+    database_name = models.CharField(max_length=120, blank=True, null=True)
+    database_user = models.CharField(max_length=120, blank=True, null=True)
+    database_password = models.TextField(blank=True, null=True)
     report_header = models.CharField(max_length=255, blank=True, null=True)
     electronic_stamp = models.CharField(max_length=120, default="Electronic School Stamp")
     colour_theme = models.CharField(max_length=30, default="#0f766e")
@@ -79,16 +101,83 @@ class SchoolTenant(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def id(self):
+        return self.tenant_id
+
+    @property
+    def primary_domain(self):
+        return self.custom_domain or self.production_domain or self.subdomain_domain
+
+    @property
+    def subdomain_domain(self):
+        if not self.subdomain:
+            return None
+        return f"{self.subdomain}.raydonsystems.co.zw"
+
+    def set_database_password(self, raw_password):
+        self.database_password = signing.dumps(raw_password, salt="tenant-db-password")
+
+    def get_database_password(self):
+        if not self.database_password:
+            return ""
+        try:
+            return signing.loads(self.database_password, salt="tenant-db-password")
+        except signing.BadSignature:
+            return ""
+
     def clean(self):
         super().clean()
-        if not self.local_testing_port and not self.production_domain:
+        if not self.local_testing_port and not self.production_domain and not self.subdomain and not self.custom_domain:
             raise ValidationError("Either a local testing port or a production domain name must be explicitly configured.")
+
+    def save(self, *args, **kwargs):
+        update_fields = set(kwargs.get("update_fields") or [])
+        if self.subdomain and not self.production_domain:
+            self.production_domain = self.subdomain_domain
+        if self.custom_domain:
+            self.custom_domain = self.custom_domain.lower().strip()
+        if self.production_domain:
+            self.production_domain = self.production_domain.lower().strip()
+        if self.subscription_plan in {"BASIC", "CUSTOM", "ELITE"} and self.plan_type == "STANDARD":
+            plan_map = {"BASIC": "STARTER", "CUSTOM": "ENTERPRISE", "ELITE": "ENTERPRISE"}
+            self.plan_type = plan_map.get(self.subscription_plan, self.plan_type)
+        if self.plan_type:
+            self.subscription_plan = self.plan_type
+        explicit_new_status = bool(update_fields & {"is_active", "is_suspended"})
+        if not explicit_new_status and self.active is False and self.is_active and not self.is_suspended:
+            self.is_active = False
+        self.active = self.is_active and not self.is_suspended
+        super().save(*args, **kwargs)
 
     def has_premium_module(self, module_code):
         return tenant_allows_module(self, module_code)
 
     def has_module(self, module_code):
         return tenant_allows_module(self, module_code)
+
+
+class Tenant(SchoolTenant):
+    class Meta:
+        proxy = True
+        verbose_name = "Tenant"
+        verbose_name_plural = "Tenants"
+
+
+class TenantModule(models.Model):
+    tenant = models.ForeignKey(SchoolTenant, on_delete=models.CASCADE, related_name="tenant_modules")
+    module_name = models.CharField(max_length=120)
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "saas_tenant_modules"
+        unique_together = ("tenant", "module_name")
+        ordering = ["module_name"]
+
+    def __str__(self):
+        return f"{self.tenant} - {self.module_name}"
 
 
 COMPULSORY_MODULES = {
@@ -181,6 +270,14 @@ class ModuleDefinition(models.Model):
 
 
 class TenantSubscription(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ("TRIAL", "Trial"),
+        ("PENDING", "Pending"),
+        ("PAID", "Paid"),
+        ("OVERDUE", "Overdue"),
+        ("CANCELLED", "Cancelled"),
+    ]
+
     STATUS_CHOICES = [
         ("TRIAL", "Trial"),
         ("ACTIVE", "Active"),
@@ -201,6 +298,11 @@ class TenantSubscription(models.Model):
     expiry_date = models.DateField()
     billing_cycle = models.CharField(max_length=20, choices=BILLING_CHOICES, default="MONTHLY")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="TRIAL")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    currency = models.CharField(max_length=10, default="USD")
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default="TRIAL")
+    payment_date = models.DateField(null=True, blank=True)
+    next_billing_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -5,20 +5,31 @@ import sys
 from django.conf import settings
 from django.db import connections
 from django.http import HttpResponse, HttpResponseNotFound
+from django.db.models import Q
 from saas_tenant_management.models import SchoolTenant, set_current_tenant, clear_current_tenant
 from saas_tenant_management.schema import ensure_sqlite_tenant_schema
+from saas_tenant_management.services import tenant_database_settings
 
 MASTER_DB_PATH = None
+MASTER_DB_SETTINGS = None
 IS_TESTING = 'test' in sys.argv or 'test_coverage' in sys.argv
 _SCHEMA_CHECKED_PATHS = set()
 TENANT_BYPASS_PATHS = ("/health/", "/django/health/")
+MASTER_PORTAL_PATH_PREFIXES = ("/api/tenants/", "/saas-tenants/", "/admin/")
+MASTER_PORTAL_DOMAINS = {
+    "saas.localhost",
+    "admin.localhost",
+    "saas.raydonsystem.com",
+    "raydonsystems.co.zw",
+    "www.raydonsystems.co.zw",
+}
 
 
 def reset_master_connection():
-    if IS_TESTING or MASTER_DB_PATH is None:
+    if IS_TESTING or MASTER_DB_SETTINGS is None:
         return
     connections['default'].close()
-    connections['default'].settings_dict['NAME'] = MASTER_DB_PATH
+    connections['default'].settings_dict.update(MASTER_DB_SETTINGS)
 
 
 def ensure_runtime_schema(db_path):
@@ -30,6 +41,17 @@ def ensure_runtime_schema(db_path):
 
 def using_sqlite_database():
     return connections["default"].settings_dict.get("ENGINE", "").endswith("sqlite3")
+
+
+def using_postgresql_database():
+    return connections["default"].settings_dict.get("ENGINE", "").endswith("postgresql")
+
+
+def switch_to_postgres_tenant_database(tenant):
+    if not tenant.database_name:
+        return
+    connections["default"].close()
+    connections["default"].settings_dict.update(tenant_database_settings(tenant))
 
 
 def ensure_tenant_db(tenant, db_path):
@@ -84,9 +106,11 @@ def ensure_tenant_db(tenant, db_path):
 class TenantMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        global MASTER_DB_PATH
+        global MASTER_DB_PATH, MASTER_DB_SETTINGS
         if MASTER_DB_PATH is None:
             MASTER_DB_PATH = settings.DATABASES['default']['NAME']
+        if MASTER_DB_SETTINGS is None:
+            MASTER_DB_SETTINGS = settings.DATABASES['default'].copy()
 
     def __call__(self, request):
         # Clean up duplicated headers from proxy layers (e.g. Origin)
@@ -100,6 +124,11 @@ class TenantMiddleware:
             set_current_tenant(None)
             request.tenant = None
             return self.get_response(request)
+        if request.path_info.startswith(MASTER_PORTAL_PATH_PREFIXES):
+            set_current_tenant(None)
+            request.tenant = None
+            reset_master_connection()
+            return self.get_response(request)
 
         # Extract host header and split into domain and port
         host_header = request.get_host()
@@ -108,7 +137,7 @@ class TenantMiddleware:
         host_port = int(parts[1]) if len(parts) > 1 else None
 
         # Check if this is the master SaaS administration portal domain
-        if host_domain in ["saas.localhost", "saas.raydonsystem.com", "admin.localhost", "raydonsystems.co.zw", "www.raydonsystems.co.zw"]:
+        if host_domain in MASTER_PORTAL_DOMAINS:
             set_current_tenant(None)
             request.tenant = None
             # Switch back to Master database if we are running in file mode
@@ -121,8 +150,8 @@ class TenantMiddleware:
             # 1. Local development subdomain mode: if visiting subdomain.localhost (e.g. raydonhigh.localhost:8006)
             if host_domain.endswith(".localhost"):
                 subdomain = host_domain[:-10]  # Strip ".localhost"
-                from django.db.models import Q
                 matched_tenant = SchoolTenant.objects.filter(
+                    Q(subdomain=subdomain) |
                     Q(production_domain__startswith=subdomain + ".") |
                     Q(production_domain=host_domain)
                 ).first()
@@ -136,7 +165,12 @@ class TenantMiddleware:
 
             # 3. Production mode matching: match production_domain
             if not matched_tenant:
-                matched_tenant = SchoolTenant.objects.filter(production_domain=host_domain).first()
+                matched_tenant = SchoolTenant.objects.filter(
+                    Q(production_domain=host_domain) |
+                    Q(custom_domain=host_domain) |
+                    Q(subdomain=f"{host_domain.split('.')[0]}") |
+                    Q(subdomain__isnull=False, production_domain=host_domain)
+                ).first()
 
             if not matched_tenant:
                 if IS_TESTING and SchoolTenant.objects.count() == 0:
@@ -148,7 +182,7 @@ class TenantMiddleware:
                     "<h3>404 Tenant Not Found</h3><p>The requested school tenant domain/port is not registered on this system.</p>"
                 )
 
-            if not matched_tenant.active:
+            if matched_tenant.is_suspended or not matched_tenant.is_active or not matched_tenant.active:
                 return HttpResponse(
                     "<h3>Tenant Inactive</h3><p>This school tenant subscription has been suspended or deactivated.</p>",
                     status=403
@@ -174,6 +208,8 @@ class TenantMiddleware:
                 # Close the master database connection and switch to the tenant database
                 connections['default'].close()
                 connections['default'].settings_dict['NAME'] = db_path
+            elif not IS_TESTING and using_postgresql_database():
+                switch_to_postgres_tenant_database(matched_tenant)
 
         except Exception as e:
             clear_current_tenant()
