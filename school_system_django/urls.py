@@ -17,6 +17,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import FileResponse, Http404
 from django.shortcuts import redirect
 from django.urls import include, path
 
@@ -56,6 +57,16 @@ from business_intelligence import views as business_intelligence_views
 from system_administration import views as system_administration_views
 from saas_tenant_management import views as saas_tenant_management_views
 
+
+def service_worker(request):
+    service_worker_path = settings.BASE_DIR / "static" / "service-worker.js"
+    if not service_worker_path.exists():
+        raise Http404("Service worker not found")
+    response = FileResponse(service_worker_path.open("rb"), content_type="application/javascript")
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 urlpatterns = [
@@ -302,7 +313,7 @@ urlpatterns = [
     path('api/pupil-balance', fee_views.pupil_balance, name='api_pupil_balance'),
     path('api/pupil-search', fee_views.pupil_search, name='api_pupil_search'),
     path('api/result-pupil-search', exam_views.result_pupil_search, name='api_result_pupil_search'),
-    path('service-worker.js', lambda request: redirect('/static/service-worker.js'), name='service_worker'),
+    path('service-worker.js', service_worker, name='service_worker'),
     path('payroll/', include('payroll.urls')),
     path('django/students/', include('students.urls')),
     path('django/parents/', include('parents.urls')),

@@ -35,9 +35,20 @@ Production now runs on PostgreSQL, so copy that SQLite file to the VPS and run:
 SQLITE_IMPORT_PATH=/var/www/raydon-school-management-system/school_system.db ./deploy.sh
 ```
 
-When `SQLITE_IMPORT_PATH` is set, `deploy.sh` imports only unmanaged legacy tables
-from SQLite into PostgreSQL using `import_sqlite_legacy --replace`. Normal Django
-migrations still own the managed PostgreSQL tables.
+`SQLITE_IMPORT_PATH` must point to the actual SQLite file, not a directory. The
+deploy script also reads `.env`, so this can be stored there:
+
+```env
+SQLITE_IMPORT_PATH=/var/www/raydon-school-management-system/school_system.db
+SQLITE_IMPORT_REQUIRED_TABLES=users,pupils,school_settings
+```
+
+When `SQLITE_IMPORT_PATH` is set, `deploy.sh` validates the source file, runs
+Django migrations, then imports the unmanaged legacy tables from SQLite into
+PostgreSQL using `import_sqlite_legacy --replace`. The importer preserves SQLite
+indexes where possible and creates common PostgreSQL lookup indexes for legacy
+student, attendance, results, and finance tables. Normal Django migrations still
+own the managed PostgreSQL tables.
 
 ---
 

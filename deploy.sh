@@ -5,6 +5,14 @@ set -Eeuo pipefail
 
 echo "=== Starting Raydon SMS Enterprise Deployment ==="
 
+if [ -f ".env" ]; then
+    echo "Loading deployment environment from .env..."
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
+
 # 1. Pull latest images and build containers
 echo "Building and pulling latest docker containers..."
 docker compose build --pull
@@ -30,14 +38,20 @@ docker compose run --rm --no-deps web python manage.py migrate --fake-initial --
 
 # 6. Optionally import legacy SQLite tables into PostgreSQL
 if [ -n "${SQLITE_IMPORT_PATH:-}" ]; then
+    if [ -d "$SQLITE_IMPORT_PATH" ]; then
+        echo "SQLITE_IMPORT_PATH points to a directory, not a SQLite database file: $SQLITE_IMPORT_PATH"
+        echo "Copy the localhost .db file to this exact path, then run deploy again."
+        exit 1
+    fi
     if [ ! -f "$SQLITE_IMPORT_PATH" ]; then
-        echo "SQLITE_IMPORT_PATH is set but file does not exist: $SQLITE_IMPORT_PATH"
+        echo "SQLITE_IMPORT_PATH is set but the SQLite database file does not exist: $SQLITE_IMPORT_PATH"
         exit 1
     fi
     echo "Importing legacy SQLite tables from $SQLITE_IMPORT_PATH..."
+    REQUIRED_TABLES="${SQLITE_IMPORT_REQUIRED_TABLES:-users,pupils,school_settings}"
     docker compose run --rm --no-deps \
         -v "$SQLITE_IMPORT_PATH:/tmp/legacy.sqlite:ro" \
-        web python manage.py import_sqlite_legacy /tmp/legacy.sqlite --replace
+        web python manage.py import_sqlite_legacy /tmp/legacy.sqlite --replace --require-tables "$REQUIRED_TABLES"
 fi
 
 # 7. Collect static assets in the shared static volume

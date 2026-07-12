@@ -1,5 +1,6 @@
 import re
 import sqlite3
+from hashlib import sha1
 from pathlib import Path
 
 from django.apps import apps
@@ -9,12 +10,39 @@ from django.db import connection, transaction
 
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 INTERNAL_PREFIXES = ("sqlite_",)
+POSTGRES_IDENTIFIER_LIMIT = 63
+
+COMMON_LEGACY_INDEXES = (
+    ("users", "idx_users_username", ("username",), False),
+    ("users", "idx_users_admission_no", ("admission_no",), False),
+    ("pupils", "idx_pupils_admission_no", ("admission_no",), False),
+    ("pupils", "idx_pupils_status_class_id", ("status", "class_id"), False),
+    ("pupils", "idx_pupils_status_grade_stream", ("status", "grade_id", "class_stream"), False),
+    ("guardians", "idx_guardians_student_primary", ("student_id", "is_primary"), False),
+    ("teacher_profiles", "idx_teacher_profiles_user_id", ("user_id",), False),
+    ("teacher_profiles", "idx_teacher_profiles_email", ("email",), False),
+    ("attendance_records", "idx_attendance_records_pupil_date", ("pupil_id", "attendance_date"), False),
+    ("attendance_records", "idx_attendance_records_class_date", ("class_id", "attendance_date"), False),
+    ("student_subjects", "idx_student_subjects_lookup", ("pupil_id", "subject_id", "academic_year"), False),
+    ("result_sheets", "idx_result_sheets_pupil_term_year", ("pupil_id", "term", "year"), False),
+    ("payments", "idx_payments_pupil_date", ("pupil_id", "payment_date"), False),
+    ("term_bills", "idx_term_bills_pupil_term_year", ("pupil_id", "term", "year"), False),
+)
 
 
 def quote_name(name):
     if not SAFE_IDENTIFIER.match(name):
         raise CommandError(f"Unsafe database identifier: {name!r}")
     return connection.ops.quote_name(name)
+
+
+def postgres_identifier(name):
+    if not SAFE_IDENTIFIER.match(name):
+        raise CommandError(f"Unsafe database identifier: {name!r}")
+    if len(name) <= POSTGRES_IDENTIFIER_LIMIT:
+        return name
+    digest = sha1(name.encode("utf-8")).hexdigest()[:10]
+    return f"{name[:POSTGRES_IDENTIFIER_LIMIT - 11]}_{digest}"
 
 
 def sqlite_tables(sqlite_cursor):
@@ -102,6 +130,55 @@ def postgres_columns(table_name):
             [table_name],
         )
         return {row[0] for row in cursor.fetchall()}
+
+
+def sqlite_indexes(sqlite_cursor, table_name):
+    sqlite_cursor.execute(f"PRAGMA index_list({quote_sqlite_identifier(table_name)})")
+    for row in sqlite_cursor.fetchall():
+        index_name = row[1]
+        is_unique = bool(row[2])
+        origin = row[3] if len(row) > 3 else ""
+        is_partial = bool(row[4]) if len(row) > 4 else False
+        if index_name.startswith("sqlite_autoindex") or origin == "pk" or is_partial:
+            continue
+        if not SAFE_IDENTIFIER.match(index_name):
+            continue
+        sqlite_cursor.execute(f"PRAGMA index_info({quote_sqlite_identifier(index_name)})")
+        columns = [info_row[2] for info_row in sqlite_cursor.fetchall()]
+        if columns and all(SAFE_IDENTIFIER.match(column) for column in columns):
+            yield index_name, columns, is_unique
+
+
+def create_postgres_index(table_name, index_name, columns, unique=False):
+    existing_columns = postgres_columns(table_name)
+    if not set(columns).issubset(existing_columns):
+        return False
+    index_name = postgres_identifier(index_name)
+    unique_sql = "UNIQUE " if unique else ""
+    quoted_columns = ", ".join(quote_name(column) for column in columns)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"CREATE {unique_sql}INDEX IF NOT EXISTS {quote_name(index_name)} "
+            f"ON {quote_name(table_name)} ({quoted_columns})"
+        )
+    return True
+
+
+def create_sqlite_indexes(sqlite_cursor, table_name):
+    created = 0
+    for index_name, columns, is_unique in sqlite_indexes(sqlite_cursor, table_name):
+        if create_postgres_index(table_name, index_name, columns, is_unique):
+            created += 1
+    return created
+
+
+def create_common_legacy_indexes(imported_tables):
+    created = 0
+    existing_tables = {table for table in imported_tables if table_exists(table)}
+    for table_name, index_name, columns, is_unique in COMMON_LEGACY_INDEXES:
+        if table_name in existing_tables and create_postgres_index(table_name, index_name, columns, is_unique):
+            created += 1
+    return created
 
 
 def create_or_extend_table(table_name, columns):
@@ -209,18 +286,34 @@ class Command(BaseCommand):
             "--tables",
             help="Comma-separated table list to import. Overrides the default unmanaged legacy table list.",
         )
+        parser.add_argument(
+            "--require-tables",
+            help="Comma-separated SQLite table names that must exist before import starts.",
+        )
         parser.add_argument("--batch-size", type=int, default=500)
         parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **options):
         sqlite_path = Path(options["sqlite_path"]).expanduser()
-        if not sqlite_path.exists():
-            raise CommandError(f"SQLite file does not exist: {sqlite_path}")
+        if not sqlite_path.is_file():
+            raise CommandError(f"SQLite database file does not exist or is not a file: {sqlite_path}")
 
         sqlite_connection = sqlite3.connect(f"file:{sqlite_path}?mode=ro", uri=True)
         try:
             sqlite_cursor = sqlite_connection.cursor()
             source_tables = sqlite_tables(sqlite_cursor)
+            required_tables = {
+                table.strip()
+                for table in (options["require_tables"] or "").split(",")
+                if table.strip()
+            }
+            missing_required_tables = sorted(required_tables - source_tables)
+            if missing_required_tables:
+                raise CommandError(
+                    "Required table(s) missing from SQLite source: "
+                    + ", ".join(missing_required_tables)
+                )
+
             if options["tables"]:
                 requested_tables = {table.strip() for table in options["tables"].split(",") if table.strip()}
             elif options["all_tables"]:
@@ -260,7 +353,11 @@ class Command(BaseCommand):
                         options["replace"],
                     )
                     reset_identity(table_name, columns)
-                    self.stdout.write(self.style.SUCCESS(f"{table_name}: imported {imported} row(s)"))
+                    index_count = create_sqlite_indexes(sqlite_cursor, table_name)
+                    self.stdout.write(self.style.SUCCESS(f"{table_name}: imported {imported} row(s), ensured {index_count} SQLite index(es)"))
+                common_index_count = create_common_legacy_indexes(import_tables)
+                if common_index_count:
+                    self.stdout.write(self.style.SUCCESS(f"Ensured {common_index_count} common legacy PostgreSQL index(es)."))
 
             self.stdout.write(self.style.SUCCESS("SQLite legacy import completed."))
         finally:
